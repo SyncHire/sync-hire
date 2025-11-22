@@ -83,6 +83,11 @@ class InterviewCompletionProcessor(Processor):
         self.accumulator_last_update = None
         self.ACCUMULATOR_GAP_THRESHOLD = 2.0  # seconds - reset accumulator after this gap
 
+        # Transcript batching - accumulate before sending to frontend
+        self.transcript_accumulator = {"agent": "", "user": ""}
+        self.transcript_last_update = {"agent": None, "user": None}
+        self.TRANSCRIPT_GAP_THRESHOLD = 2.0  # seconds - send after this gap
+
         # Closing keywords and phrases
         self.closing_keywords = {
             "goodbye", "good bye", "bye",
@@ -99,8 +104,8 @@ class InterviewCompletionProcessor(Processor):
             "walk me through", "what was your", "?",
         }
 
-    async def _send_transcript_event(self, speaker: str, text: str, timestamp: float):
-        """Send transcript to frontend via Stream.io custom event"""
+    async def _send_realtime_transcript(self, speaker: str, text: str, timestamp: float):
+        """Send transcript to frontend in real-time via Stream.io custom event"""
         if not self.call or not self.agent_user_id:
             return
 
@@ -114,9 +119,52 @@ class InterviewCompletionProcessor(Processor):
                     "timestamp": timestamp,
                 }
             )
-            logger.debug(f"📤 Sent transcript event: {speaker}: {text[:50]}...")
+            logger.debug(f"📤 Sent realtime transcript: {speaker}: {text[:50]}...")
         except Exception as e:
             logger.warning(f"⚠️ Failed to send transcript event: {e}")
+
+    def _accumulate_transcript_for_webhook(self, speaker: str, text: str, timestamp: float):
+        """Accumulate transcript for final webhook - batches by speaker with time gaps"""
+        now = time.time()
+        other_speaker = "user" if speaker == "agent" else "agent"
+
+        # Flush other speaker's accumulator to transcript if speaker changed
+        if self.transcript_accumulator[other_speaker]:
+            self.transcript.append(TranscriptEntry(
+                speaker=other_speaker,
+                text=self.transcript_accumulator[other_speaker],
+                timestamp=self.transcript_last_update[other_speaker] or timestamp
+            ))
+            self.transcript_accumulator[other_speaker] = ""
+
+        # Check if there's been a gap - start new entry
+        last_update = self.transcript_last_update[speaker]
+        if last_update is not None and (now - last_update) > self.TRANSCRIPT_GAP_THRESHOLD:
+            if self.transcript_accumulator[speaker]:
+                self.transcript.append(TranscriptEntry(
+                    speaker=speaker,
+                    text=self.transcript_accumulator[speaker],
+                    timestamp=last_update
+                ))
+                self.transcript_accumulator[speaker] = ""
+
+        # Accumulate new text
+        if self.transcript_accumulator[speaker]:
+            self.transcript_accumulator[speaker] += " " + text
+        else:
+            self.transcript_accumulator[speaker] = text
+        self.transcript_last_update[speaker] = timestamp
+
+    def _flush_webhook_transcript(self):
+        """Flush any remaining accumulated transcript to the transcript list"""
+        for speaker in ["agent", "user"]:
+            if self.transcript_accumulator[speaker]:
+                self.transcript.append(TranscriptEntry(
+                    speaker=speaker,
+                    text=self.transcript_accumulator[speaker],
+                    timestamp=self.transcript_last_update[speaker] or 0
+                ))
+                self.transcript_accumulator[speaker] = ""
 
     async def _send_progress_event(self, question_index: int, category: str):
         """Send progress update to frontend via Stream.io custom event"""
@@ -214,13 +262,11 @@ class InterviewCompletionProcessor(Processor):
             # Add to transcript and broadcast to frontend
             if text:
                 elapsed = now - self.interview_start_time
-                self.transcript.append(TranscriptEntry(
-                    speaker="agent",
-                    text=text,
-                    timestamp=round(elapsed, 2)
-                ))
-                # Send to frontend via custom event
-                await self._send_transcript_event("agent", text, round(elapsed, 2))
+                # Accumulate for final webhook transcript
+                self._accumulate_transcript_for_webhook("agent", text, round(elapsed, 2))
+
+                # Send real-time to frontend for live display
+                await self._send_realtime_transcript("agent", text, round(elapsed, 2))
 
                 # Accumulate speech for question matching
                 if self.agent_speech_accumulator:
@@ -261,13 +307,11 @@ class InterviewCompletionProcessor(Processor):
             # The frontend also uses Stream.io closed captions as a backup
             if text and len(text) > 1:  # Skip if only punctuation
                 elapsed = time.time() - self.interview_start_time
-                self.transcript.append(TranscriptEntry(
-                    speaker="user",
-                    text=text,
-                    timestamp=round(elapsed, 2)
-                ))
-                # Send to frontend via custom event
-                await self._send_transcript_event("user", text, round(elapsed, 2))
+                # Accumulate for final webhook transcript
+                self._accumulate_transcript_for_webhook("user", text, round(elapsed, 2))
+
+                # Send real-time to frontend for live display
+                await self._send_realtime_transcript("user", text, round(elapsed, 2))
                 logger.debug(f"📝 User transcript: {text[:50]}...")
 
             # If user also says goodbye, definitely time to end
@@ -312,6 +356,9 @@ class InterviewCompletionProcessor(Processor):
     async def _mark_complete(self, reason: str):
         """Mark interview as complete and trigger callback"""
         if not self.is_complete.is_set():
+            # Flush any remaining transcript for webhook
+            self._flush_webhook_transcript()
+
             logger.info(f"✅ Interview marked complete: {reason}")
             self.is_complete.set()
 

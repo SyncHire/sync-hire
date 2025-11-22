@@ -66,10 +66,10 @@ export function useInterviewCall({
         // Join the call
         await videoCall.join({ create: true, video: true });
 
-        // Start transcription for closed captions
+        // Start transcription for closed captions (English only)
         try {
           console.log('🎤 Attempting to start transcription...');
-          const transcriptionResult = await videoCall.startTranscription();
+          const transcriptionResult = await videoCall.startTranscription({ language: 'en', enable_closed_captions: true });
           console.log('🎤 Transcription started:', transcriptionResult);
         } catch (transcriptionErr) {
           console.error('❌ Could not start transcription:', transcriptionErr);
