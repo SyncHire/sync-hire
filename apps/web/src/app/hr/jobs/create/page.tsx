@@ -195,7 +195,10 @@ export default function JobCreationPage() {
       }
 
       const result = await response.json();
-      toast.success("Job posted successfully!");
+      toast.success("Job created! Redirecting...", {
+        duration: 2000,
+      });
+      setIsLoading(true);
       router.push(`/hr/jobs/${result.data.id}`);
     } catch (error) {
       const errorMessage =

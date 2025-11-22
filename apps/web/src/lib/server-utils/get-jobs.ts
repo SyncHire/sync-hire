@@ -41,9 +41,20 @@ export async function getAllJobsData(): Promise<Job[]> {
     // Override with stored jobs (they're newer)
     storedJobs.forEach(job => jobMap.set(job.id, job));
 
-    return Array.from(jobMap.values());
+    // Sort by createdAt, newest first (real jobs will appear before mock jobs)
+    const jobs = Array.from(jobMap.values());
+    return jobs.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA; // Descending order (newest first)
+    });
   } catch {
     // Fall back to memory storage if file access fails
-    return getAllJobs();
+    const jobs = getAllJobs();
+    return jobs.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA;
+    });
   }
 }
