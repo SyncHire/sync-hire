@@ -1,6 +1,6 @@
 "use client";
 
-import { mockJobs } from "@/lib/mock-data";
+import { mockJobs, getAllInterviews } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, ArrowRight, Search, Building2, Clock, Sparkles, Zap } from "lucide-react";
@@ -8,6 +8,16 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 
 export default function CandidateJobListings() {
+  // Get all interviews and create a map of jobId -> interviewId
+  const interviews = getAllInterviews();
+  const jobToInterview = new Map<string, string>();
+  for (const interview of interviews) {
+    // Use first interview found for each job (for demo purposes)
+    if (!jobToInterview.has(interview.jobId)) {
+      jobToInterview.set(interview.jobId, interview.id);
+    }
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* Ambient Background Effects */}
@@ -57,7 +67,7 @@ export default function CandidateJobListings() {
               className="animate-in fade-in slide-in-from-bottom-4 duration-500"
               style={{ animationDelay: `${i * 100}ms` }}
             >
-              <Link href={`/interview/${job.id}`}>
+              <Link href={`/interview/${jobToInterview.get(job.id) || job.id}`}>
                 <div className="group relative h-full bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6 hover:bg-card/80 transition-all cursor-pointer overflow-hidden">
                   {/* Hover Glow */}
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-duration-500" />
