@@ -2,7 +2,7 @@
  * API for job custom questions CRUD
  * GET - Get all questions for a job
  * POST - Add a new question
- * PUT - Update question order
+ * PUT - Update question order OR bulk update all interview questions
  * DELETE - Delete a specific question
  */
 
@@ -14,6 +14,7 @@ import {
   getCustomQuestionsByJobId,
   updateCustomQuestion,
 } from "@/lib/mock-data";
+import { getStorage } from "@/lib/storage/storage-factory";
 
 export async function GET(
   request: NextRequest,
@@ -82,12 +83,55 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id: jobId } = await params;
     const body = await request.json();
+
+    // Check if this is a bulk update (questions array provided)
+    if (body.questions && Array.isArray(body.questions)) {
+      const storage = getStorage();
+
+      // Get existing job
+      const job = await storage.getJob(jobId);
+      if (!job) {
+        return NextResponse.json(
+          { success: false, error: `Job not found: ${jobId}` },
+          { status: 404 },
+        );
+      }
+
+      // Update job with new questions
+      const updatedJob = {
+        ...job,
+        questions: body.questions.map((q: { id: string; text: string; type?: string; duration?: number }) => ({
+          id: q.id,
+          text: q.text,
+          type: q.type || "text",
+          duration: q.duration || 2,
+          category: "Technical Skills" as const,
+        })),
+      };
+
+      // Save updated job
+      await storage.saveJob(jobId, updatedJob);
+
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            id: jobId,
+            questionCount: body.questions.length,
+          },
+        },
+        { status: 200 },
+      );
+    }
+
+    // Single question update (legacy behavior)
     const { questionId, updates } = body;
 
     if (!questionId) {
       return NextResponse.json(
-        { success: false, error: "Missing questionId" },
+        { success: false, error: "Missing questionId or questions array" },
         { status: 400 },
       );
     }

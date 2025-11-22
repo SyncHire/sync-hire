@@ -13,8 +13,6 @@ import {
   Plus,
   Sparkles,
   Trash2,
-  Wand2,
-  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -30,15 +28,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useSaveJobQuestions, useGenerateJobQuestions } from "@/lib/hooks/use-job-questions";
 import type { Job } from "@/lib/mock-data";
 
 interface Question {
@@ -57,8 +49,12 @@ export default function HRJDDetail() {
   // Question management state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [newQuestion, setNewQuestion] = useState<{ text: string; type: "text" | "video" | "code"; duration: number }>({ text: "", type: "text", duration: 2 });
+
+  // React Query mutations
+  const saveQuestionsMutation = useSaveJobQuestions();
+  const generateQuestionsMutation = useGenerateJobQuestions();
 
   useEffect(() => {
     async function fetchJob() {
@@ -99,7 +95,8 @@ export default function HRJDDetail() {
     setQuestions((prev) => [...prev, question]);
     setNewQuestion({ text: "", type: "text", duration: 2 });
     setIsAddModalOpen(false);
-    toast.success("Question added");
+    setHasUnsavedChanges(true);
+    toast.success("Question added - remember to save!");
   };
 
   // Update an existing question
@@ -112,48 +109,55 @@ export default function HRJDDetail() {
       prev.map((q) => (q.id === editingQuestion.id ? editingQuestion : q))
     );
     setEditingQuestion(null);
-    toast.success("Question updated");
+    setHasUnsavedChanges(true);
+    toast.success("Question updated - remember to save!");
   };
 
   // Delete a question
   const handleDeleteQuestion = (id: string) => {
     setQuestions((prev) => prev.filter((q) => q.id !== id));
-    toast.success("Question removed");
+    setHasUnsavedChanges(true);
   };
 
   // Generate AI questions
-  const handleGenerateQuestions = async () => {
+  const handleGenerateQuestions = () => {
     if (!job) return;
-    setIsGenerating(true);
-    try {
-      const response = await fetch("/api/jobs/generate-questions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobId: job.id,
-          title: job.title,
-          description: job.description,
-          requirements: job.requirements,
-        }),
-      });
-      if (!response.ok) throw new Error("Failed to generate questions");
-      const result = await response.json();
-      const aiQuestions: Question[] = (result.data?.questions || []).map(
-        (q: { content: string; reason?: string }, i: number) => ({
-          id: `ai-${Date.now()}-${i}`,
-          text: q.content,
-          type: "text" as const,
-          duration: 2,
-        })
-      );
-      setQuestions((prev) => [...prev, ...aiQuestions]);
-      toast.success(`Generated ${aiQuestions.length} questions`);
-    } catch (error) {
-      console.error("Error generating questions:", error);
-      toast.error("Failed to generate questions");
-    } finally {
-      setIsGenerating(false);
-    }
+    generateQuestionsMutation.mutate(
+      {
+        jobId: job.id,
+        title: job.title,
+        description: job.description,
+        requirements: job.requirements,
+      },
+      {
+        onSuccess: (result) => {
+          const aiQuestions: Question[] = (result.data?.questions || []).map(
+            (q: { content: string; reason?: string }, i: number) => ({
+              id: `ai-${Date.now()}-${i}`,
+              text: q.content,
+              type: "text" as const,
+              duration: 2,
+            })
+          );
+          setQuestions((prev) => [...prev, ...aiQuestions]);
+          setHasUnsavedChanges(true);
+          toast.success(`Generated ${aiQuestions.length} questions - remember to save!`);
+        },
+      }
+    );
+  };
+
+  // Save questions to job
+  const handleSaveQuestions = () => {
+    if (!job) return;
+    saveQuestionsMutation.mutate(
+      { jobId: job.id, questions },
+      {
+        onSuccess: () => {
+          setHasUnsavedChanges(false);
+        },
+      }
+    );
   };
 
   if (isLoading) {
@@ -351,22 +355,38 @@ export default function HRJDDetail() {
                 variant="outline"
                 className="gap-2 border-blue-500/30 text-blue-500 hover:bg-blue-500/10"
                 onClick={handleGenerateQuestions}
-                disabled={isGenerating}
+                disabled={generateQuestionsMutation.isPending}
               >
-                {isGenerating ? (
+                {generateQuestionsMutation.isPending ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
                   <Sparkles className="h-3.5 w-3.5" />
                 )}
-                {isGenerating ? "Generating..." : "Generate with AI"}
+                {generateQuestionsMutation.isPending ? "Generating..." : "Generate with AI"}
               </Button>
               <Button
                 size="sm"
-                className="gap-2 bg-foreground text-background hover:bg-foreground/90"
+                variant="outline"
+                className="gap-2"
                 onClick={() => setIsAddModalOpen(true)}
               >
                 <Plus className="h-3.5 w-3.5" /> Add Question
               </Button>
+              {hasUnsavedChanges && (
+                <Button
+                  size="sm"
+                  className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={handleSaveQuestions}
+                  disabled={saveQuestionsMutation.isPending}
+                >
+                  {saveQuestionsMutation.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Check className="h-3.5 w-3.5" />
+                  )}
+                  {saveQuestionsMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -379,10 +399,14 @@ export default function HRJDDetail() {
                   size="sm"
                   variant="outline"
                   onClick={handleGenerateQuestions}
-                  disabled={isGenerating}
+                  disabled={generateQuestionsMutation.isPending}
                 >
-                  <Sparkles className="h-3.5 w-3.5 mr-2" />
-                  Generate with AI
+                  {generateQuestionsMutation.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5 mr-2" />
+                  )}
+                  {generateQuestionsMutation.isPending ? "Generating..." : "Generate with AI"}
                 </Button>
                 <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
                   <Plus className="h-3.5 w-3.5 mr-2" />
@@ -404,17 +428,9 @@ export default function HRJDDetail() {
                     <p className="text-sm text-foreground leading-relaxed">
                       {q.text}
                     </p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] h-5 px-1.5 font-medium text-muted-foreground border-border bg-secondary/50"
-                      >
-                        {q.type.toUpperCase()}
-                      </Badge>
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> {q.duration} min
-                      </span>
-                    </div>
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1.5">
+                      <Clock className="h-3 w-3" /> {q.duration} min
+                    </span>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
@@ -456,36 +472,19 @@ export default function HRJDDetail() {
                 placeholder="Enter your interview question..."
                 value={newQuestion.text}
                 onChange={(e) => setNewQuestion((prev) => ({ ...prev, text: e.target.value }))}
-                rows={3}
+                rows={6}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Response Type</label>
-                <Select
-                  value={newQuestion.type}
-                  onValueChange={(v) => setNewQuestion((prev) => ({ ...prev, type: v as "text" | "video" | "code" }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="text">Text</SelectItem>
-                    <SelectItem value="video">Video</SelectItem>
-                    <SelectItem value="code">Code</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Duration (min)</label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={newQuestion.duration}
-                  onChange={(e) => setNewQuestion((prev) => ({ ...prev, duration: parseInt(e.target.value) || 2 }))}
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Expected Duration (min)</label>
+              <Input
+                type="number"
+                min={1}
+                max={10}
+                value={newQuestion.duration}
+                onChange={(e) => setNewQuestion((prev) => ({ ...prev, duration: parseInt(e.target.value) || 2 }))}
+              />
+              <p className="text-xs text-muted-foreground">How long the candidate should spend answering this question</p>
             </div>
           </div>
           <DialogFooter>
@@ -511,36 +510,19 @@ export default function HRJDDetail() {
                   placeholder="Enter your interview question..."
                   value={editingQuestion.text}
                   onChange={(e) => setEditingQuestion((prev) => prev ? { ...prev, text: e.target.value } : null)}
-                  rows={3}
+                  rows={6}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Response Type</label>
-                  <Select
-                    value={editingQuestion.type}
-                    onValueChange={(v) => setEditingQuestion((prev) => prev ? { ...prev, type: v as "text" | "video" | "code" } : null)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="text">Text</SelectItem>
-                      <SelectItem value="video">Video</SelectItem>
-                      <SelectItem value="code">Code</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Duration (min)</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={editingQuestion.duration}
-                    onChange={(e) => setEditingQuestion((prev) => prev ? { ...prev, duration: parseInt(e.target.value) || 2 } : null)}
-                  />
-                </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Expected Duration (min)</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={editingQuestion.duration}
+                  onChange={(e) => setEditingQuestion((prev) => prev ? { ...prev, duration: parseInt(e.target.value) || 2 } : null)}
+                />
+                <p className="text-xs text-muted-foreground">How long the candidate should spend answering this question</p>
               </div>
             </div>
           )}
