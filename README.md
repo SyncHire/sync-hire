@@ -186,6 +186,7 @@ ENVIRONMENT=development
 - [Architecture](./docs/ARCHITECTURE.md) - System architecture and design decisions
 - [API Specification](./docs/API_SPEC.md) - API endpoints and data models
 - [Vision-Agents Integration](./docs/VISION_AGENTS_INTEGRATION.md) - Python agent setup
+- [HeyGen Avatar Setup](./apps/agent/HEYGEN_SETUP.md) - Interactive avatar configuration
 
 ## Support
 

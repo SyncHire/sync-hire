@@ -10,17 +10,15 @@ This agent:
 5. Sends results to Next.js webhook
 """
 
-import os
 import asyncio
 import httpx
 import logging
 from typing import List
-from datetime import datetime
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
-from dotenv import load_dotenv
 
 # FastAPI imports (for HTTP endpoints)
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
@@ -28,10 +26,14 @@ import uvicorn
 # Vision-Agents imports
 from vision_agents.core.edge.types import User
 from vision_agents.core.agents import Agent
-from vision_agents.plugins import getstream, openai, gemini
+from vision_agents.plugins import getstream, openai, gemini, heygen
+from vision_agents.plugins.heygen import VideoQuality
 
 # Custom processors
 from processors.interview_completion_processor import InterviewCompletionProcessor
+
+# Configuration
+from config import Config
 
 # Setup logging
 logging.basicConfig(
@@ -53,9 +55,6 @@ logger.info("=" * 80)
 logger.info("Agent started - logging to agent.log")
 logger.info("=" * 80)
 
-# Load environment variables
-load_dotenv()
-
 
 # Lifespan context manager for startup/shutdown
 @asynccontextmanager
@@ -67,11 +66,7 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting SyncHire AI Interview Agent...")
 
     # Only initialize if API keys are configured
-    stream_key = os.getenv("STREAM_API_KEY")
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    openai_key = os.getenv("OPENAI_API_KEY")
-
-    if stream_key and (gemini_key or openai_key):
+    if Config.STREAM_API_KEY and (Config.GEMINI_API_KEY or Config.OPENAI_API_KEY):
         try:
             await interview_agent.initialize()
         except Exception as e:
@@ -136,23 +131,80 @@ class HealthResponse(BaseModel):
 def get_llm():
     """Get the appropriate LLM based on available API keys.
     Prioritizes Gemini if API key is set, falls back to OpenAI."""
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    openai_key = os.getenv("OPENAI_API_KEY")
-
-    if gemini_key:
+    if Config.GEMINI_API_KEY:
         logger.info("🤖 Using Gemini Live for realtime audio")
         # Use default model (gemini-2.5-flash-native-audio-preview)
         # which is specifically optimized for native audio
-        # Disable affective dialog (emotion awareness) as it's not supported
-        config = {
-            "enable_affective_dialog": False,
-        }
-        return gemini.Realtime(config=config)
-    elif openai_key:
+        # Note: Gemini config is passed via environment variable, not constructor
+        return gemini.Realtime()
+    elif Config.OPENAI_API_KEY:
         logger.info("🤖 Using OpenAI Realtime for audio")
         return openai.Realtime()
     else:
         raise ValueError("No API keys configured. Set GEMINI_API_KEY or OPENAI_API_KEY")
+
+
+def get_avatar_publisher():
+    """Get HeyGen avatar publisher if configured, otherwise return None.
+
+    Note: This creates a wrapper class to add the required 'name' attribute
+    that Vision-Agents framework expects from processors.
+    """
+    if not Config.HEYGEN_API_KEY:
+        logger.info("⚠️  HeyGen not configured - agent will be audio-only")
+        return None
+
+    # Map quality string to VideoQuality enum
+    quality_str = Config.HEYGEN_VIDEO_QUALITY.upper()
+    quality_map = {
+        "LOW": VideoQuality.LOW,
+        "MEDIUM": VideoQuality.MEDIUM,
+        "HIGH": VideoQuality.HIGH,
+    }
+    quality = quality_map.get(quality_str, VideoQuality.LOW)
+
+    logger.info(f"🎭 Configuring HeyGen avatar: {Config.HEYGEN_AVATAR_ID} (Quality: {quality_str})")
+
+    try:
+        # Create avatar publisher
+        publisher = heygen.AvatarPublisher(
+            avatar_id=Config.HEYGEN_AVATAR_ID,
+            quality=quality,
+            resolution=(1920, 1080),
+            api_key=Config.HEYGEN_API_KEY
+        )
+
+        # Add 'name' attribute required by Vision-Agents framework
+        # This is a workaround for missing attribute in HeyGen plugin
+        if not hasattr(publisher, 'name'):
+            publisher.name = "heygen_avatar"
+            logger.debug("Added 'name' attribute to AvatarPublisher")
+
+        return publisher
+
+    except RuntimeError as e:
+        error_msg = str(e)
+
+        # Check for specific HeyGen API errors
+        if "Concurrent limit reached" in error_msg:
+            logger.error("❌ HeyGen Error: Concurrent session limit reached")
+            logger.error("   Your HeyGen plan only allows limited concurrent sessions.")
+            logger.error("   Either upgrade your HeyGen plan or wait for other sessions to end.")
+            logger.info("⚠️  Continuing without avatar - agent will be audio-only")
+        elif "400" in error_msg or "401" in error_msg or "403" in error_msg:
+            logger.error(f"❌ HeyGen API Error: {error_msg}")
+            logger.error("   Check your HEYGEN_API_KEY and avatar permissions")
+            logger.info("⚠️  Continuing without avatar - agent will be audio-only")
+        else:
+            logger.error(f"❌ HeyGen Error: {error_msg}")
+            logger.info("⚠️  Continuing without avatar - agent will be audio-only")
+
+        return None
+
+    except Exception as e:
+        logger.error(f"❌ Unexpected error initializing HeyGen avatar: {type(e).__name__}: {e}")
+        logger.info("⚠️  Continuing without avatar - agent will be audio-only")
+        return None
 
 
 class InterviewAgent:
@@ -161,7 +213,7 @@ class InterviewAgent:
     def __init__(self):
         self.agent = None
         self.current_interview = None
-        self.nextjs_webhook_url = os.getenv("NEXTJS_WEBHOOK_URL", "http://localhost:3000")
+        self.nextjs_webhook_url = Config.NEXTJS_WEBHOOK_URL
         self.is_initialized = False
 
     async def initialize(self):
@@ -260,6 +312,16 @@ Guidelines:
         # Create a NEW agent instance for this interview
         # This allows multiple concurrent interviews without conflicts
         logger.info("🤖 Creating new agent instance for this interview...")
+
+        # Build processors list
+        processors = []
+
+        # Add HeyGen avatar if configured
+        avatar_publisher = get_avatar_publisher()
+        if avatar_publisher:
+            processors.append(avatar_publisher)
+            logger.info("✅ HeyGen avatar enabled for this interview")
+
         interview_agent = Agent(
             edge=getstream.Edge(),
             agent_user=User(
@@ -267,7 +329,7 @@ Guidelines:
             ),
             instructions=personalized_instructions,
             llm=get_llm(),
-            processors=[]
+            processors=processors
         )
 
         # Register agent user with Stream
@@ -280,7 +342,7 @@ Guidelines:
             "candidate_name": candidate_name,
             "job_title": job_title,
             "questions": questions,
-            "started_at": datetime.utcnow().isoformat()
+            "started_at": datetime.now(timezone.utc).isoformat()
         }
 
         # Join the existing Stream call (call was already created by Next.js)
@@ -319,9 +381,10 @@ Guidelines:
                 completion_callback=end_call_callback
             )
 
-            # Add processor to agent
+            # Add completion processor to agent (after avatar processor if present)
             interview_agent.processors.append(completion_processor)
             await completion_processor.setup(interview_agent)
+            logger.info("✅ Interview completion processor added")
 
             # Join call and let agent run autonomously
             # The agent will automatically detect participants and start the interview
@@ -393,7 +456,7 @@ After each answer, either ask a follow-up or move to the next question.
             "candidate_name": candidate_name,
             "job_title": job_title,
             "duration_minutes": round(duration_minutes, 2),
-            "completed_at": datetime.utcnow().isoformat(),
+            "completed_at": datetime.now(timezone.utc).isoformat(),
             "status": "completed"
         }
 
@@ -422,7 +485,7 @@ async def health_check():
         status="healthy",
         service="sync-hire-vision-agent",
         version="0.2.0",
-        timestamp=datetime.utcnow().isoformat(),
+        timestamp=datetime.now(timezone.utc).isoformat(),
         agent_initialized=interview_agent.is_initialized
     )
 
@@ -499,12 +562,9 @@ async def join_interview(request: JoinInterviewRequest, background_tasks: Backgr
 async def root():
     """Root endpoint"""
     # Determine which LLM is active
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    openai_key = os.getenv("OPENAI_API_KEY")
-
-    if gemini_key:
+    if Config.GEMINI_API_KEY:
         llm_name = "Google Gemini 2.0 Flash"
-    elif openai_key:
+    elif Config.OPENAI_API_KEY:
         llm_name = "OpenAI GPT-4o Realtime"
     else:
         llm_name = "None (no API keys configured)"
@@ -515,6 +575,7 @@ async def root():
         "status": "running",
         "framework": "Vision-Agents",
         "llm": llm_name,
+        "avatar": "HeyGen" if Config.HEYGEN_API_KEY else "Audio-only",
         "agent_initialized": interview_agent.is_initialized,
         "endpoints": {
             "health": "/health",
@@ -525,11 +586,10 @@ async def root():
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8080"))
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=port,
+        port=Config.PORT,
         reload=True,
         log_level="info",
     )

@@ -6,6 +6,8 @@ requires-python = ">=3.11"
 dependencies = [
     # Vision-Agents from GitHub main with Gemini and OpenAI support
     "vision-agents[gemini,getstream,openai]>=0.2.0",
+    # Vision-Agents HeyGen plugin for interactive avatar
+    "vision-agents-plugins-heygen>=0.1.0",
     # Vision-Agents profiling dependency (required by GitHub version)
     "pyinstrument>=5.0.0",
     # Web framework

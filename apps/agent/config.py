@@ -19,11 +19,16 @@ class Config:
     STREAM_API_SECRET: Optional[str] = os.getenv("STREAM_API_SECRET")
 
     # OpenAI
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-realtime-preview")
 
     # Alternative: Gemini
-    # GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+
+    # HeyGen Avatar
+    HEYGEN_API_KEY: Optional[str] = os.getenv("HEYGEN_API_KEY")
+    HEYGEN_AVATAR_ID: str = os.getenv("HEYGEN_AVATAR_ID", "default")
+    HEYGEN_VIDEO_QUALITY: str = os.getenv("HEYGEN_VIDEO_QUALITY", "LOW")
 
     # ElevenLabs (TTS)
     ELEVENLABS_API_KEY: Optional[str] = os.getenv("ELEVENLABS_API_KEY")
@@ -41,6 +46,7 @@ class Config:
     # Agent Settings
     AGENT_FPS: int = int(os.getenv("AGENT_FPS", "10"))
     AGENT_TIMEOUT: int = int(os.getenv("AGENT_TIMEOUT", "3600"))  # 1 hour
+    PORT: int = int(os.getenv("PORT", "8080"))
 
     @classmethod
     def validate(cls) -> bool:

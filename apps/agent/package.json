@@ -6,6 +6,7 @@
     "dev": "uv run python main.py",
     "build": "echo 'Python agent - no build step'",
     "start": "uv run python main.py",
-    "type-check": "uv run mypy main.py config.py"
+    "type-check": "uv run mypy main.py config.py",
+    "sync": "uv sync"
   }
 }

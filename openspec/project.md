@@ -18,43 +18,106 @@ SyncHire is a real-time AI-powered interview platform that revolutionizes the hi
 - Structured interview results with hiring recommendations
 - Recording storage and playback for review
 
+## Implementation Status
+
+**Legend:**
+- ✅ **Completed** - Fully implemented and tested
+- 🚧 **In Progress** - Currently being developed
+- 📋 **Planned** - Documented but not yet started
+- ❌ **Not Implemented** - Needs to be built
+
+### Infrastructure (Foundation)
+- ✅ Monorepo setup (Turborepo + PNPM)
+- ✅ Next.js 16 application with TypeScript 5
+- ✅ Python FastAPI agent with minimal endpoints
+- ✅ Docker Compose configuration for local development
+- ✅ Next.js ↔ Python API communication (HTTP/REST)
+- ✅ Stream Video SDK integration (Node + React SDKs)
+- ✅ Vision-Agents framework v0.2.0 integration
+- 📋 Biome configuration (linting and formatting)
+- 📋 CI/CD pipeline (GitHub Actions)
+
+### Frontend & UI
+- ✅ Basic Next.js App Router structure
+- ✅ TanStack Query (React Query) setup
+- 📋 Shadcn UI component library
+- 📋 Tailwind CSS v4 configuration
+- 📋 Authentication UI (login, signup)
+- 📋 Job posting creation form
+- 📋 Interview room UI
+- 📋 Results dashboard
+
+### Backend Services
+- ❌ Database setup (Prisma + PostgreSQL/Supabase)
+- ❌ Authentication (NextAuth.js v5)
+- ❌ File storage (Supabase Storage)
+- 📋 AI question generation API (Gemini 2.0 Flash)
+- 📋 CV analysis API (Gemini 2.0 Flash)
+- 📋 Interview summary generation API (Gemini 2.0 Flash)
+- 📋 Webhook handlers for interview completion
+
+### AI Interview Agent
+- ✅ FastAPI server with health endpoint
+- ✅ Vision-Agents framework integration
+- 🚧 OpenAI Realtime API integration
+- 🚧 Gemini Live API fallback
+- 🚧 Stream Video agent connection
+- 📋 Interview instructions (personality and flow)
+- 📋 Real-time question adaptation logic
+- 📋 Interview completion detection
+- 📋 Transcript export to Next.js
+
+### Deployment
+- 📋 Vercel deployment (Next.js)
+- 📋 Google Cloud Run deployment (Python agent)
+- 📋 Environment variable configuration
+- 📋 Production monitoring (Sentry)
+
+**Current Phase:** Foundation complete, transitioning to AI integration and feature development.
+
 ## Tech Stack
 
 ### Frontend & Primary Backend (90% of codebase)
-- **Framework:** Next.js 14 with App Router
-- **UI Library:** React 18
-- **Language:** TypeScript (strict mode)
-- **Styling:** Tailwind CSS + Shadcn UI components
-- **State Management:** Zustand (lightweight, TypeScript-first)
-- **Form Handling:** React Hook Form + Zod validation
-- **Video SDK:** Stream Video React SDK (WebRTC)
-- **Animations:** Framer Motion
+- **Framework:** Next.js 16 with App Router (latest stable)
+- **UI Library:** React 19.2 (with React Compiler support)
+- **Language:** TypeScript 5 (strict mode)
+- **Styling:** Tailwind CSS v4 (beta) + Shadcn UI components
+- **State Management:** Zustand (lightweight, TypeScript-first) - _Planned_
+- **Form Handling:** React Hook Form + Zod validation - _Planned_
+- **Video SDK:** Stream Video React SDK v1.25+ (WebRTC)
+- **Animations:** Framer Motion - _Planned_
+- **Data Fetching:** TanStack Query (React Query) v5.90+
 
 ### Backend Services
 - **API Framework:** Next.js API Routes (serverless)
-- **Database ORM:** Prisma
-- **Database:** PostgreSQL via Supabase
-- **Authentication:** NextAuth.js (JWT sessions, OAuth support)
-- **File Storage:** Supabase Storage (CV uploads, recordings)
-- **AI Integration:** Google Gemini 2.0 Flash (question generation, CV analysis, summary generation)
+- **Database ORM:** Prisma - _Not Yet Implemented_
+- **Database:** PostgreSQL via Supabase - _Planned_
+- **Authentication:** NextAuth.js v5 (JWT sessions, OAuth support) - _Planned_
+- **File Storage:** Supabase Storage (CV uploads, recordings) - _Planned_
+- **AI Integration:** Google Gemini 2.0 Flash (question generation, CV analysis, summary generation) - _Planned_
 
 ### AI Interview Agent (10% of codebase - Python Microservice)
-- **Framework:** GetStream Vision-Agents
-- **Language:** Python 3.13
-- **LLM Provider:** OpenAI Realtime API (primary)
-- **LLM Fallback:** Google Gemini Live (cost-effective alternative)
+- **Framework:** GetStream Vision-Agents v0.2.0+
+- **Language:** Python 3.11+ (tested with 3.11, 3.12, 3.13)
+- **Package Manager:** uv (fast Python package installer)
+- **LLM Provider:** OpenAI Realtime API (primary) - _Integration in Progress_
+- **LLM Fallback:** Google Gemini Live (cost-effective alternative) - _Integration in Progress_
 - **STT:** Deepgram (via Vision-Agents integration)
 - **TTS:** ElevenLabs (via Vision-Agents integration)
-- **Web Server:** FastAPI (optional HTTP endpoints)
+- **Web Server:** FastAPI v0.115+ with Uvicorn
 - **Deployment:** Docker container on Google Cloud Run
+- **Type Checking:** mypy for static type analysis
 
 ### Infrastructure & Services
-- **Frontend Hosting:** Vercel (Next.js deployment with edge functions)
-- **Agent Hosting:** Google Cloud Run (Python container, serverless)
+- **Monorepo Manager:** Turborepo (task orchestration, caching)
+- **Package Manager:** PNPM v9.15+ (Node.js workspaces), uv (Python)
+- **Frontend Hosting:** Vercel (Next.js deployment with edge functions) - _Planned_
+- **Agent Hosting:** Google Cloud Run (Python container, serverless) - _Planned_
 - **Video Infrastructure:** Stream Video (managed WebRTC service)
-- **Database:** Supabase (managed PostgreSQL with real-time subscriptions)
-- **Monitoring:** Sentry + Vercel Analytics
-- **CI/CD:** GitHub Actions
+- **Database:** Supabase (managed PostgreSQL with real-time subscriptions) - _Planned_
+- **Monitoring:** Sentry + Vercel Analytics - _Planned_
+- **CI/CD:** GitHub Actions - _Planned_
+- **Development:** Docker Compose (local multi-service development)
 
 ## Project Conventions
 
@@ -72,8 +135,10 @@ SyncHire is a real-time AI-powered interview platform that revolutionizes the hi
   - One component per file
   - Co-locate tests with source files (e.g., `InterviewRoom.test.tsx`)
   - Export named exports (no default exports except for Next.js pages)
-- **Formatting:** Prettier with 2-space indentation, single quotes, trailing commas
-- **Linting:** ESLint with TypeScript plugin, React hooks rules
+- **Formatting & Linting:** Biome v2.2+ (unified formatter and linter)
+  - Replaces both Prettier and ESLint
+  - Run via: `pnpm lint` (check) and `pnpm format` (fix)
+  - Configuration in `biome.json`
 
 **Python:**
 - **Type Hints:** Use Python type hints for all function signatures
@@ -82,14 +147,50 @@ SyncHire is a real-time AI-powered interview platform that revolutionizes the hi
   - Functions/methods: snake_case (e.g., `join_interview()`)
   - Constants: UPPER_SNAKE_CASE (e.g., `AGENT_TIMEOUT`)
 - **Docstrings:** Use Google-style docstrings for all public functions
-- **Formatting:** Black formatter with 88-character line length
-- **Linting:** Flake8 + mypy for type checking
+- **Formatting:** Ruff v0.8+ (fast Python linter and formatter)
+- **Type Checking:** mypy v1.0+ for static type analysis
+- **Package Management:** Use `uv` for all Python operations (faster than pip)
+  - Install packages: `uv add <package>`
+  - Remove packages: `uv remove <package>`
+  - Run scripts: `uv run python <script.py>`
+  - Type checking: `uv run mypy <file.py>`
 
 **General Rules:**
 - **No shorthand if conditions** - Always use explicit conditions (never use `if (foo)` - use `if (foo !== null && foo !== undefined)`)
 - **Never use try/catch in tests** - Always use `expect(...).rejects.toThrow()` for async error testing
 - **No emojis in code** - Professional codebase, emojis only in user-facing UI when explicitly requested
 - **Comments:** Explain "why" not "what" - code should be self-documenting
+
+### Project Structure
+
+**Monorepo Organization:**
+```
+sync-hire/
+├── apps/
+│   ├── web/              # Next.js 16 application (frontend + API routes)
+│   │   ├── src/
+│   │   │   ├── app/      # Next.js App Router (pages, layouts, API routes)
+│   │   │   ├── components/  # React components
+│   │   │   └── lib/      # Shared utilities, clients
+│   │   ├── package.json
+│   │   └── next.config.js
+│   └── agent/            # Python FastAPI agent (AI interview service)
+│       ├── main.py       # FastAPI application entry point
+│       ├── pyproject.toml  # Python dependencies (uv compatible)
+│       └── .env          # Python environment variables
+├── docs/                 # Project documentation
+├── openspec/             # OpenSpec specifications and changes
+├── package.json          # Root workspace configuration
+├── pnpm-workspace.yaml   # PNPM workspace definition
+├── turbo.json            # Turborepo task configuration
+└── docker-compose.yml    # Local development orchestration
+```
+
+**Workspace Configuration:**
+- **Root:** Turborepo orchestration, shared scripts
+- **apps/web:** Independent Next.js workspace with own dependencies
+- **apps/agent:** Python microservice with pyproject.toml (not part of PNPM workspace)
+- **Shared:** No shared packages yet (planned for future)
 
 ### Architecture Patterns
 
@@ -107,7 +208,7 @@ SyncHire is a real-time AI-powered interview platform that revolutionizes the hi
 - **Filtering/Sorting:** Query parameters for complex queries
 - **Versioning:** Prepare for `/api/v1/...` in future (currently unversioned)
 
-**Database Patterns:**
+**Database Patterns:** _Not Yet Implemented - Planned Design_
 - **Prisma ORM:** Type-safe database access with generated types
 - **Migrations:** All schema changes via Prisma migrations
 - **Connection pooling:** Use Prisma connection pooling for serverless
@@ -116,17 +217,17 @@ SyncHire is a real-time AI-powered interview platform that revolutionizes the hi
 - **Timestamps:** All tables have `createdAt` and `updatedAt` fields
 
 **Frontend Patterns:**
-- **Server Components:** Use React Server Components by default (Next.js 14 App Router)
+- **Server Components:** Use React Server Components by default (Next.js 16 App Router)
 - **Client Components:** Only mark as `'use client'` when necessary (interactivity, hooks)
-- **Data Fetching:** Server-side data fetching in Server Components, SWR for client-side
-- **Route Handlers:** API routes in `app/api/` directory
+- **Data Fetching:** Server-side data fetching in Server Components, TanStack Query for client-side
+- **Route Handlers:** API routes in `apps/web/src/app/api/` directory
 - **Layouts:** Shared layouts for common UI patterns
 - **Loading/Error States:** Use `loading.tsx` and `error.tsx` conventions
 
 **State Management:**
-- **Server State:** Fetch on server, pass to components via props
-- **Client State:** Zustand for global client state (user session, UI preferences)
-- **Form State:** React Hook Form for complex forms
+- **Server State:** Fetch on server, pass to components via props, or use TanStack Query for client-side caching
+- **Client State:** Zustand for global client state (user session, UI preferences) - _Planned_
+- **Form State:** React Hook Form for complex forms - _Planned_
 - **URL State:** Use search params for shareable state
 
 **Real-time Interview Flow:**
@@ -216,17 +317,23 @@ SyncHire is a real-time AI-powered interview platform that revolutionizes the hi
 7. Address review feedback
 8. Squash merge into `master`
 
-**Pre-commit Hooks:**
-- Prettier formatting check
-- ESLint validation
+**Pre-commit Hooks:** _Planned_
+- Biome formatting and linting
 - TypeScript type checking
 - Unit test execution
 - Commit message format validation
 
-**Deployment:**
+**Deployment:** _Planned_
 - **Automatic:** Push to `master` triggers deployment to production (Vercel + Cloud Run)
 - **Preview:** Each PR gets preview deployment on Vercel
 - **Rollback:** Use Vercel deployment history or revert commit
+
+**Development Commands:**
+- `pnpm dev` - Start all services (Next.js on :3000, Python agent on :8080)
+- `pnpm build` - Build all applications
+- `pnpm lint` - Lint all code (Biome for JS/TS, Ruff for Python)
+- `pnpm clean` - Clean all build artifacts
+- `docker-compose up --build` - Start all services in Docker
 
 ## Domain Context
 
@@ -455,20 +562,29 @@ SyncHire is a real-time AI-powered interview platform that revolutionizes the hi
 ## Key Project Files
 
 **Critical Configuration Files:**
-- `/prisma/schema.prisma` - Database schema and models
-- `/next.config.js` - Next.js configuration
-- `/.env.local` - Next.js environment variables
-- `/interview-agent/.env` - Python agent environment variables
-- `/interview-agent/interview_instructions.md` - AI agent personality (Markdown configuration)
+- `/apps/web/package.json` - Next.js dependencies and scripts
+- `/apps/web/next.config.js` - Next.js configuration - _To be created_
+- `/apps/web/.env.local` - Next.js environment variables - _To be created_
+- `/apps/agent/pyproject.toml` - Python dependencies (uv compatible)
+- `/apps/agent/.env` - Python agent environment variables
+- `/apps/agent/interview_instructions.md` - AI agent personality - _To be created_
+- `/package.json` - Root workspace configuration (Turborepo scripts)
+- `/turbo.json` - Turborepo task pipeline configuration
+- `/pnpm-workspace.yaml` - PNPM workspace definition
+- `/docker-compose.yml` - Local development orchestration
+- `/biome.json` - Biome formatter/linter configuration - _To be created_
 
 **Core Application Structure:**
-- `/src/app/` - Next.js App Router pages and API routes
-- `/src/components/` - React components (UI, Shadcn)
-- `/src/lib/` - Shared utilities (Prisma client, AI clients)
-- `/interview-agent/` - Python microservice (Vision-Agents)
+- `/apps/web/src/app/` - Next.js App Router pages and API routes
+- `/apps/web/src/components/` - React components (UI, Shadcn)
+- `/apps/web/src/lib/` - Shared utilities (Stream SDK clients, AI clients)
+- `/apps/agent/main.py` - Python FastAPI agent entry point
+- `/apps/agent/` - Python microservice (Vision-Agents integration)
 
 **Documentation:**
-- `/docs/ARCHITECTURE.md` - Complete system architecture (this is the source of truth)
+- `/docs/ARCHITECTURE.md` - Complete system architecture
 - `/docs/API_SPEC.md` - API endpoint specifications with examples
 - `/docs/VISION_AGENTS_INTEGRATION.md` - Python integration guide
-- `/openspec/project.md` - This file (project context)
+- `/openspec/project.md` - This file (project context and conventions)
+- `/README.md` - Quick start guide and project overview
+- `/CHANGELOG.md` - Version history and changes
