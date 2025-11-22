@@ -69,8 +69,6 @@ function InterviewCallContent({
   // Full transcript history built from caption events
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
 
-  const processedCaptionIds = useRef<Set<string>>(new Set());
-
   const scrollRef = useRef<HTMLDivElement>(null);
   const [agentConnected, setAgentConnected] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -111,58 +109,59 @@ function InterviewCallContent({
     setAgentConnected(hasAgent);
   }, [participants]);
 
+  // Track last speaker to merge consecutive messages
+  const lastSpeakerRef = useRef<string | null>(null);
+
   // Build transcript from closed captions - streaming updates
   useEffect(() => {
     if (closedCaptions.length === 0) {
       return;
     }
 
-    // Process each caption - update existing or add new
+    // Process each caption
     closedCaptions.forEach((caption: CallClosedCaption) => {
       const text = caption.text.trim();
       if (!text) {
         return;
       }
 
+      const speakerId = caption.user.id;
       const isAI = caption.user.name?.toLowerCase().includes('interviewer') ||
                    caption.user.name?.toLowerCase().includes('ai') ||
-                   caption.user.id?.startsWith('agent-');
+                   speakerId?.startsWith('agent-');
 
-      const speakerId = caption.user.id;
-      const timestamp = caption.start_time ? new Date(caption.start_time).getTime() : Date.now();
+      console.log('📝 Caption from', caption.user.name, ':', text.substring(0, 50) + '...');
 
       setTranscript(prev => {
         const lastMessage = prev[prev.length - 1];
 
-        // If same speaker and within 10 seconds, update the last message
-        if (lastMessage &&
-            lastMessage.speakerId === speakerId &&
-            timestamp - lastMessage.timestamp < 10000) {
-          // Update last message with new text
-          const updated = [...prev];
-          updated[updated.length - 1] = {
-            ...lastMessage,
-            text: text, // Caption text is cumulative from Stream
-          };
-          return updated;
-        }
-
-        // New speaker or gap - create new message
-        const captionId = `${speakerId}-${timestamp}`;
-        if (processedCaptionIds.current.has(captionId)) {
+        // Same speaker - update the last message text
+        if (lastMessage && lastMessage.speakerId === speakerId) {
+          // Only update if text is different (longer usually)
+          if (text !== lastMessage.text) {
+            const updated = [...prev];
+            updated[updated.length - 1] = {
+              ...lastMessage,
+              text: text,
+            };
+            return updated;
+          }
           return prev;
         }
-        processedCaptionIds.current.add(captionId);
 
+        // Different speaker - add new message
+        const newId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         return [...prev, {
-          id: captionId,
+          id: newId,
           speakerId,
           speakerName: caption.user.name || 'Unknown',
           text,
-          timestamp,
+          timestamp: Date.now(),
           isAI,
         }];
       });
+
+      lastSpeakerRef.current = speakerId;
     });
   }, [closedCaptions]);
 
@@ -434,11 +433,10 @@ function InterviewCallContent({
             </div>
 
             {/* User PIP (Picture-in-Picture) */}
-            <div className="absolute top-6 right-6 w-56 aspect-video rounded-xl bg-zinc-900 overflow-hidden border border-white/20 shadow-2xl">
+            <div className="pip-video-container absolute top-6 right-6 w-56 aspect-video rounded-xl bg-zinc-900 overflow-hidden border border-white/20 shadow-2xl">
               {localParticipant ? (
                 <ParticipantView
                   participant={localParticipant}
-                  className="h-full w-full object-cover"
                   ParticipantViewUI={null}
                 />
               ) : (
