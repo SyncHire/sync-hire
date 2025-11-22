@@ -125,7 +125,7 @@ function InterviewCallContent({
           const speakerId = isAgent ? 'agent' : 'user';
           const now = Date.now();
           const timeSinceLastMessage = lastMessage ? now - lastMessage.timestamp : Infinity;
-          const TIME_GAP_THRESHOLD = 1500; // 1.5 seconds
+          const TIME_GAP_THRESHOLD = 2000; // 2 seconds
 
           // If last message is from same speaker AND within time threshold, append to it
           if (lastMessage && lastMessage.isAI === isAgent && timeSinceLastMessage < TIME_GAP_THRESHOLD) {

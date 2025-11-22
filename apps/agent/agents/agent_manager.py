@@ -231,7 +231,7 @@ class AgentManager:
 
             # Interview complete - wait for final audio to finish streaming
             logger.info(f"⏰ Interview complete for {call_id}, waiting for final audio...")
-            await asyncio.sleep(5)
+            await asyncio.sleep(10)
 
             # Get data before cleanup
             duration = completion_processor.get_duration_minutes()

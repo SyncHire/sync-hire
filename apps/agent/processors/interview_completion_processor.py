@@ -78,6 +78,11 @@ class InterviewCompletionProcessor(Processor):
         # Transcript collection
         self.transcript: List[TranscriptEntry] = []
 
+        # Agent speech accumulator for question matching
+        self.agent_speech_accumulator = ""
+        self.accumulator_last_update = None
+        self.ACCUMULATOR_GAP_THRESHOLD = 2.0  # seconds - reset accumulator after this gap
+
         # Closing keywords and phrases
         self.closing_keywords = {
             "goodbye", "good bye", "bye",
@@ -132,26 +137,42 @@ class InterviewCompletionProcessor(Processor):
         except Exception as e:
             logger.warning(f"⚠️ Failed to send progress event: {e}")
 
-    def _check_question_match(self, speech_text: str) -> bool:
-        """Check if agent speech matches the next question and update progress"""
+    def _check_question_match(self, accumulated_text: str) -> Optional[int]:
+        """Check if accumulated agent speech matches any upcoming question.
+        Returns the question index if matched, None otherwise."""
         if self.current_question_index >= len(self.questions):
-            return False
+            return None
 
-        next_question = self.questions[self.current_question_index]
-        question_text = next_question["text"].lower()
-        speech_lower = speech_text.lower()
+        accumulated_lower = accumulated_text.lower()
+        accumulated_words = set(accumulated_lower.split())
 
-        # Check if significant portion of the question text appears in the speech
-        # Use first 30 chars or key phrases from the question
-        key_phrase = question_text[:50] if len(question_text) > 50 else question_text
-        words = key_phrase.split()
-        # Match if at least 3 consecutive words from question appear in speech
-        for i in range(len(words) - 2):
-            phrase = " ".join(words[i:i+3])
-            if phrase in speech_lower:
-                return True
+        # Check questions starting from current index
+        for idx in range(self.current_question_index, len(self.questions)):
+            question = self.questions[idx]
+            question_text = question["text"].lower()
+            question_words = set(question_text.split())
 
-        return False
+            # Calculate word overlap percentage
+            if len(question_words) == 0:
+                continue
+
+            common_words = accumulated_words & question_words
+            # Ignore common filler words
+            filler_words = {"the", "a", "an", "is", "are", "was", "were", "to", "for", "and", "or", "in", "on", "at", "of", "your", "you", "me", "can", "could", "would", "about", "with"}
+            meaningful_common = common_words - filler_words
+            meaningful_question = question_words - filler_words
+
+            if len(meaningful_question) == 0:
+                continue
+
+            match_ratio = len(meaningful_common) / len(meaningful_question)
+
+            # Match if 40%+ of meaningful question words appear in accumulated speech
+            if match_ratio >= 0.4:
+                logger.info(f"📊 Question match: {match_ratio:.0%} overlap for Q{idx + 1}")
+                return idx
+
+        return None
 
     async def setup(self, agent):
         """Initialize processor when agent starts"""
@@ -161,16 +182,38 @@ class InterviewCompletionProcessor(Processor):
         # Register custom event class to prevent framework errors when receiving our events
         agent.events.register(CustomCallEvent)
 
+        async def _check_accumulator_for_question():
+            """Check accumulated speech for question match and send progress if found"""
+            if not self.agent_speech_accumulator:
+                return
+
+            matched_idx = self._check_question_match(self.agent_speech_accumulator)
+            if matched_idx is not None and matched_idx >= self.current_question_index:
+                current_q = self.questions[matched_idx]
+                await self._send_progress_event(matched_idx, current_q["category"])
+                self.current_question_index = matched_idx + 1
+                self.questions_asked = matched_idx + 1
+                logger.info(f"📊 Progress updated to Q{matched_idx + 1} based on accumulated speech")
+
+            # Reset accumulator after checking
+            self.agent_speech_accumulator = ""
+
         @agent.events.subscribe
         async def on_agent_speech(event: RealtimeAgentSpeechTranscriptionEvent):
             """Track agent speech to detect closing and questions"""
-            self.last_agent_speech_time = time.time()
+            now = time.time()
             text = event.text.strip()
             text_lower = text.lower()
 
+            # Check if there's been a gap - if so, check accumulated text first
+            if self.accumulator_last_update is not None:
+                gap = now - self.accumulator_last_update
+                if gap > self.ACCUMULATOR_GAP_THRESHOLD:
+                    await _check_accumulator_for_question()
+
             # Add to transcript and broadcast to frontend
             if text:
-                elapsed = time.time() - self.interview_start_time
+                elapsed = now - self.interview_start_time
                 self.transcript.append(TranscriptEntry(
                     speaker="agent",
                     text=text,
@@ -179,24 +222,27 @@ class InterviewCompletionProcessor(Processor):
                 # Send to frontend via custom event
                 await self._send_transcript_event("agent", text, round(elapsed, 2))
 
-            # Count questions and check for question transitions
-            if any(indicator in text_lower for indicator in self.question_indicators):
-                self.questions_asked += 1
-                logger.debug(f"📊 Questions asked: {self.questions_asked}/{self.expected_questions}")
+                # Accumulate speech for question matching
+                if self.agent_speech_accumulator:
+                    self.agent_speech_accumulator += " " + text
+                else:
+                    self.agent_speech_accumulator = text
+                self.accumulator_last_update = now
 
-                # Check if this matches a specific question and update progress
-                if self._check_question_match(text):
-                    current_q = self.questions[self.current_question_index]
-                    await self._send_progress_event(
-                        self.current_question_index,
-                        current_q["category"]
-                    )
-                    self.current_question_index += 1
+            self.last_agent_speech_time = now
 
-            # Detect closing phrases
+            # Detect closing phrases - mark wrap-up/final section as complete
             if any(keyword in text_lower for keyword in self.closing_keywords):
                 self.agent_closing_phrases.append(text)
                 logger.info(f"👋 Agent used closing phrase: '{text}'")
+
+                # Mark the last question (wrap-up) as reached
+                if self.current_question_index < len(self.questions):
+                    last_idx = len(self.questions) - 1
+                    last_q = self.questions[last_idx]
+                    await self._send_progress_event(last_idx, last_q["category"])
+                    self.current_question_index = len(self.questions)
+                    logger.info(f"📊 Marked wrap-up complete (Q{last_idx + 1})")
 
                 # Check if interview should complete
                 await self._check_completion()
@@ -204,6 +250,9 @@ class InterviewCompletionProcessor(Processor):
         @agent.events.subscribe
         async def on_user_speech(event: RealtimeUserSpeechTranscriptionEvent):
             """Track user responses (helps confirm interview is active)"""
+            # User speaking = turn change, check accumulated agent speech for question match
+            await _check_accumulator_for_question()
+
             text = event.text.strip()
             text_lower = text.lower()
 
