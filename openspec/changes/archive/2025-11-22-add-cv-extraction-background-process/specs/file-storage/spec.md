@@ -1,16 +1,4 @@
-# file-storage Specification
-
-## Purpose
-TBD - created by archiving change initialize-synchire-monorepo. Update Purpose after archive.
-## Requirements
-### Requirement: Firebase Admin SDK Setup
-The system SHALL configure Firebase Admin SDK for Cloud Storage access.
-
-#### Scenario: Upload file
-**Given** service account credentials are configured
-**When** file is uploaded to Firebase Storage
-**Then** file is stored successfully
-**And** public URL is returned
+## ADDED Requirements
 
 ### Requirement: CV Extraction Storage
 The system SHALL extend the existing file storage system to support CV extraction data alongside job description extraction.
@@ -42,4 +30,3 @@ The system SHALL manage uploaded CV files using the same file management pattern
 - **THEN** the system shall use the same retrieval patterns as JD data
 - **AND** shall support hash-based lookups
 - **AND** shall handle missing files gracefully
-

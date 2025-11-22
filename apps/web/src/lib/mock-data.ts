@@ -101,6 +101,58 @@ export interface ExtractedJobData {
   employmentType: string;
 }
 
+export interface ExtractedCVData {
+  personalInfo: {
+    fullName: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+    summary?: string;
+    linkedinUrl?: string;
+    githubUrl?: string;
+    portfolioUrl?: string;
+  };
+  experience: Array<{
+    title: string;
+    company: string;
+    location?: string;
+    startDate: string;
+    endDate?: string;
+    current: boolean;
+    description: string[];
+  }>;
+  education: Array<{
+    degree: string;
+    field: string;
+    institution: string;
+    location?: string;
+    startDate: string;
+    endDate?: string;
+    current: boolean;
+    gpa?: string;
+  }>;
+  skills: string[];
+  certifications: Array<{
+    name: string;
+    issuer?: string;
+    issueDate?: string;
+    expiryDate?: string;
+    credentialId?: string;
+  }>;
+  languages: Array<{
+    language: string;
+    proficiency: "Basic" | "Intermediate" | "Advanced" | "Native";
+  }>;
+  projects: Array<{
+    name: string;
+    description: string;
+    technologies: string[];
+    url?: string;
+    startDate?: string;
+    endDate?: string;
+  }>;
+}
+
 export interface JobDescriptionVersion {
   id: string;
   jobPostingId: string;

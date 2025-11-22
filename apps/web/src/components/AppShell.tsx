@@ -27,7 +27,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // After mount, render the correct conditional layout
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-background font-sans text-foreground selection:bg-white/20 selection:text-white transition-colors duration-300">
+      <div className="min-h-screen bg-background font-sans text-foreground transition-colors duration-300">
         <main className="h-screen overflow-hidden">
           {children}
         </main>
@@ -36,7 +36,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-background font-sans text-foreground selection:bg-white/20 selection:text-white transition-colors duration-300">
+    <div className="min-h-screen bg-background font-sans text-foreground transition-colors duration-300">
       {/* Hide header in immersive interview mode */}
       {!isInterview && (
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md transition-colors duration-300">

@@ -11,29 +11,42 @@ import type { StorageInterface } from "@/lib/storage/storage-interface";
 import { generateFileHash } from "@/lib/utils/hash-utils";
 import { geminiClient } from "@/lib/gemini-client";
 import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
+import { inspect } from "node:util";
+import { log } from "node:console";
 
 // Define Zod schema for extracted job data
 const extractedJobDataSchema = z.object({
   title: z
     .string()
+    .nullable()
+    .transform(val => val || "")
     .describe("The job title or position name"),
   company: z
     .string()
     .describe("The company or organization name"),
   responsibilities: z
-    .array(z.string())
+    .array(z.string().nullable().transform(val => val || ""))
+    .transform(arr => arr || [])
     .describe("List of key job responsibilities and duties"),
   requirements: z
-    .array(z.string())
+    .array(z.string().nullable().transform(val => val || ""))
+    .transform(arr => arr || [])
     .describe("List of required skills, qualifications, and experience"),
   seniority: z
     .string()
+    .nullable()
+    .transform(val => val || "")
     .describe("Seniority level (e.g., Junior, Mid-level, Senior, Staff, Principal)"),
   location: z
     .string()
+    .nullable()
+    .transform(val => val || "")
     .describe("Job location or Remote if work-from-home"),
   employmentType: z
     .string()
+    .nullable()
+    .transform(val => val || "")
     .describe("Employment type (e.g., Full-time, Part-time, Contract, Temporary)"),
 });
 

@@ -52,11 +52,39 @@ export default function CandidateJobListings() {
   const [error, setError] = useState<string | null>(null);
   const [matchedInterviews, setMatchedInterviews] = useState<InterviewWithMatch[]>([]);
 
+  /**
+   * Trigger background CV extraction without blocking the main flow
+   */
+  const triggerCVExtraction = useCallback(async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/cv/extract', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('CV extraction completed:', result.data.id, result.data.cached ? 'from cache' : 'new extraction');
+      } else {
+        console.warn('CV extraction failed:', await response.text());
+      }
+    } catch (error) {
+      console.error('CV extraction error:', error);
+      // Don't let extraction failures affect the user experience
+    }
+  }, []);
+
   const handleFileSelect = useCallback(async (file: File) => {
     setError(null);
     setWorkflowStage('processing');
     setProcessingStage('parsing');
     setProcessingProgress(0);
+
+    // Trigger background CV extraction (non-blocking)
+    triggerCVExtraction(file);
 
     try {
       // Simulate CV parsing

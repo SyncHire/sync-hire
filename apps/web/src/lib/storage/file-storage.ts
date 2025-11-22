@@ -1,24 +1,27 @@
 /**
  * File-based Storage Implementation
  *
- * Stores extracted job data, uploads, and created job postings in the file system.
+ * Stores extracted job/CV data, uploads, and created job postings in the file system.
  * Can be easily migrated to database later without changing the interface.
  */
 
 import { promises as fs } from "fs";
 import { join } from "path";
-import type { ExtractedJobData, Job } from "@/lib/mock-data";
+import type { ExtractedJobData, Job, ExtractedCVData } from "@/lib/mock-data";
 import type { StorageInterface } from "./storage-interface";
 
 const DATA_DIR = join(process.cwd(), "data");
-const EXTRACTIONS_DIR = join(DATA_DIR, "jd-extractions");
-const UPLOADS_DIR = join(DATA_DIR, "jd-uploads");
+const JD_EXTRACTIONS_DIR = join(DATA_DIR, "jd-extractions");
+const JD_UPLOADS_DIR = join(DATA_DIR, "jd-uploads");
+const CV_EXTRACTIONS_DIR = join(DATA_DIR, "cv-extractions");
+const CV_UPLOADS_DIR = join(DATA_DIR, "cv-uploads");
 const JOBS_DIR = join(DATA_DIR, "jobs");
 
 export class FileStorage implements StorageInterface {
+  // Job Description methods
   async getExtraction(hash: string): Promise<ExtractedJobData | null> {
     try {
-      const filePath = join(EXTRACTIONS_DIR, `${hash}.json`);
+      const filePath = join(JD_EXTRACTIONS_DIR, `${hash}.json`);
       const data = await fs.readFile(filePath, "utf-8");
       return JSON.parse(data) as ExtractedJobData;
     } catch {
@@ -31,34 +34,85 @@ export class FileStorage implements StorageInterface {
     data: ExtractedJobData
   ): Promise<void> {
     try {
-      await fs.mkdir(EXTRACTIONS_DIR, { recursive: true });
-      const filePath = join(EXTRACTIONS_DIR, `${hash}.json`);
+      await fs.mkdir(JD_EXTRACTIONS_DIR, { recursive: true });
+      const filePath = join(JD_EXTRACTIONS_DIR, `${hash}.json`);
       await fs.writeFile(filePath, JSON.stringify(data, null, 2));
     } catch (error) {
-      console.error("Failed to save extraction:", error);
+      console.error("Failed to save job extraction:", error);
       throw error;
     }
   }
 
   async saveUpload(hash: string, buffer: Buffer): Promise<string> {
     try {
-      await fs.mkdir(UPLOADS_DIR, { recursive: true });
-      const filePath = join(UPLOADS_DIR, hash);
+      await fs.mkdir(JD_UPLOADS_DIR, { recursive: true });
+      const filePath = join(JD_UPLOADS_DIR, hash);
       await fs.writeFile(filePath, buffer);
       return filePath;
     } catch (error) {
-      console.error("Failed to save upload:", error);
+      console.error("Failed to save job upload:", error);
       throw error;
     }
   }
 
   getUploadPath(hash: string): string {
-    return join(UPLOADS_DIR, hash);
+    return join(JD_UPLOADS_DIR, hash);
   }
 
   async hasExtraction(hash: string): Promise<boolean> {
     try {
-      const filePath = join(EXTRACTIONS_DIR, `${hash}.json`);
+      const filePath = join(JD_EXTRACTIONS_DIR, `${hash}.json`);
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // CV methods
+  async getCVExtraction(hash: string): Promise<ExtractedCVData | null> {
+    try {
+      const filePath = join(CV_EXTRACTIONS_DIR, `${hash}.json`);
+      const data = await fs.readFile(filePath, "utf-8");
+      return JSON.parse(data) as ExtractedCVData;
+    } catch {
+      return null;
+    }
+  }
+
+  async saveCVExtraction(
+    hash: string,
+    data: ExtractedCVData
+  ): Promise<void> {
+    try {
+      await fs.mkdir(CV_EXTRACTIONS_DIR, { recursive: true });
+      const filePath = join(CV_EXTRACTIONS_DIR, `${hash}.json`);
+      await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+    } catch (error) {
+      console.error("Failed to save CV extraction:", error);
+      throw error;
+    }
+  }
+
+  async saveCVUpload(hash: string, buffer: Buffer): Promise<string> {
+    try {
+      await fs.mkdir(CV_UPLOADS_DIR, { recursive: true });
+      const filePath = join(CV_UPLOADS_DIR, hash);
+      await fs.writeFile(filePath, buffer);
+      return filePath;
+    } catch (error) {
+      console.error("Failed to save CV upload:", error);
+      throw error;
+    }
+  }
+
+  getCVUploadPath(hash: string): string {
+    return join(CV_UPLOADS_DIR, hash);
+  }
+
+  async hasCVExtraction(hash: string): Promise<boolean> {
+    try {
+      const filePath = join(CV_EXTRACTIONS_DIR, `${hash}.json`);
       await fs.access(filePath);
       return true;
     } catch {
