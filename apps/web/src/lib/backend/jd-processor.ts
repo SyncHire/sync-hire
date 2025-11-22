@@ -17,6 +17,9 @@ const extractedJobDataSchema = z.object({
   title: z
     .string()
     .describe("The job title or position name"),
+  company: z
+    .string()
+    .describe("The company or organization name"),
   responsibilities: z
     .array(z.string())
     .describe("List of key job responsibilities and duties"),
@@ -138,7 +141,7 @@ export class JobDescriptionProcessor {
         model: "gemini-2.5-flash",
         contents: [
           {
-            text: "Extract structured job information from the provided PDF job description. You MUST return a valid JSON object with these exact fields: title, responsibilities (array of strings), requirements (array of strings), seniority, location, and employmentType. All fields must be present even if empty."
+            text: "Extract structured job information from the provided PDF job description. You MUST return a valid JSON object with these exact fields: title, company, responsibilities (array of strings), requirements (array of strings), seniority, location, and employmentType. All fields must be present even if empty."
           },
           {
             inlineData: {
@@ -174,6 +177,7 @@ export class JobDescriptionProcessor {
       console.log("🔄 Returning empty structured data as fallback");
       return {
         title: "",
+        company: "",
         responsibilities: [],
         requirements: [],
         seniority: "",

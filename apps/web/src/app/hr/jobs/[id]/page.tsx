@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Clock, MapPin, DollarSign, Video, Type, Code, Plus, Trash2, MoreHorizontal, Wand2, BrainCircuit } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, DollarSign, Video, Type, Code, Plus, Trash2, MoreHorizontal, Wand2, BrainCircuit, Building2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -90,6 +90,10 @@ export default function HRJDDetail() {
                  Active
               </Badge>
             </div>
+            <p className="text-lg text-muted-foreground mb-3 flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              {job.company}
+            </p>
             <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
               <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/50 border border-border">
                 <MapPin className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" /> {job.location}

@@ -183,7 +183,7 @@ export default function JobCreationPage() {
           seniority: state.extractedData.seniority,
           customQuestions: state.customQuestions,
           originalJDText: JSON.stringify(state.extractedData, null, 2),
-          company: "Company",
+          company: state.extractedData.company || "Company",
           employerId: "employer-1",
           aiSuggestions: state.acceptedSuggestions,
         }),
@@ -264,6 +264,17 @@ export default function JobCreationPage() {
                         value={state.extractedData.title}
                         onChange={(e) =>
                           handleExtractedDataChange("title", e.target.value)
+                        }
+                        className="mt-1"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-foreground">Company</label>
+                      <Input
+                        value={state.extractedData.company}
+                        onChange={(e) =>
+                          handleExtractedDataChange("company", e.target.value)
                         }
                         className="mt-1"
                       />
