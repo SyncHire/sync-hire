@@ -99,10 +99,21 @@ interface InterviewDetailsResponse {
   };
 }
 
+interface UseInterviewDetailsOptions {
+  /** Enable polling every N milliseconds. Set to false to disable polling. */
+  refetchInterval?: number | false;
+}
+
 /**
  * Hook for fetching a single interview with full details
+ * Supports polling for waiting on AI evaluation
  */
-export function useInterviewDetails(interviewId: string | null) {
+export function useInterviewDetails(
+  interviewId: string | null,
+  options: UseInterviewDetailsOptions = {},
+) {
+  const { refetchInterval = 3000 } = options;
+
   return useQuery<InterviewDetailsResponse>({
     queryKey: ["/api/interviews", interviewId],
     queryFn: async () => {
@@ -116,7 +127,8 @@ export function useInterviewDetails(interviewId: string | null) {
       return response.json();
     },
     enabled: !!interviewId,
-    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
+    staleTime: 5 * 1000, // Consider data fresh for 5 seconds when polling
+    refetchInterval: interviewId ? refetchInterval : false,
   });
 }
 
