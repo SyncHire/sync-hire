@@ -462,18 +462,25 @@ export default function JobCreationPage() {
                         placeholder="Enter each responsibility on a new line..."
                       />
                     ) : (
-                      <ul className="mt-1 space-y-1.5 text-sm text-muted-foreground">
+                      <div className="mt-2 space-y-2">
                         {state.extractedData.responsibilities.length === 0 ? (
-                          <li className="text-muted-foreground/60 italic">No responsibilities listed</li>
+                          <p className="text-muted-foreground/60 italic text-sm py-4 text-center">
+                            No responsibilities listed
+                          </p>
                         ) : (
                           state.extractedData.responsibilities.map((item, i) => (
-                            <li key={i} className="flex items-start gap-2">
-                              <span className="text-primary mt-1">•</span>
-                              <span>{item}</span>
-                            </li>
+                            <div
+                              key={i}
+                              className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                            >
+                              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-medium flex items-center justify-center">
+                                {i + 1}
+                              </span>
+                              <span className="text-sm text-foreground leading-relaxed">{item}</span>
+                            </div>
                           ))
                         )}
-                      </ul>
+                      </div>
                     )}
                   </div>
 
@@ -516,18 +523,25 @@ export default function JobCreationPage() {
                         placeholder="Enter each requirement on a new line..."
                       />
                     ) : (
-                      <ul className="mt-1 space-y-1.5 text-sm text-muted-foreground">
+                      <div className="mt-2 space-y-2">
                         {state.extractedData.requirements.length === 0 ? (
-                          <li className="text-muted-foreground/60 italic">No requirements listed</li>
+                          <p className="text-muted-foreground/60 italic text-sm py-4 text-center">
+                            No requirements listed
+                          </p>
                         ) : (
                           state.extractedData.requirements.map((item, i) => (
-                            <li key={i} className="flex items-start gap-2">
-                              <span className="text-primary mt-1">•</span>
-                              <span>{item}</span>
-                            </li>
+                            <div
+                              key={i}
+                              className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                            >
+                              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-medium flex items-center justify-center">
+                                {i + 1}
+                              </span>
+                              <span className="text-sm text-foreground leading-relaxed">{item}</span>
+                            </div>
                           ))
                         )}
-                      </ul>
+                      </div>
                     )}
                   </div>
                 </div>
