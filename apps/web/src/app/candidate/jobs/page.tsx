@@ -1,6 +1,7 @@
 "use client";
 
 import { getAllInterviews, getJobById, getDemoUser } from "@/lib/mock-data";
+import { getCompanyLogoUrl } from "@/lib/logo-utils";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, ArrowRight, Building2, Sparkles, Clock, CheckCircle2, Play } from "lucide-react";
 import Link from "next/link";
@@ -29,7 +30,7 @@ export default function CandidateJobListings() {
 
         {/* Hero Section */}
         <div className="space-y-6 text-center max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/50 border border-white/10 backdrop-blur-sm">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/50 border border-border backdrop-blur-sm">
             <Sparkles className="h-3.5 w-3.5 text-blue-400" />
             <span className="text-xs font-medium text-muted-foreground">Welcome, {demoUser.name}</span>
           </div>
@@ -60,15 +61,23 @@ export default function CandidateJobListings() {
                 className="animate-in fade-in slide-in-from-bottom-4 duration-500"
                 style={{ animationDelay: `${i * 100}ms` }}
               >
-                <Link href={`/interview/${interview.id}`}>
-                  <div className="group relative h-full bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6 hover:bg-card/80 transition-all cursor-pointer overflow-hidden">
+                <Link href={interview.status === "COMPLETED" ? `/interview/${interview.id}/results` : `/interview/${interview.id}`}>
+                  <div className="group relative h-full bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-6 hover:bg-card/80 transition-all cursor-pointer overflow-hidden">
                     {/* Hover Glow */}
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-duration-500" />
 
                     <div className="relative z-10 flex flex-col h-full">
                       <div className="flex justify-between items-start mb-6">
-                        <div className="h-12 w-12 rounded-xl bg-secondary/50 flex items-center justify-center border border-white/5 group-hover:border-blue-500/30 transition-colors">
-                          <Building2 className="h-6 w-6 text-muted-foreground group-hover:text-blue-400 transition-colors" />
+                        <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center border border-border group-hover:border-blue-500/30 transition-colors overflow-hidden">
+                          {interview.job?.company && getCompanyLogoUrl(interview.job.company) ? (
+                            <img
+                              src={getCompanyLogoUrl(interview.job.company)!}
+                              alt={`${interview.job.company} logo`}
+                              className="h-8 w-8 object-contain"
+                            />
+                          ) : (
+                            <Building2 className="h-6 w-6 text-muted-foreground group-hover:text-blue-400 transition-colors" />
+                          )}
                         </div>
                         <Badge variant="outline" className={`${status.color} flex items-center gap-1.5 px-3 py-1`}>
                           <StatusIcon className="h-3 w-3" /> {status.label}
@@ -83,13 +92,13 @@ export default function CandidateJobListings() {
                         <span className="flex items-center gap-1.5">
                           <Building2 className="h-3.5 w-3.5" /> {interview.job?.company}
                         </span>
-                        <span className="w-1 h-1 rounded-full bg-white/20" />
+                        <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
                         <span className="flex items-center gap-1.5">
                           <MapPin className="h-3.5 w-3.5" /> {interview.job?.location}
                         </span>
                       </div>
 
-                      <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
+                      <div className="mt-auto pt-6 border-t border-border flex items-center justify-between">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Clock className="h-3.5 w-3.5" />
                           <span>{interview.durationMinutes} min</span>

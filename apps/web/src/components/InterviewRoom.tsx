@@ -16,7 +16,7 @@ import {
   InterviewErrorScreen,
   InterviewEndedScreen,
 } from './interview/InterviewScreens';
-import { InterviewCallViewEnhanced } from './interview/InterviewCallView';
+import { InterviewCallView } from './interview/InterviewCallView';
 
 interface InterviewRoomProps {
   interviewId: string;
@@ -87,7 +87,7 @@ export function InterviewRoom({
   }
 
   return (
-    <InterviewCallViewEnhanced
+    <InterviewCallView
       call={call}
       interviewId={interviewId}
       jobTitle={jobTitle}

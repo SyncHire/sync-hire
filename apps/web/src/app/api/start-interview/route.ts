@@ -66,6 +66,10 @@ export async function POST(request: Request) {
               bitrate: 3000000,
             },
           },
+          transcription: {
+            mode: 'auto-on',
+            closed_caption_mode: 'auto-on',
+          },
         },
         members: [
           { user_id: candidateId, role: 'admin' },

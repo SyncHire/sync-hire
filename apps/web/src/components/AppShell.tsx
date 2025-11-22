@@ -19,7 +19,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   // Compute these values but only use them after mount to avoid hydration mismatch
   const isCandidate = pathname.startsWith('/candidate') || pathname.startsWith('/interview');
-  const isInterview = pathname.startsWith('/interview');
+  // Only match /interview/[id], not deeper paths like /interview/[id]/results
+  const pathParts = pathname.split('/').filter(Boolean);
+  const isInterview = pathParts[0] === 'interview' && pathParts.length === 2;
 
   // During SSR and initial hydration, render a neutral state
   // After mount, render the correct conditional layout

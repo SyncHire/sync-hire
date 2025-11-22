@@ -485,8 +485,9 @@ const interviews: Record<string, Interview> = {
     id: "interview-6",
     jobId: "job-6",
     candidateId: DEMO_USER_ID,
-    status: "PENDING",
+    status: "COMPLETED",
     durationMinutes: 30,
+    score: 87,
     createdAt: new Date("2025-01-09"),
   },
 };

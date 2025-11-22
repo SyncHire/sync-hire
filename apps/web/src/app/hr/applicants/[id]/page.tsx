@@ -43,10 +43,10 @@ export default function HRApplicantDetail() {
           </div>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" className="gap-2 border-white/10 bg-white/5 hover:bg-white/10">
+          <Button variant="outline" className="gap-2 border-border bg-secondary/50 hover:bg-secondary">
             <Filter className="h-4 w-4" /> Filter
           </Button>
-          <Button variant="outline" className="gap-2 border-white/10 bg-white/5 hover:bg-white/10">
+          <Button variant="outline" className="gap-2 border-border bg-secondary/50 hover:bg-secondary">
             <Download className="h-4 w-4" /> Export Report
           </Button>
         </div>
@@ -73,7 +73,7 @@ export default function HRApplicantDetail() {
           </p>
         </div>
 
-        <div className="p-5 rounded-xl bg-card border border-white/5">
+        <div className="p-5 rounded-xl bg-card border border-border">
            <div className="text-xs font-medium text-muted-foreground mb-1">Average Match Score</div>
            <div className="text-2xl font-bold text-foreground">85%</div>
            <div className="w-full bg-secondary/50 h-1.5 rounded-full mt-3 overflow-hidden">
@@ -81,7 +81,7 @@ export default function HRApplicantDetail() {
            </div>
         </div>
 
-        <div className="p-5 rounded-xl bg-card border border-white/5">
+        <div className="p-5 rounded-xl bg-card border border-border">
            <div className="text-xs font-medium text-muted-foreground mb-1">Time to Hire</div>
            <div className="text-2xl font-bold text-foreground">12 Days</div>
            <div className="text-xs text-green-500 mt-1 font-medium flex items-center gap-1">
@@ -91,10 +91,10 @@ export default function HRApplicantDetail() {
       </div>
 
       {/* Applicants Table */}
-      <div className="border border-white/5 rounded-xl overflow-hidden bg-card shadow-2xl shadow-black/20">
+      <div className="border border-border rounded-xl overflow-hidden bg-card shadow-2xl shadow-black/10 dark:shadow-black/20">
         <Table>
           <TableHeader className="bg-secondary/30">
-            <TableRow className="hover:bg-transparent border-white/5">
+            <TableRow className="hover:bg-transparent border-border">
               <TableHead className="w-[300px] h-12 text-xs font-medium uppercase tracking-wider text-muted-foreground pl-6">Candidate</TableHead>
               <TableHead className="h-12 text-xs font-medium uppercase tracking-wider text-muted-foreground">AI Analysis</TableHead>
               <TableHead className="h-12 text-xs font-medium uppercase tracking-wider text-muted-foreground">Match Score</TableHead>
@@ -104,10 +104,10 @@ export default function HRApplicantDetail() {
           </TableHeader>
           <TableBody>
             {mockApplicants.map((applicant, i) => (
-              <TableRow key={applicant.id} className="group hover:bg-white/[0.02] border-white/5 transition-colors">
+              <TableRow key={applicant.id} className="group hover:bg-secondary/30 border-border transition-colors">
                 <TableCell className="pl-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full overflow-hidden border border-white/10 group-hover:border-blue-500/30 transition-colors">
+                    <div className="h-10 w-10 rounded-full overflow-hidden border border-border group-hover:border-blue-500/30 transition-colors">
                        <img src={avatars[i % avatars.length]} alt={applicant.name} className="h-full w-full object-cover" />
                     </div>
                     <div>

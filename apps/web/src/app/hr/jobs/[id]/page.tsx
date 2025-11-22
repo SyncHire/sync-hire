@@ -21,7 +21,7 @@ export default function HRJDDetail() {
     <div className="max-w-5xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500 px-4 py-8">
 
       {/* Header */}
-      <div className="flex flex-col gap-6 border-b border-white/10 pb-8">
+      <div className="flex flex-col gap-6 border-b border-border pb-8">
         <Link href="/hr/jobs">
           <Button variant="ghost" className="pl-0 hover:pl-2 transition-all text-muted-foreground hover:text-foreground w-fit -ml-3 h-auto py-0 gap-2">
             <ArrowLeft className="h-4 w-4" /> Back to Jobs
@@ -37,19 +37,19 @@ export default function HRJDDetail() {
               </Badge>
             </div>
             <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
-              <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/30 border border-white/5">
-                <MapPin className="h-3.5 w-3.5 text-blue-400" /> {job.location}
+              <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/50 border border-border">
+                <MapPin className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" /> {job.location}
               </span>
-              <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/30 border border-white/5">
-                <DollarSign className="h-3.5 w-3.5 text-green-400" /> {job.salary}
+              <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/50 border border-border">
+                <DollarSign className="h-3.5 w-3.5 text-green-600 dark:text-green-400" /> {job.salary}
               </span>
-              <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/30 border border-white/5">
-                <Clock className="h-3.5 w-3.5 text-purple-400" /> {job.type}
+              <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/50 border border-border">
+                <Clock className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" /> {job.type}
               </span>
             </div>
           </div>
           <div className="flex gap-3">
-             <Button variant="outline" className="h-10 px-5 border-white/10 bg-white/5 hover:bg-white/10">Edit Job</Button>
+             <Button variant="outline" className="h-10 px-5 border-border bg-secondary/50 hover:bg-secondary">Edit Job</Button>
              <Link href={`/hr/applicants/${job.id}`}>
                <Button className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 border-0">
                  View Applicants ({job.applicantsCount})
@@ -61,7 +61,7 @@ export default function HRJDDetail() {
 
       <Tabs defaultValue="details" className="w-full">
         <div className="flex items-center justify-between mb-8">
-          <TabsList className="h-11 bg-secondary/30 p-1 border border-white/5">
+          <TabsList className="h-11 bg-secondary/30 p-1 border border-border">
             <TabsTrigger value="details" className="text-sm h-9 px-6">Details</TabsTrigger>
             <TabsTrigger value="questions" className="text-sm h-9 px-6">AI Interview</TabsTrigger>
             <TabsTrigger value="settings" className="text-sm h-9 px-6">Settings</TabsTrigger>
@@ -71,14 +71,14 @@ export default function HRJDDetail() {
         <TabsContent value="details" className="space-y-8 animate-in fade-in duration-300">
           <div className="grid gap-8 md:grid-cols-3">
             <div className="md:col-span-2 space-y-8">
-              <div className="space-y-4 p-6 rounded-xl bg-card border border-white/5">
+              <div className="space-y-4 p-6 rounded-xl bg-card border border-border">
                 <h3 className="text-lg font-semibold text-foreground">About the Role</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {job.description}
                 </p>
               </div>
 
-              <div className="space-y-4 p-6 rounded-xl bg-card border border-white/5">
+              <div className="space-y-4 p-6 rounded-xl bg-card border border-border">
                 <h3 className="text-lg font-semibold text-foreground">Requirements</h3>
                 <ul className="space-y-3">
                   {job.requirements.map((req, i) => (
@@ -108,7 +108,7 @@ export default function HRJDDetail() {
         </TabsContent>
 
         <TabsContent value="questions" className="space-y-6 animate-in fade-in duration-300">
-          <div className="flex justify-between items-center p-6 rounded-xl bg-secondary/20 border border-white/5">
+          <div className="flex justify-between items-center p-6 rounded-xl bg-secondary/20 border border-border">
             <div>
               <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
                 Interview Configuration
@@ -136,14 +136,14 @@ export default function HRJDDetail() {
 
           <div className="grid gap-4">
             {questions.map((q, i) => (
-              <div key={q.id} className="group flex items-start gap-4 p-5 rounded-xl border border-white/5 bg-card hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300">
-                <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-secondary text-sm font-bold text-muted-foreground mt-0.5 border border-white/5 group-hover:text-blue-400 group-hover:border-blue-500/30 transition-colors">
+              <div key={q.id} className="group flex items-start gap-4 p-5 rounded-xl border border-border bg-card hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300">
+                <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-secondary text-sm font-bold text-muted-foreground mt-0.5 border border-border group-hover:text-blue-400 group-hover:border-blue-500/30 transition-colors">
                   {i + 1}
                 </div>
                 <div className="flex-1 space-y-2">
                   <p className="text-base font-medium text-foreground leading-relaxed">{q.text}</p>
                   <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="text-[10px] h-5 px-2 font-medium text-muted-foreground border-white/10 bg-white/5 group-hover:border-blue-500/20 group-hover:text-blue-400 transition-colors">
+                    <Badge variant="outline" className="text-[10px] h-5 px-2 font-medium text-muted-foreground border-border bg-secondary/50 group-hover:border-blue-500/20 group-hover:text-blue-400 transition-colors">
                        {q.type.toUpperCase()} RESPONSE
                     </Badge>
                     <span className="text-xs text-muted-foreground flex items-center gap-1">

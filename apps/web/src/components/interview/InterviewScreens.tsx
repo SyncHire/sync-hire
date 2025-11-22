@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, AlertTriangle, CheckCircle2, Sparkles, Video, Clock, Mic, Camera, VideoOff, MicOff } from 'lucide-react';
 import type { Question } from '@/lib/mock-data';
+import { getCompanyLogoUrl } from '@/lib/logo-utils';
 
 interface InterviewPreviewScreenProps {
   candidateName: string;
@@ -20,21 +21,6 @@ interface InterviewPreviewScreenProps {
 }
 
 type PermissionStatus = 'pending' | 'granted' | 'denied';
-
-// Logo.dev API for company logos
-const LOGO_DEV_PUBLIC_KEY = process.env.NEXT_PUBLIC_LOGO_DEV_KEY || 'pk_FgUgq-__SdOal0JNAYVqJQ';
-
-const getCompanyLogoUrl = (domain: string) =>
-  `https://img.logo.dev/${domain}?token=${LOGO_DEV_PUBLIC_KEY}`;
-
-const companyLogos: Record<string, string> = {
-  'Stripe': getCompanyLogoUrl('stripe.com'),
-  'Databricks': getCompanyLogoUrl('databricks.com'),
-  'Vercel': getCompanyLogoUrl('vercel.com'),
-  'Cloudflare': getCompanyLogoUrl('cloudflare.com'),
-  'OpenAI': getCompanyLogoUrl('openai.com'),
-  'Spotify': getCompanyLogoUrl('spotify.com'),
-};
 
 export function InterviewPreviewScreen({
   candidateName,
@@ -51,7 +37,7 @@ export function InterviewPreviewScreen({
 
   // Get unique stages from questions
   const stages = [...new Set(questions.map(q => q.category))];
-  const companyLogo = companyLogos[company];
+  const companyLogo = getCompanyLogoUrl(company);
 
   // Request permissions on mount
   useEffect(() => {
@@ -116,7 +102,7 @@ export function InterviewPreviewScreen({
       <div className="absolute inset-0 bg-grid-pattern [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_80%)] pointer-events-none opacity-50" />
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
 
-      <Card className="relative max-w-xl w-full mx-4 bg-card/80 backdrop-blur-xl border-white/10 shadow-2xl">
+      <Card className="relative max-w-xl w-full mx-4 bg-card/80 backdrop-blur-xl border-border shadow-2xl">
         <CardContent className="pt-8 pb-8 px-8">
           {/* Company Header */}
           <div className="mb-6 flex items-center justify-center gap-3">
@@ -177,22 +163,22 @@ export function InterviewPreviewScreen({
           <div className="mb-6 flex gap-3">
             <div className={`flex-1 p-3 rounded-lg border ${
               cameraPermission === 'granted'
-                ? 'bg-green-500/10 border-green-500/20'
+                ? 'bg-green-500/10 border-green-500/30'
                 : cameraPermission === 'denied'
-                ? 'bg-red-500/10 border-red-500/20'
-                : 'bg-secondary/30 border-white/5'
+                ? 'bg-red-500/10 border-red-500/30'
+                : 'bg-secondary/50 border-border'
             }`}>
               <div className="flex items-center gap-2">
                 {cameraPermission === 'granted' ? (
-                  <Camera className="h-4 w-4 text-green-400" />
+                  <Camera className="h-4 w-4 text-green-600 dark:text-green-400" />
                 ) : cameraPermission === 'denied' ? (
-                  <VideoOff className="h-4 w-4 text-red-400" />
+                  <VideoOff className="h-4 w-4 text-red-600 dark:text-red-400" />
                 ) : (
                   <Camera className="h-4 w-4 text-muted-foreground" />
                 )}
                 <span className={`text-sm ${
-                  cameraPermission === 'granted' ? 'text-green-400' :
-                  cameraPermission === 'denied' ? 'text-red-400' : 'text-muted-foreground'
+                  cameraPermission === 'granted' ? 'text-green-600 dark:text-green-400' :
+                  cameraPermission === 'denied' ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'
                 }`}>
                   Camera {cameraPermission === 'granted' ? 'Ready' : cameraPermission === 'denied' ? 'Blocked' : 'Pending'}
                 </span>
@@ -200,22 +186,22 @@ export function InterviewPreviewScreen({
             </div>
             <div className={`flex-1 p-3 rounded-lg border ${
               micPermission === 'granted'
-                ? 'bg-green-500/10 border-green-500/20'
+                ? 'bg-green-500/10 border-green-500/30'
                 : micPermission === 'denied'
-                ? 'bg-red-500/10 border-red-500/20'
-                : 'bg-secondary/30 border-white/5'
+                ? 'bg-red-500/10 border-red-500/30'
+                : 'bg-secondary/50 border-border'
             }`}>
               <div className="flex items-center gap-2">
                 {micPermission === 'granted' ? (
-                  <Mic className="h-4 w-4 text-green-400" />
+                  <Mic className="h-4 w-4 text-green-600 dark:text-green-400" />
                 ) : micPermission === 'denied' ? (
-                  <MicOff className="h-4 w-4 text-red-400" />
+                  <MicOff className="h-4 w-4 text-red-600 dark:text-red-400" />
                 ) : (
                   <Mic className="h-4 w-4 text-muted-foreground" />
                 )}
                 <span className={`text-sm ${
-                  micPermission === 'granted' ? 'text-green-400' :
-                  micPermission === 'denied' ? 'text-red-400' : 'text-muted-foreground'
+                  micPermission === 'granted' ? 'text-green-600 dark:text-green-400' :
+                  micPermission === 'denied' ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'
                 }`}>
                   Microphone {micPermission === 'granted' ? 'Ready' : micPermission === 'denied' ? 'Blocked' : 'Pending'}
                 </span>
@@ -239,7 +225,7 @@ export function InterviewPreviewScreen({
               {stages.map((stage) => (
                 <span
                   key={stage}
-                  className="px-3 py-1.5 text-xs bg-secondary/50 text-muted-foreground rounded-full border border-white/5"
+                  className="px-3 py-1.5 text-xs bg-secondary/50 text-muted-foreground rounded-full border border-border"
                 >
                   {stage}
                 </span>
@@ -278,8 +264,8 @@ export function InterviewLoadingScreen() {
         {/* Animated Icon */}
         <div className="mb-8 flex justify-center">
           <div className="relative">
-            <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center">
-              <Loader2 className="h-10 w-10 text-blue-400 animate-spin" />
+            <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-border flex items-center justify-center">
+              <Loader2 className="h-10 w-10 text-blue-600 dark:text-blue-400 animate-spin" />
             </div>
             <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 blur-xl animate-pulse" />
           </div>
@@ -300,9 +286,9 @@ export function InterviewLoadingScreen() {
         </div>
 
         {/* Tips */}
-        <div className="p-4 bg-card/50 backdrop-blur-sm rounded-xl border border-white/5">
+        <div className="p-4 bg-card/50 backdrop-blur-sm rounded-xl border border-border">
           <p className="text-sm text-muted-foreground">
-            <span className="text-blue-400 font-medium">Tip:</span> Speak clearly and take your time with each answer
+            <span className="text-blue-600 dark:text-blue-400 font-medium">Tip:</span> Speak clearly and take your time with each answer
           </p>
         </div>
       </div>
@@ -326,8 +312,8 @@ export function InterviewErrorScreen({ errorMessage, onRetry }: InterviewErrorSc
         <CardContent className="pt-8 pb-8 px-8 text-center">
           {/* Error Icon */}
           <div className="mb-6 flex justify-center">
-            <div className="h-16 w-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-              <AlertTriangle className="h-8 w-8 text-red-400" />
+            <div className="h-16 w-16 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+              <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
             </div>
           </div>
 
@@ -364,7 +350,7 @@ export function InterviewEndedScreen({ onRejoin }: InterviewEndedScreenProps) {
           {/* Success Icon */}
           <div className="mb-6 flex justify-center">
             <div className="h-16 w-16 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
-              <CheckCircle2 className="h-8 w-8 text-green-400" />
+              <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
           </div>
 
@@ -385,7 +371,7 @@ export function InterviewEndedScreen({ onRejoin }: InterviewEndedScreenProps) {
             <Button
               onClick={() => window.location.href = '/candidate/jobs'}
               variant="outline"
-              className="w-full h-11 border-white/10 bg-white/5 hover:bg-white/10"
+              className="w-full h-11 border-border bg-secondary/50 hover:bg-secondary"
             >
               Browse More Jobs
             </Button>
