@@ -2,9 +2,9 @@
 
 /**
  * Custom hook to manage interview call lifecycle
- * Handles initialization, joining, and cleanup
+ * Simplified: join happens on user action (button click), not on mount
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Call, useStreamVideoClient } from '@stream-io/video-react-sdk';
 import { useStartInterview } from '@/lib/hooks/use-interview';
 
@@ -12,7 +12,7 @@ interface UseInterviewCallParams {
   interviewId: string;
   candidateId: string;
   candidateName: string;
-  enabled: boolean; // Only start when name is provided
+  enabled: boolean; // Only start when user clicks "Join"
 }
 
 export function useInterviewCall({
@@ -24,23 +24,19 @@ export function useInterviewCall({
   const client = useStreamVideoClient();
   const [call, setCall] = useState<Call | null>(null);
   const [callEnded, setCallEnded] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
   const startInterviewMutation = useStartInterview();
-  const initializingRef = useRef(false);
-  const joinedRef = useRef(false); // Track if we've successfully joined
 
   useEffect(() => {
-    // Guard: don't run if not enabled or already initializing/joined
-    if (!enabled || !client || call || initializingRef.current || joinedRef.current) {
+    // Only run when enabled and we have a client, and haven't already joined
+    if (!enabled || !client || call || isJoining) {
       return;
     }
 
-    let cancelled = false;
-
-    const initializeInterview = async () => {
-      if (cancelled) return;
+    const joinInterview = async () => {
+      setIsJoining(true);
 
       try {
-        initializingRef.current = true;
         console.log('🚀 Starting interview for:', candidateName);
 
         // Start interview and get call ID
@@ -50,28 +46,25 @@ export function useInterviewCall({
           candidateName,
         });
 
-        if (cancelled) {
-          console.log('⚠️ Cancelled before joining call');
-          initializingRef.current = false;
-          return;
-        }
-
         console.log('📞 Interview started, joining call:', data.callId);
 
-        // Join the call
+        // Create the call object
         const videoCall = client.call('default', data.callId);
-        await videoCall.join();
 
-        // Mark as joined - prevents re-running even if StrictMode remounts
-        joinedRef.current = true;
-
-        if (cancelled) {
-          console.log('⚠️ Cancelled after joining, leaving call');
-          await videoCall.leave();
-          joinedRef.current = false;
-          initializingRef.current = false;
-          return;
+        // Enable camera and microphone BEFORE joining
+        try {
+          await videoCall.camera.enable();
+        } catch (camErr) {
+          console.warn('⚠️ Could not enable camera:', camErr);
         }
+        try {
+          await videoCall.microphone.enable();
+        } catch (micErr) {
+          console.warn('⚠️ Could not enable microphone:', micErr);
+        }
+
+        // Join the call
+        await videoCall.join({ create: true, video: true });
 
         // Listen for call ended events
         videoCall.on('call.ended', () => {
@@ -85,35 +78,27 @@ export function useInterviewCall({
         });
 
         setCall(videoCall);
+        setIsJoining(false);
         console.log('✅ Successfully joined call');
       } catch (err) {
         console.error('Error initializing interview:', err);
-        if (!cancelled) {
-          initializingRef.current = false;
-        }
+        setIsJoining(false);
       }
     };
 
-    initializeInterview();
-
-    // Cleanup - use a local reference to avoid TypeScript flow issues
-    return () => {
-      cancelled = true;
-      // Don't reset joinedRef here - let it persist to prevent re-runs on StrictMode remount
-      initializingRef.current = false;
-    };
-  }, [enabled, client, call, interviewId, candidateId, candidateName]);
+    joinInterview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, client]);
 
   return {
     call,
     callEnded,
-    isLoading: startInterviewMutation.isPending || (!call && enabled && !startInterviewMutation.isError),
+    isLoading: isJoining || startInterviewMutation.isPending,
     error: startInterviewMutation.error,
     reset: () => {
       setCall(null);
       setCallEnded(false);
-      initializingRef.current = false;
-      joinedRef.current = false; // Reset on manual reset
+      setIsJoining(false);
       startInterviewMutation.reset();
     },
   };

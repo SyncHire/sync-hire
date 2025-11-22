@@ -2,78 +2,70 @@
 
 /**
  * Interview Room Component
- * Simplified orchestrator for interview flow
+ * Simplified orchestrator for interview flow:
+ * 1. Preview screen - show interview details, click "Join" to start
+ * 2. Loading screen - while connecting
+ * 3. Active interview - video call with AI
  */
 import { useState } from 'react';
 import { useInterviewCall } from './interview/useInterviewCall';
+import type { Question } from '@/lib/mock-data';
 import {
-  InterviewNameForm,
+  InterviewPreviewScreen,
   InterviewLoadingScreen,
   InterviewErrorScreen,
   InterviewEndedScreen,
 } from './interview/InterviewScreens';
-import { InterviewCallView } from './interview/InterviewCallView';
+import { InterviewCallViewEnhanced } from './interview/InterviewCallView';
 
 interface InterviewRoomProps {
-  callId: string;
   interviewId: string;
   candidateId: string;
-  candidateName?: string;
+  candidateName: string;
+  jobTitle: string;
+  company: string;
+  durationMinutes: number;
+  questions: Question[];
 }
 
 export function InterviewRoom({
   interviewId,
   candidateId,
   candidateName,
+  jobTitle,
+  company,
+  durationMinutes,
+  questions,
 }: InterviewRoomProps) {
-  // Check if user has already started this interview
-  const storageKey = `interview-${interviewId}-started`;
-  const storedName = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
-  const hasStarted = !!storedName;
+  const [hasJoined, setHasJoined] = useState(false);
 
-  const [nameInput, setNameInput] = useState(storedName || candidateName || '');
-  const [showNameForm, setShowNameForm] = useState(!hasStarted);
-
-  // Use custom hook to manage call lifecycle
+  // Use custom hook to manage call lifecycle - only enabled after user clicks Join
   const { call, callEnded, isLoading, error, reset } = useInterviewCall({
     interviewId,
     candidateId,
-    candidateName: nameInput,
-    enabled: !showNameForm, // Only start when name is provided
+    candidateName,
+    enabled: hasJoined,
   });
 
-  const handleStartInterview = () => {
-    if (nameInput.trim()) {
-      // Save name to localStorage to skip form on refresh
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(storageKey, nameInput.trim());
-      }
-      setShowNameForm(false);
-    }
-  };
-
-  const handleRejoin = () => {
-    // Clear the localStorage to allow re-entering name
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(storageKey);
-    }
-    reset();
-    setShowNameForm(true);
-    window.location.reload();
+  const handleJoin = () => {
+    setHasJoined(true);
   };
 
   const handleRetry = () => {
     reset();
-    window.location.reload();
+    setHasJoined(false);
   };
 
   // Render appropriate screen based on state
-  if (showNameForm) {
+  if (!hasJoined) {
     return (
-      <InterviewNameForm
-        nameInput={nameInput}
-        onNameChange={setNameInput}
-        onSubmit={handleStartInterview}
+      <InterviewPreviewScreen
+        candidateName={candidateName}
+        jobTitle={jobTitle}
+        company={company}
+        durationMinutes={durationMinutes}
+        questions={questions}
+        onJoin={handleJoin}
       />
     );
   }
@@ -87,12 +79,20 @@ export function InterviewRoom({
   }
 
   if (callEnded) {
-    return <InterviewEndedScreen onRejoin={handleRejoin} />;
+    return <InterviewEndedScreen onRejoin={handleRetry} />;
   }
 
   if (!call) {
     return null;
   }
 
-  return <InterviewCallView call={call} interviewId={interviewId} />;
+  return (
+    <InterviewCallViewEnhanced
+      call={call}
+      interviewId={interviewId}
+      jobTitle={jobTitle}
+      durationMinutes={durationMinutes}
+      questions={questions}
+    />
+  );
 }

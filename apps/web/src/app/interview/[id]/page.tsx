@@ -4,7 +4,7 @@
  */
 import { StreamVideoProvider } from '@/components/StreamVideoProvider';
 import { InterviewRoom } from '@/components/InterviewRoom';
-import { mockInterviews, mockUsers } from '@/lib/mock-data';
+import { mockInterviews, getDemoUser, getJobById } from '@/lib/mock-data';
 import { notFound } from 'next/navigation';
 
 interface InterviewPageProps {
@@ -23,19 +23,26 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
     notFound();
   }
 
-  const candidate = mockUsers[interview.candidateId];
+  // Use demo user for all interviews
+  const demoUser = getDemoUser();
 
-  if (!candidate) {
+  // Get job details for the interview
+  const job = getJobById(interview.jobId);
+
+  if (!job) {
     notFound();
   }
 
   return (
-    <StreamVideoProvider userId={candidate.id} userName={candidate.name}>
+    <StreamVideoProvider userId={demoUser.id} userName={demoUser.name}>
       <InterviewRoom
-        callId={`interview-${id}`}
         interviewId={id}
-        candidateId={candidate.id}
-        candidateName={candidate.name}
+        candidateId={demoUser.id}
+        candidateName={demoUser.name}
+        jobTitle={job.title}
+        company={job.company}
+        durationMinutes={interview.durationMinutes}
+        questions={job.questions}
       />
     </StreamVideoProvider>
   );

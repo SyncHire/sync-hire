@@ -41,8 +41,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Use stable call ID based on interview ID (same ID for reconnections)
-    const callId = `interview-${interviewId}`;
+    // Use interview ID directly as call ID (already formatted as "interview-1", etc.)
+    const callId = interviewId;
 
     // Create the Stream call (getOrCreate returns existing call if it exists)
     const streamClient = getStreamClient();
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
           },
         },
         members: [
-          { user_id: candidateId },
+          { user_id: candidateId, role: 'admin' },
         ],
       },
       ring: false,
@@ -78,6 +78,18 @@ export async function POST(request: Request) {
     // Check if this is a new call or existing call
     const isNewCall = callData.created;
     console.log(`📞 Call status: ${isNewCall ? 'NEW' : 'EXISTING'} - ${callId}`);
+
+    // If call already exists, ensure member has admin role (fixes permission issues)
+    if (!isNewCall) {
+      try {
+        await call.updateCallMembers({
+          update_members: [{ user_id: candidateId, role: 'admin' }],
+        });
+        console.log('🔄 Updated member role to admin');
+      } catch (memberUpdateErr) {
+        console.warn('⚠️ Could not update member role:', memberUpdateErr);
+      }
+    }
 
     // Check if we've already invited an agent to this call (prevents duplicates)
     const alreadyInvited = invitedCalls.has(callId);
