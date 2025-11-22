@@ -12,6 +12,7 @@ import type {
   ExtractedJobData,
   Interview,
   Job,
+  Notification,
   User,
 } from "@/lib/mock-data";
 import {
@@ -34,6 +35,7 @@ const QUESTIONS_SET_DIR = join(DATA_DIR, "questions-set");
 const INTERVIEWS_DIR = join(DATA_DIR, "interviews");
 const USERS_DIR = join(DATA_DIR, "users");
 const USER_CVS_DIR = join(DATA_DIR, "user-cvs");
+const NOTIFICATIONS_DIR = join(DATA_DIR, "notifications");
 
 export class FileStorage implements StorageInterface {
   // Job Description methods
@@ -348,6 +350,77 @@ export class FileStorage implements StorageInterface {
       );
     } catch (error) {
       console.error("Failed to save user CV ID:", error);
+      throw error;
+    }
+  }
+
+  // =============================================================================
+  // Notification Methods
+  // =============================================================================
+
+  async getNotifications(userId: string): Promise<Notification[]> {
+    try {
+      const userNotificationsDir = join(NOTIFICATIONS_DIR, userId);
+      const files = await fs.readdir(userNotificationsDir);
+      const notifications: Notification[] = [];
+
+      for (const file of files) {
+        if (file.endsWith(".json")) {
+          try {
+            const filePath = join(userNotificationsDir, file);
+            const data = await fs.readFile(filePath, "utf-8");
+            notifications.push(JSON.parse(data) as Notification);
+          } catch (error) {
+            console.error(`Failed to read notification file ${file}:`, error);
+          }
+        }
+      }
+
+      // Sort by createdAt descending (newest first)
+      return notifications.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+    } catch {
+      // Directory doesn't exist yet, return empty array
+      return [];
+    }
+  }
+
+  async saveNotification(notification: Notification): Promise<void> {
+    try {
+      const userNotificationsDir = join(NOTIFICATIONS_DIR, notification.userId);
+      await fs.mkdir(userNotificationsDir, { recursive: true });
+      const filePath = join(userNotificationsDir, `${notification.id}.json`);
+      await fs.writeFile(filePath, JSON.stringify(notification, null, 2));
+    } catch (error) {
+      console.error("Failed to save notification:", error);
+      throw error;
+    }
+  }
+
+  async markNotificationRead(notificationId: string): Promise<void> {
+    try {
+      // Search for notification in all user directories
+      const userDirs = await fs.readdir(NOTIFICATIONS_DIR);
+      for (const userDir of userDirs) {
+        const filePath = join(
+          NOTIFICATIONS_DIR,
+          userDir,
+          `${notificationId}.json`,
+        );
+        try {
+          const data = await fs.readFile(filePath, "utf-8");
+          const notification = JSON.parse(data) as Notification;
+          notification.read = true;
+          await fs.writeFile(filePath, JSON.stringify(notification, null, 2));
+          return;
+        } catch {
+          // File doesn't exist in this directory, continue
+        }
+      }
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
       throw error;
     }
   }

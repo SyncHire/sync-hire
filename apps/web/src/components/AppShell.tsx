@@ -1,16 +1,44 @@
 "use client";
 
-import { Bell, Moon, Search, Sun, Video } from "lucide-react";
+import { Bell, Inbox, Moon, Search, Sun, Video } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useCurrentUser } from "@/lib/hooks/use-current-user";
+import { useNotifications } from "@/lib/hooks/use-notifications";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const { data: notificationsData, isLoading: notificationsLoading } =
+    useNotifications();
+  const notifications = notificationsData?.data ?? [];
+  const { data: userData } = useCurrentUser();
+  const user = userData?.data;
+
+  // Get user initials from name
+  const userInitials = user?.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "U";
 
   // Prevent hydration mismatch by only rendering conditional content after mount
   useEffect(() => {
@@ -66,12 +94,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     >
                       Candidates
                     </Link>
-                    <Link
-                      href="/hr/analytics"
-                      className="hover:text-foreground transition-colors"
-                    >
-                      Analytics
-                    </Link>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-not-allowed text-muted-foreground/50">
+                            Analytics
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Coming Soon</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </>
                 ) : (
                   <>
@@ -114,13 +148,57 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               </Button>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              >
-                <Bell className="h-4 w-4" />
-              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground relative"
+                  >
+                    <Bell className="h-4 w-4" />
+                    {notifications.length > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground flex items-center justify-center">
+                        {notifications.length}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80 p-0">
+                  <div className="border-b border-border px-4 py-3">
+                    <h4 className="text-sm font-semibold">Notifications</h4>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notificationsLoading ? (
+                      <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                        Loading...
+                      </div>
+                    ) : notifications.length === 0 ? (
+                      <div className="px-4 py-8 text-center">
+                        <Inbox className="mx-auto h-8 w-8 text-muted-foreground/50 mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          No notifications yet
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className="px-4 py-3 hover:bg-muted/50 transition-colors"
+                          >
+                            <p className="text-sm font-medium">
+                              {notification.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {notification.message}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
 
               <div className="h-4 w-px bg-border/50" />
 
@@ -131,9 +209,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   {isCandidate ? "Switch to HR" : "Switch to Candidate"}
                 </Link>
-                <div className="h-7 w-7 rounded-full overflow-hidden border border-border/50 bg-secondary flex items-center justify-center">
-                  <span className="text-xs font-medium">U</span>
-                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="h-7 w-7 rounded-full overflow-hidden border border-border/50 bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors cursor-pointer">
+                      <span className="text-xs font-medium">{userInitials}</span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-56 p-0">
+                    <div className="px-4 py-3 border-b border-border">
+                      <p className="text-sm font-medium">{user?.name ?? "User"}</p>
+                      <p className="text-xs text-muted-foreground">{user?.email}</p>
+                    </div>
+                    <div className="p-2">
+                      <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                        Role: {user?.role === "CANDIDATE" ? "Candidate" : "Employer"}
+                      </p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           </div>

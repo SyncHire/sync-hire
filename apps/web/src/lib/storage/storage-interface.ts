@@ -10,6 +10,7 @@ import type {
   ExtractedJobData,
   Interview,
   Job,
+  Notification,
   User,
 } from "@/lib/mock-data";
 
@@ -180,4 +181,23 @@ export interface StorageInterface {
    * Save/link a CV ID to a user
    */
   saveUserCVId(userId: string, cvId: string): Promise<void>;
+
+  // =============================================================================
+  // Notification Methods
+  // =============================================================================
+
+  /**
+   * Get all notifications for a user
+   */
+  getNotifications(userId: string): Promise<Notification[]>;
+
+  /**
+   * Save a notification
+   */
+  saveNotification(notification: Notification): Promise<void>;
+
+  /**
+   * Mark a notification as read
+   */
+  markNotificationRead(notificationId: string): Promise<void>;
 }

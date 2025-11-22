@@ -203,6 +203,16 @@ export interface SuggestionResponse {
   cached: boolean;
 }
 
+export interface Notification {
+  id: string;
+  userId: string;
+  type: "info" | "success" | "warning" | "error";
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: Date;
+}
+
 // =============================================================================
 // Mock Data Storage (will be replaced by database)
 // =============================================================================
