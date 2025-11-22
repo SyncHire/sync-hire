@@ -267,7 +267,14 @@ export default function JobCreationPage() {
       }
 
       const result = await response.json();
-      toast.success("Job created! Redirecting...", { duration: 2000 });
+
+      // Show toast based on AI matching status
+      if (result.data.aiMatchingStatus === "scanning") {
+        toast.success("Job created! Scanning for matching candidates...", { duration: 3000 });
+      } else {
+        toast.success("Job created!", { duration: 2000 });
+      }
+
       router.push(`/hr/jobs/${result.data.id}`);
     } catch (error) {
       const errorMessage =

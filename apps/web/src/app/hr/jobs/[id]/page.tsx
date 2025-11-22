@@ -32,7 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { useSaveJobQuestions, useGenerateJobQuestions, useUpdateJobSettings, useMatchCandidates } from "@/lib/hooks/use-job-questions";
+import { useSaveJobQuestions, useGenerateJobQuestions, useUpdateJobSettings, useMatchCandidates, useJob } from "@/lib/hooks/use-job-questions";
 import type { Job } from "@/lib/mock-data";
 
 interface Question {
@@ -44,8 +44,14 @@ interface Question {
 
 export default function HRJDDetail() {
   const params = useParams();
-  const [job, setJob] = useState<Job | null | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(true);
+  const jobId = params?.id as string | undefined;
+
+  // Track previous status for toast notification
+  const [prevStatus, setPrevStatus] = useState<string | undefined>();
+
+  // Fetch job with react-query, poll while scanning
+  const { data: job, isLoading } = useJob(jobId, { pollWhileScanning: true });
+
   const [questions, setQuestions] = useState<Question[]>([]);
 
   // Question management state
@@ -54,7 +60,7 @@ export default function HRJDDetail() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [newQuestion, setNewQuestion] = useState<{ text: string; type: "text" | "video" | "code"; duration: number }>({ text: "", type: "text", duration: 2 });
 
-  // AI Matching settings state
+  // AI Matching settings state - derived from job data
   const [aiMatchingEnabled, setAiMatchingEnabled] = useState(true);
 
   // React Query mutations
@@ -63,32 +69,21 @@ export default function HRJDDetail() {
   const updateSettingsMutation = useUpdateJobSettings();
   const matchCandidatesMutation = useMatchCandidates();
 
+  // Sync local state with job data
   useEffect(() => {
-    async function fetchJob() {
-      try {
-        const response = await fetch("/api/jobs");
-        if (!response.ok) throw new Error("Failed to fetch jobs");
-        const result = await response.json();
-        const jobs = result.data || [];
-        const foundJob = jobs.find((j: Job) => j.id === params?.id);
-        setJob(foundJob || null);
-        if (foundJob?.questions) {
-          setQuestions(foundJob.questions);
-        }
-        if (foundJob) {
-          setAiMatchingEnabled(foundJob.aiMatchingEnabled ?? true);
-        }
-      } catch (error) {
-        console.error("Error fetching job:", error);
-        setJob(null);
-      } finally {
-        setIsLoading(false);
+    if (job) {
+      if (job.questions) {
+        setQuestions(job.questions);
       }
+      setAiMatchingEnabled(job.aiMatchingEnabled ?? true);
+
+      // Show toast when scanning completes
+      if (prevStatus === "scanning" && job.aiMatchingStatus === "complete") {
+        toast.success(`Scanning complete! Found ${job.applicantsCount || 0} matching candidates.`, { duration: 4000 });
+      }
+      setPrevStatus(job.aiMatchingStatus);
     }
-    if (params?.id) {
-      fetchJob();
-    }
-  }, [params?.id]);
+  }, [job, prevStatus]);
 
   // Add a new question
   const handleAddQuestion = () => {
@@ -289,7 +284,14 @@ export default function HRJDDetail() {
             </Button>
             <Link href={`/hr/applicants/${job.id}`}>
               <Button className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 border-0">
-                View Applicants ({job.applicantsCount})
+                {job.aiMatchingStatus === "scanning" ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Scanning...
+                  </>
+                ) : (
+                  `View Applicants (${job.applicantsCount || 0})`
+                )}
               </Button>
             </Link>
           </div>

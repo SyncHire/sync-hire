@@ -39,9 +39,9 @@ interface CreateJobRequest {
 }
 
 /**
- * Trigger candidate matching in the background
+ * Trigger candidate matching and return match count
  */
-async function triggerCandidateMatching(jobId: string): Promise<void> {
+async function triggerCandidateMatching(jobId: string): Promise<{ matchedCount: number; candidateNames: string[] }> {
   try {
     // Import dynamically to avoid circular dependencies
     const { generateSmartMergedQuestions } = await import("@/lib/backend/question-generator");
@@ -53,7 +53,7 @@ async function triggerCandidateMatching(jobId: string): Promise<void> {
     const job = await storage.getJob(jobId);
     if (!job) {
       console.log(`[auto-match] Job not found: ${jobId}`);
-      return;
+      return { matchedCount: 0, candidateNames: [] };
     }
 
     console.log(`\n🤖 [auto-match] Starting automatic candidate matching for job: ${jobId}`);
@@ -65,13 +65,14 @@ async function triggerCandidateMatching(jobId: string): Promise<void> {
 
     if (cvExtractions.length === 0) {
       console.log(`⚠️ [auto-match] No CVs to match against`);
-      return;
+      return { matchedCount: 0, candidateNames: [] };
     }
 
     const matchThreshold = job.aiMatchingThreshold || 80;
     console.log(`🎯 [auto-match] Match threshold: ${matchThreshold}%`);
 
     let matchedCount = 0;
+    const matchedCandidates: string[] = [];
 
     // Process each CV
     for (const { cvId, data: cvData } of cvExtractions) {
@@ -159,6 +160,7 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
 
         await storage.saveApplication(application);
         matchedCount++;
+        matchedCandidates.push(candidateName);
 
         // Update job applicant count
         const updatedJob = { ...job, applicantsCount: (job.applicantsCount || 0) + 1 };
@@ -219,8 +221,28 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
     }
 
     console.log(`\n📊 [auto-match] Complete: ${matchedCount} candidate(s) matched\n`);
+
+    // Update job status to complete
+    const finalJob = await storage.getJob(jobId);
+    if (finalJob) {
+      finalJob.aiMatchingStatus = "complete";
+      await storage.saveJob(jobId, finalJob);
+      console.log(`✅ [auto-match] Job status updated to 'complete'`);
+    }
+
+    return { matchedCount, candidateNames: matchedCandidates };
   } catch (error) {
     console.error("[auto-match] Error:", error);
+
+    // Update job status to complete even on error
+    const storage = getStorage();
+    const errorJob = await storage.getJob(jobId);
+    if (errorJob) {
+      errorJob.aiMatchingStatus = "complete";
+      await storage.saveJob(jobId, errorJob);
+    }
+
+    return { matchedCount: 0, candidateNames: [] };
   }
 }
 
@@ -267,6 +289,7 @@ export async function POST(request: NextRequest) {
       questions: questions,
       aiMatchingEnabled,
       aiMatchingThreshold,
+      aiMatchingStatus: aiMatchingEnabled ? "scanning" : "disabled",
     } as Partial<Job>);
 
     // Create JD version with extraction data
@@ -294,7 +317,7 @@ export async function POST(request: NextRequest) {
     const storage = getStorage();
     await storage.saveJob(job.id, job);
 
-    // Trigger automatic candidate matching if enabled (in background)
+    // Trigger automatic candidate matching in background (don't wait)
     if (aiMatchingEnabled) {
       console.log(`🚀 [create-job] AI Matching enabled - triggering automatic candidate matching`);
       triggerCandidateMatching(job.id).catch(err =>
@@ -311,6 +334,7 @@ export async function POST(request: NextRequest) {
           location: job.location,
           customQuestionsCount: questions.length,
           status: job.status,
+          aiMatchingStatus: job.aiMatchingStatus,
         },
       },
       { status: 201 },

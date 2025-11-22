@@ -56,6 +56,7 @@ export interface Job {
   // AI Matching settings
   aiMatchingEnabled?: boolean; // Auto-match candidates when enabled
   aiMatchingThreshold?: number; // Minimum match % to auto-apply (default 80)
+  aiMatchingStatus?: "scanning" | "complete" | "disabled"; // Current scan status
 }
 
 export interface AIEvaluation {
