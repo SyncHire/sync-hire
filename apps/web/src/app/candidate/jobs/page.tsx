@@ -197,7 +197,7 @@ export default function CandidateJobListings() {
                 <Button
                   variant="outline"
                   onClick={handleTryAgain}
-                  className="flex items-center gap-2 cursor-pointer"
+                  className="flex items-center gap-2"
                 >
                   <RefreshCw className="w-4 h-4" />
                   Upload Different CV
@@ -354,7 +354,7 @@ export default function CandidateJobListings() {
                   <p className="text-muted-foreground">No interviews found that match your profile.</p>
                   <Button
                     onClick={handleTryAgain}
-                    className="mt-4 cursor-pointer"
+                    className="mt-4"
                   >
                     Try Again
                   </Button>
@@ -367,7 +367,7 @@ export default function CandidateJobListings() {
             <div className="flex justify-center">
               <Button
                 onClick={handleTryAgain}
-                className="flex items-center gap-2 cursor-pointer"
+                className="flex items-center gap-2"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Try Again

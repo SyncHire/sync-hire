@@ -108,9 +108,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
 
-              <button className="text-muted-foreground hover:text-foreground">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              >
                 <Bell className="h-4 w-4" />
-              </button>
+              </Button>
 
               <div className="h-4 w-px bg-border/50" />
 
