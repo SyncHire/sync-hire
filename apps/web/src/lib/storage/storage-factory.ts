@@ -5,8 +5,8 @@
  * Makes it easy to swap between file and database storage.
  */
 
-import type { StorageInterface } from "./storage-interface";
 import { FileStorage } from "./file-storage";
+import type { StorageInterface } from "./storage-interface";
 
 export function createStorage(): StorageInterface {
   // In the future, this can check for environment variables
@@ -16,7 +16,7 @@ export function createStorage(): StorageInterface {
   if (useDatabase) {
     // Future: return new DatabaseStorage();
     console.warn(
-      "DATABASE_STORAGE not yet implemented, falling back to FileStorage"
+      "DATABASE_STORAGE not yet implemented, falling back to FileStorage",
     );
   }
 

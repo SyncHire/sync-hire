@@ -1,11 +1,11 @@
 "use client";
 
+import { Bell, Moon, Search, Sun, Video } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Video, Bell, Search, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
-import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -18,19 +18,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Compute these values but only use them after mount to avoid hydration mismatch
-  const isCandidate = pathname.startsWith('/candidate') || pathname.startsWith('/interview');
+  const isCandidate =
+    pathname.startsWith("/candidate") || pathname.startsWith("/interview");
   // Only match /interview/[id], not deeper paths like /interview/[id]/results
-  const pathParts = pathname.split('/').filter(Boolean);
-  const isInterview = pathParts[0] === 'interview' && pathParts.length === 2;
+  const pathParts = pathname.split("/").filter(Boolean);
+  const isInterview = pathParts[0] === "interview" && pathParts.length === 2;
 
   // During SSR and initial hydration, render a neutral state
   // After mount, render the correct conditional layout
   if (!mounted) {
     return (
       <div className="min-h-screen bg-background font-sans text-foreground transition-colors duration-300">
-        <main className="h-screen overflow-hidden">
-          {children}
-        </main>
+        <main className="h-screen overflow-hidden">{children}</main>
       </div>
     );
   }
@@ -42,7 +41,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md transition-colors duration-300">
           <div className="container mx-auto flex h-14 items-center justify-between px-4">
             <div className="flex items-center gap-8">
-              <Link href="/" className="flex items-center gap-2 font-medium tracking-tight group">
+              <Link
+                href="/"
+                className="flex items-center gap-2 font-medium tracking-tight group"
+              >
                 <div className="h-6 w-6 rounded bg-foreground flex items-center justify-center text-background group-hover:scale-105 transition-transform">
                   <Video className="h-3 w-3" />
                 </div>
@@ -54,13 +56,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   <>
                     <Link
                       href="/hr/jobs"
-                      className={`hover:text-foreground transition-colors ${pathname.startsWith('/hr/jobs') ? 'text-foreground' : ''}`}
+                      className={`hover:text-foreground transition-colors ${pathname.startsWith("/hr/jobs") ? "text-foreground" : ""}`}
                     >
                       Jobs
                     </Link>
                     <Link
                       href="/hr/applicants"
-                      className={`hover:text-foreground transition-colors ${pathname.startsWith('/hr/applicants') ? 'text-foreground' : ''}`}
+                      className={`hover:text-foreground transition-colors ${pathname.startsWith("/hr/applicants") ? "text-foreground" : ""}`}
                     >
                       Candidates
                     </Link>
@@ -75,13 +77,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   <>
                     <Link
                       href="/candidate/jobs"
-                      className={`hover:text-foreground transition-colors ${pathname.startsWith('/candidate/jobs') ? 'text-foreground' : ''}`}
+                      className={`hover:text-foreground transition-colors ${pathname.startsWith("/candidate/jobs") ? "text-foreground" : ""}`}
                     >
                       Find Jobs
                     </Link>
                     <Link
                       href="/candidate/history"
-                      className={`hover:text-foreground transition-colors ${pathname.startsWith('/candidate/history') ? 'text-foreground' : ''}`}
+                      className={`hover:text-foreground transition-colors ${pathname.startsWith("/candidate/history") ? "text-foreground" : ""}`}
                     >
                       Interview History
                     </Link>
@@ -103,9 +105,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               >
-                {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                {theme === "dark" ? (
+                  <Sun className="h-4 w-4" />
+                ) : (
+                  <Moon className="h-4 w-4" />
+                )}
               </Button>
 
               <Button
@@ -123,7 +129,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   href={isCandidate ? "/hr/jobs" : "/candidate/jobs"}
                   className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1 hover:bg-secondary rounded"
                 >
-                  {isCandidate ? 'Switch to HR' : 'Switch to Candidate'}
+                  {isCandidate ? "Switch to HR" : "Switch to Candidate"}
                 </Link>
                 <div className="h-7 w-7 rounded-full overflow-hidden border border-border/50 bg-secondary flex items-center justify-center">
                   <span className="text-xs font-medium">U</span>
@@ -133,7 +139,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
       )}
-      <main className={`${isInterview ? 'h-screen overflow-hidden' : 'container mx-auto px-4 py-8'}`}>
+      <main
+        className={`${isInterview ? "h-screen overflow-hidden" : "container mx-auto px-4 py-8"}`}
+      >
         {children}
       </main>
     </div>

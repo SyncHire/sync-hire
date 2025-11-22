@@ -5,8 +5,8 @@
  * based on candidate's CV and job description context.
  */
 
-import { geminiClient } from "@/lib/gemini-client";
 import { z } from "zod";
+import { geminiClient } from "@/lib/gemini-client";
 import type { ExtractedCVData, ExtractedJobData } from "@/lib/mock-data";
 
 // Zod schema for suggested question response validation
@@ -36,7 +36,8 @@ function extractTopSkills(cv: ExtractedCVData | null): string[] {
  * Extract experience summary from CV
  */
 function extractExperienceSummary(cv: ExtractedCVData | null): string {
-  if (!cv?.experience || cv.experience.length === 0) return "No experience data";
+  if (!cv?.experience || cv.experience.length === 0)
+    return "No experience data";
 
   const totalYears = cv.experience.length; // Simplified calculation
   const recentRole = cv.experience[0];
@@ -49,7 +50,7 @@ function extractExperienceSummary(cv: ExtractedCVData | null): string {
  */
 function buildPrompt(
   cvData: ExtractedCVData | null,
-  jdData: ExtractedJobData | null
+  jdData: ExtractedJobData | null,
 ): string {
   const candidateName = cvData?.personalInfo.fullName || "Unknown";
   const skills = extractTopSkills(cvData);
@@ -95,7 +96,7 @@ Return ONLY valid JSON array, no additional text.`;
  */
 export async function generateInterviewQuestions(
   cvData: ExtractedCVData | null,
-  jdData: ExtractedJobData | null
+  jdData: ExtractedJobData | null,
 ): Promise<SuggestedQuestion[]> {
   try {
     const prompt = buildPrompt(cvData, jdData);
@@ -139,7 +140,7 @@ export async function generateInterviewQuestions(
     // Ensure we have 6-8 questions
     if (validatedQuestions.length < 6 || validatedQuestions.length > 8) {
       console.warn(
-        `Expected 6-8 questions, got ${validatedQuestions.length}. Returning as-is.`
+        `Expected 6-8 questions, got ${validatedQuestions.length}. Returning as-is.`,
       );
     }
 
@@ -147,7 +148,7 @@ export async function generateInterviewQuestions(
   } catch (error) {
     console.error("Failed to generate interview questions:", error);
     throw new Error(
-      `Failed to generate interview questions: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to generate interview questions: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 }

@@ -14,7 +14,7 @@ export interface ValidationResult {
 
 export function validateFiles(
   files: File[],
-  config: FileValidationConfig
+  config: FileValidationConfig,
 ): ValidationResult {
   if (files.length === 0) {
     return { valid: false, error: "No file selected" };
@@ -24,7 +24,7 @@ export function validateFiles(
 
   // Check file type
   const typeValid = config.allowedTypes.some(
-    (type) => file.type === type || file.name.endsWith(type.split("/")[1])
+    (type) => file.type === type || file.name.endsWith(type.split("/")[1]),
   );
 
   if (!typeValid) {

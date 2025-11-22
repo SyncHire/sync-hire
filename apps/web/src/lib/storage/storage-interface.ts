@@ -5,7 +5,13 @@
  * Can be implemented with files, database, or cloud storage.
  */
 
-import type { ExtractedJobData, Job, ExtractedCVData } from "@/lib/mock-data";
+import type {
+  ExtractedCVData,
+  ExtractedJobData,
+  Interview,
+  Job,
+  User,
+} from "@/lib/mock-data";
 
 /**
  * Interview questions storage format with both custom HR questions and AI-generated suggested questions
@@ -122,4 +128,56 @@ export interface StorageInterface {
    * Check if interview questions exist in questions-set storage
    */
   hasInterviewQuestions(hash: string): Promise<boolean>;
+
+  // =============================================================================
+  // Interview Methods
+  // =============================================================================
+
+  /**
+   * Get interview by ID
+   */
+  getInterview(id: string): Promise<Interview | null>;
+
+  /**
+   * Get all interviews
+   */
+  getAllInterviews(): Promise<Interview[]>;
+
+  /**
+   * Get interviews for a specific user
+   */
+  getInterviewsForUser(userId: string): Promise<Interview[]>;
+
+  /**
+   * Save interview data
+   */
+  saveInterview(id: string, interview: Interview): Promise<void>;
+
+  // =============================================================================
+  // User Methods
+  // =============================================================================
+
+  /**
+   * Get user by ID
+   */
+  getUser(id: string): Promise<User | null>;
+
+  /**
+   * Get current/demo user
+   */
+  getCurrentUser(): Promise<User>;
+
+  // =============================================================================
+  // User CV Methods
+  // =============================================================================
+
+  /**
+   * Get the CV ID associated with a user
+   */
+  getUserCVId(userId: string): Promise<string | null>;
+
+  /**
+   * Save/link a CV ID to a user
+   */
+  saveUserCVId(userId: string, cvId: string): Promise<void>;
 }

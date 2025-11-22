@@ -9,41 +9,41 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  
+
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
-  
+
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
-  
+
   --color-popover: hsl(var(--popover));
   --color-popover-foreground: hsl(var(--popover-foreground));
-  
+
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
-  
+
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
-  
+
   --color-muted: hsl(var(--muted));
   --color-muted-foreground: hsl(var(--muted-foreground));
-  
+
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
-  
+
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
-  
+
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
-  
+
   --color-chart-1: hsl(var(--chart-1));
   --color-chart-2: hsl(var(--chart-2));
   --color-chart-3: hsl(var(--chart-3));
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
-  
+
   --color-sidebar: hsl(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
   --color-sidebar-primary: hsl(var(--sidebar-primary));
@@ -52,23 +52,33 @@
   --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
-  
-  --font-sans: 'Inter', sans-serif;
-  --font-heading: 'Inter', sans-serif;
-  
+
+  --font-sans: "Inter", sans-serif;
+  --font-heading: "Inter", sans-serif;
+
   --animate-gradient: gradient 8s linear infinite;
   --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-shimmer: shimmer 2s linear infinite;
 
   @keyframes gradient {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
   }
-  
+
   @keyframes shimmer {
-    from { background-position: 0 0; }
-    to { background-position: -200% 0; }
+    from {
+      background-position: 0 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
   }
 }
 
@@ -132,8 +142,9 @@
   }
 
   .bg-grid-pattern {
-    background-image: linear-gradient(to right, rgba(128, 128, 128, 0.1) 1px, transparent 1px),
-                      linear-gradient(to bottom, rgba(128, 128, 128, 0.1) 1px, transparent 1px);
+    background-image:
+      linear-gradient(to right, rgba(128, 128, 128, 0.1) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(128, 128, 128, 0.1) 1px, transparent 1px);
     background-size: 24px 24px;
   }
 

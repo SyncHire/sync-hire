@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import "@/index.css";
-import { QueryProvider } from "@/lib/query-provider";
 import { ThemeProvider } from "next-themes";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { Toaster } from "@/components/ui/toaster";
 import AppShell from "@/components/AppShell";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryProvider } from "@/lib/query-provider";
 
 export const metadata: Metadata = {
   title: "SyncHire - AI Interview Platform",
@@ -20,17 +20,26 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
       </head>
       <body className="antialiased font-sans">
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+        >
           <QueryProvider>
             <TooltipProvider>
               <Toaster />
-              <AppShell>
-                {children}
-              </AppShell>
+              <AppShell>{children}</AppShell>
             </TooltipProvider>
           </QueryProvider>
         </ThemeProvider>

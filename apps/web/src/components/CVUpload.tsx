@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Upload, FileText, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { AlertCircle, CheckCircle, FileText, Upload, X } from "lucide-react";
+import type React from "react";
+import { useCallback, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -11,30 +12,37 @@ interface FileUploadProps {
   error?: string | null;
 }
 
-export function CVUploadSection({ onFileSelect, isProcessing, error }: FileUploadProps) {
+export function CVUploadSection({
+  onFileSelect,
+  isProcessing,
+  error,
+}: FileUploadProps) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const validateFile = (file: File): string | null => {
-    if (file.type !== 'application/pdf') {
-      return 'Only PDF files are supported';
+    if (file.type !== "application/pdf") {
+      return "Only PDF files are supported";
     }
     if (file.size > 10 * 1024 * 1024) {
-      return 'File size must be less than 10MB';
+      return "File size must be less than 10MB";
     }
     return null;
   };
 
-  const handleFile = useCallback((file: File) => {
-    const validationError = validateFile(file);
-    if (validationError) {
-      return validationError;
-    }
+  const handleFile = useCallback(
+    (file: File) => {
+      const validationError = validateFile(file);
+      if (validationError) {
+        return validationError;
+      }
 
-    setSelectedFile(file);
-    onFileSelect(file);
-    return null;
-  }, [onFileSelect]);
+      setSelectedFile(file);
+      onFileSelect(file);
+      return null;
+    },
+    [onFileSelect],
+  );
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -46,27 +54,33 @@ export function CVUploadSection({ onFileSelect, isProcessing, error }: FileUploa
     }
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragActive(false);
 
-    if (isProcessing) return;
+      if (isProcessing) return;
 
-    const files = e.dataTransfer.files;
-    if (files && files[0]) {
-      handleFile(files[0]);
-    }
-  }, [handleFile, isProcessing]);
+      const files = e.dataTransfer.files;
+      if (files && files[0]) {
+        handleFile(files[0]);
+      }
+    },
+    [handleFile, isProcessing],
+  );
 
-  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isProcessing) return;
+  const handleFileInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (isProcessing) return;
 
-    const files = e.target.files;
-    if (files && files[0]) {
-      handleFile(files[0]);
-    }
-  }, [handleFile, isProcessing]);
+      const files = e.target.files;
+      if (files && files[0]) {
+        handleFile(files[0]);
+      }
+    },
+    [handleFile, isProcessing],
+  );
 
   const clearFile = useCallback(() => {
     setSelectedFile(null);
@@ -77,8 +91,12 @@ export function CVUploadSection({ onFileSelect, isProcessing, error }: FileUploa
       <div className="w-full max-w-2xl mx-auto">
         <div className="bg-card/50 backdrop-blur-sm border border-gray-200 dark:border-white/5 rounded-2xl p-8 text-center">
           <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-lg font-medium text-foreground mb-2">Processing your CV...</p>
-          <p className="text-sm text-muted-foreground">This will only take a moment</p>
+          <p className="text-lg font-medium text-foreground mb-2">
+            Processing your CV...
+          </p>
+          <p className="text-sm text-muted-foreground">
+            This will only take a moment
+          </p>
         </div>
       </div>
     );
@@ -92,7 +110,9 @@ export function CVUploadSection({ onFileSelect, isProcessing, error }: FileUploa
             <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl dark:bg-emerald-500/5 dark:border-emerald-500/30">
               <FileText className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">{selectedFile.name}</p>
+                <p className="text-sm font-medium text-foreground">
+                  {selectedFile.name}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                 </p>
@@ -112,8 +132,8 @@ export function CVUploadSection({ onFileSelect, isProcessing, error }: FileUploa
           <div
             className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
               dragActive
-                ? 'border-blue-500 bg-blue-500/5'
-                : 'border-gray-300 hover:border-gray-400 dark:border-white/10 dark:hover:border-white/20'
+                ? "border-blue-500 bg-blue-500/5"
+                : "border-gray-300 hover:border-gray-400 dark:border-white/10 dark:hover:border-white/20"
             }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}

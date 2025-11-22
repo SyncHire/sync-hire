@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
 /**
  * React Query Provider
  * Provides query client to the app for data fetching and caching
  */
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState } from 'react';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -28,7 +28,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             retry: 1,
           },
         },
-      })
+      }),
   );
 
   return (

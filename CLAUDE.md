@@ -37,3 +37,41 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - **Never use inline/dynamic imports** - always use static imports at the top of the file
 - Bad: `const { toast } = await import('@/lib/hooks/use-toast');`
 - Good: `import { toast } from '@/lib/hooks/use-toast';` at the top of the file
+
+### Data Fetching (Frontend)
+- **Always use react-query (`@tanstack/react-query`) for data fetching in React components** - not raw `fetch` in useEffect
+- Use `useQuery` for GET requests with automatic caching and refetching
+- Use `useMutation` for POST/PUT/DELETE operations with automatic cache invalidation
+- Create custom hooks in `@/lib/hooks/` to encapsulate related queries and mutations
+- Use `queryClient.invalidateQueries()` to refresh data after mutations
+
+**Good patterns:**
+```tsx
+// Custom hook for reusable query logic
+export function useQuestionSets(cvId: string | null) {
+  return useQuery({
+    queryKey: ['/api/jobs/questions', cvId],
+    queryFn: async () => { /* fetch logic */ },
+    enabled: !!cvId,
+  });
+}
+
+// Mutation with cache invalidation
+export function useApplyToJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params) => { /* POST logic */ },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/jobs/questions', variables.cvId] });
+    },
+  });
+}
+```
+
+**Bad patterns:**
+```tsx
+// Don't use raw fetch in useEffect
+useEffect(() => {
+  fetch('/api/data').then(res => res.json()).then(setData);
+}, []);
+```

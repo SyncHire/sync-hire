@@ -21,7 +21,7 @@ export async function GET() {
         success: false,
         error: error instanceof Error ? error.message : "Failed to fetch jobs",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

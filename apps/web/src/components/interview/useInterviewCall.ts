@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
+import { type Call, useStreamVideoClient } from "@stream-io/video-react-sdk";
 /**
  * Custom hook to manage interview call lifecycle
  * Simplified: join happens on user action (button click), not on mount
  */
-import { useState, useEffect } from 'react';
-import { Call, useStreamVideoClient } from '@stream-io/video-react-sdk';
-import { useStartInterview } from '@/lib/hooks/use-interview';
+import { useEffect, useState } from "react";
+import { useStartInterview } from "@/lib/hooks/use-interview";
 
 interface UseInterviewCallParams {
   interviewId: string;
@@ -37,7 +37,7 @@ export function useInterviewCall({
       setIsJoining(true);
 
       try {
-        console.log('🚀 Starting interview for:', candidateName);
+        console.log("🚀 Starting interview for:", candidateName);
 
         // Start interview and get call ID
         const data = await startInterviewMutation.mutateAsync({
@@ -46,21 +46,21 @@ export function useInterviewCall({
           candidateName,
         });
 
-        console.log('📞 Interview started, joining call:', data.callId);
+        console.log("📞 Interview started, joining call:", data.callId);
 
         // Create the call object
-        const videoCall = client.call('default', data.callId);
+        const videoCall = client.call("default", data.callId);
 
         // Enable camera and microphone BEFORE joining
         try {
           await videoCall.camera.enable();
         } catch (camErr) {
-          console.warn('⚠️ Could not enable camera:', camErr);
+          console.warn("⚠️ Could not enable camera:", camErr);
         }
         try {
           await videoCall.microphone.enable();
         } catch (micErr) {
-          console.warn('⚠️ Could not enable microphone:', micErr);
+          console.warn("⚠️ Could not enable microphone:", micErr);
         }
 
         // Join the call
@@ -68,29 +68,32 @@ export function useInterviewCall({
 
         // Start transcription for closed captions (English only)
         try {
-          console.log('🎤 Attempting to start transcription...');
-          const transcriptionResult = await videoCall.startTranscription({ language: 'en', enable_closed_captions: true });
-          console.log('🎤 Transcription started:', transcriptionResult);
+          console.log("🎤 Attempting to start transcription...");
+          const transcriptionResult = await videoCall.startTranscription({
+            language: "en",
+            enable_closed_captions: true,
+          });
+          console.log("🎤 Transcription started:", transcriptionResult);
         } catch (transcriptionErr) {
-          console.error('❌ Could not start transcription:', transcriptionErr);
+          console.error("❌ Could not start transcription:", transcriptionErr);
         }
 
         // Listen for call ended events
-        videoCall.on('call.ended', () => {
-          console.log('📞 Call ended by host');
+        videoCall.on("call.ended", () => {
+          console.log("📞 Call ended by host");
           setCallEnded(true);
         });
 
-        videoCall.on('call.session_participant_left', () => {
-          console.log('📞 Participant left - ending interview');
+        videoCall.on("call.session_participant_left", () => {
+          console.log("📞 Participant left - ending interview");
           setTimeout(() => setCallEnded(true), 500);
         });
 
         setCall(videoCall);
         setIsJoining(false);
-        console.log('✅ Successfully joined call');
+        console.log("✅ Successfully joined call");
       } catch (err) {
-        console.error('Error initializing interview:', err);
+        console.error("Error initializing interview:", err);
         setIsJoining(false);
       }
     };

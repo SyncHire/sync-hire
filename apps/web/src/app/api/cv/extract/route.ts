@@ -2,11 +2,12 @@
  * POST /api/cv/extract
  *
  * Handles CV file upload and AI extraction with intelligent caching.
+ * Also links the CV to the current user for persistence.
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import { getStorage } from "@/lib/storage/storage-factory";
+import { type NextRequest, NextResponse } from "next/server";
 import { CVProcessor } from "@/lib/backend/cv-processor";
+import { getStorage } from "@/lib/storage/storage-factory";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -18,15 +19,18 @@ export async function POST(request: NextRequest) {
     if (!file) {
       return NextResponse.json(
         { success: false, error: "No file provided" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Validate file type - only PDF is supported
     if (file.type !== "application/pdf" && !file.name.endsWith(".pdf")) {
       return NextResponse.json(
-        { success: false, error: "Unsupported file type. Only PDF files are accepted" },
-        { status: 400 }
+        {
+          success: false,
+          error: "Unsupported file type. Only PDF files are accepted",
+        },
+        { status: 400 },
       );
     }
 
@@ -34,7 +38,7 @@ export async function POST(request: NextRequest) {
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
         { success: false, error: "File size exceeds 10MB limit" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -47,8 +51,12 @@ export async function POST(request: NextRequest) {
 
     const { hash, extractedData, cached } = await processor.processFile(
       buffer,
-      file.name
+      file.name,
     );
+
+    // Link CV to current user for persistence
+    const user = await storage.getCurrentUser();
+    await storage.saveUserCVId(user.id, hash);
 
     return NextResponse.json(
       {
@@ -59,7 +67,7 @@ export async function POST(request: NextRequest) {
           cached,
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Extract CV error:", error);
@@ -67,11 +75,9 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error:
-          error instanceof Error
-            ? error.message
-            : "Failed to extract CV data",
+          error instanceof Error ? error.message : "Failed to extract CV data",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
