@@ -4,7 +4,9 @@ Intelligently detects when the interview is complete based on conversation conte
 """
 import asyncio
 import logging
-from typing import Optional
+import time
+from typing import Optional, List
+from dataclasses import dataclass, field, asdict
 from vision_agents.core.processors import Processor
 from vision_agents.core.llm.events import (
     RealtimeAgentSpeechTranscriptionEvent,
@@ -12,6 +14,17 @@ from vision_agents.core.llm.events import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class TranscriptEntry:
+    """Single transcript entry"""
+    speaker: str  # "agent" or "user"
+    text: str
+    timestamp: float  # seconds since interview start
+
+    def to_dict(self) -> dict:
+        return asdict(self)
 
 
 class InterviewCompletionProcessor(Processor):
@@ -23,6 +36,8 @@ class InterviewCompletionProcessor(Processor):
     2. Agent hasn't spoken for 10+ seconds after closing
     3. Total questions asked >= expected questions
     4. Interview duration >= minimum time (8 minutes)
+
+    Also collects full transcript for webhook.
     """
 
     def __init__(
@@ -43,6 +58,9 @@ class InterviewCompletionProcessor(Processor):
         self.interview_start_time = None
         self.is_complete = asyncio.Event()
 
+        # Transcript collection
+        self.transcript: List[TranscriptEntry] = []
+
         # Closing keywords and phrases
         self.closing_keywords = {
             "goodbye", "good bye", "bye",
@@ -61,16 +79,24 @@ class InterviewCompletionProcessor(Processor):
 
     async def setup(self, agent):
         """Initialize processor when agent starts"""
-        import time
         self.interview_start_time = time.time()
         logger.info("🎬 Interview completion processor initialized")
 
         @agent.events.subscribe
         async def on_agent_speech(event: RealtimeAgentSpeechTranscriptionEvent):
             """Track agent speech to detect closing and questions"""
-            import time
             self.last_agent_speech_time = time.time()
-            text_lower = event.text.lower().strip()
+            text = event.text.strip()
+            text_lower = text.lower()
+
+            # Add to transcript
+            if text:
+                elapsed = time.time() - self.interview_start_time
+                self.transcript.append(TranscriptEntry(
+                    speaker="agent",
+                    text=text,
+                    timestamp=round(elapsed, 2)
+                ))
 
             # Count questions
             if any(indicator in text_lower for indicator in self.question_indicators):
@@ -79,8 +105,8 @@ class InterviewCompletionProcessor(Processor):
 
             # Detect closing phrases
             if any(keyword in text_lower for keyword in self.closing_keywords):
-                self.agent_closing_phrases.append(event.text)
-                logger.info(f"👋 Agent used closing phrase: '{event.text}'")
+                self.agent_closing_phrases.append(text)
+                logger.info(f"👋 Agent used closing phrase: '{text}'")
 
                 # Check if interview should complete
                 await self._check_completion()
@@ -88,17 +114,25 @@ class InterviewCompletionProcessor(Processor):
         @agent.events.subscribe
         async def on_user_speech(event: RealtimeUserSpeechTranscriptionEvent):
             """Track user responses (helps confirm interview is active)"""
-            text_lower = event.text.lower().strip()
+            text = event.text.strip()
+            text_lower = text.lower()
+
+            # Add to transcript
+            if text:
+                elapsed = time.time() - self.interview_start_time
+                self.transcript.append(TranscriptEntry(
+                    speaker="user",
+                    text=text,
+                    timestamp=round(elapsed, 2)
+                ))
 
             # If user also says goodbye, definitely time to end
             if "goodbye" in text_lower or "bye" in text_lower:
-                logger.info(f"👋 User said goodbye: '{event.text}'")
+                logger.info(f"👋 User said goodbye: '{text}'")
                 await self._mark_complete("User said goodbye")
 
     async def _check_completion(self):
         """Smart completion check based on multiple signals"""
-        import time
-
         # Calculate interview duration
         duration_minutes = (time.time() - self.interview_start_time) / 60 if self.interview_start_time else 0
 
@@ -151,7 +185,10 @@ class InterviewCompletionProcessor(Processor):
 
     def get_duration_minutes(self) -> float:
         """Get interview duration in minutes"""
-        import time
         if self.interview_start_time:
             return (time.time() - self.interview_start_time) / 60
         return 0
+
+    def get_transcript(self) -> List[dict]:
+        """Get full transcript as list of dicts"""
+        return [entry.to_dict() for entry in self.transcript]

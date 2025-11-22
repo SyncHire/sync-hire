@@ -74,11 +74,11 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
       <div className="relative max-w-4xl mx-auto px-6 py-12 pb-24">
         {/* Back Button */}
         <Link
-          href="/candidate/history"
+          href="/candidate/jobs"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
         >
           <ArrowLeft className="h-4 w-4" />
-          To Interview History
+          Back to Interviews
         </Link>
 
         {/* Header */}
@@ -208,10 +208,10 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
         {/* Action Buttons */}
         <div className="mt-10 flex gap-4">
           <Link
-            href="/candidate/history"
+            href="/candidate/jobs"
             className="flex-1 h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium flex items-center justify-center gap-2 transition-colors"
           >
-            View Interview History
+            View More Interviews
           </Link>
         </div>
       </div>

@@ -20,11 +20,9 @@ export default function HRJDListings() {
           </h1>
           <p className="text-muted-foreground mt-2">Manage your open positions and track AI-screened applicants.</p>
         </div>
-        <Link href="/hr/jobs/create">
-          <Button className="gap-2 h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-lg shadow-blue-500/20 transition-all">
-            <Plus className="h-4 w-4" /> Post New Job
-          </Button>
-        </Link>
+        <Button className="gap-2 h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-lg shadow-blue-500/20 transition-all">
+          <Plus className="h-4 w-4" /> Post New Job
+        </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
