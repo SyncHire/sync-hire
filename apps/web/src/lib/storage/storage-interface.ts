@@ -1,35 +1,35 @@
 /**
- * Storage Interface for Job Description Extractions and Job Postings
+ * Storage Interface for Job Description Extractions, CV Extractions and Job Postings
  *
- * Provides abstraction for storing and retrieving extracted job data and created jobs.
+ * Provides abstraction for storing and retrieving extracted job data, CV data and created jobs.
  * Can be implemented with files, database, or cloud storage.
  */
 
-import type { ExtractedJobData, Job } from "@/lib/mock-data";
+import type { ExtractedJobData, Job, ExtractedCVData } from "@/lib/mock-data";
 
 export interface StorageInterface {
   /**
-   * Get extraction data by hash ID
+   * Get job extraction data by hash ID
    */
   getExtraction(hash: string): Promise<ExtractedJobData | null>;
 
   /**
-   * Save extraction data with hash key
+   * Save job extraction data with hash key
    */
   saveExtraction(hash: string, data: ExtractedJobData): Promise<void>;
 
   /**
-   * Save uploaded file and return path/URL
+   * Save uploaded job description file and return path/URL
    */
   saveUpload(hash: string, buffer: Buffer): Promise<string>;
 
   /**
-   * Get path to uploaded file
+   * Get path to uploaded job description file
    */
   getUploadPath(hash: string): string;
 
   /**
-   * Check if extraction exists
+   * Check if job extraction exists
    */
   hasExtraction(hash: string): Promise<boolean>;
 
@@ -52,4 +52,29 @@ export interface StorageInterface {
    * Check if job exists
    */
   hasJob(id: string): Promise<boolean>;
+
+  /**
+   * Get CV extraction data by hash ID
+   */
+  getCVExtraction(hash: string): Promise<ExtractedCVData | null>;
+
+  /**
+   * Save CV extraction data with hash key
+   */
+  saveCVExtraction(hash: string, data: ExtractedCVData): Promise<void>;
+
+  /**
+   * Save uploaded CV file and return path/URL
+   */
+  saveCVUpload(hash: string, buffer: Buffer): Promise<string>;
+
+  /**
+   * Get path to uploaded CV file
+   */
+  getCVUploadPath(hash: string): string;
+
+  /**
+   * Check if CV extraction exists
+   */
+  hasCVExtraction(hash: string): Promise<boolean>;
 }
