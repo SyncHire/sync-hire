@@ -7,6 +7,7 @@ import {
   Download,
   Filter,
   Inbox,
+  Mail,
   PlayCircle,
   Sparkles,
   X,
@@ -269,8 +270,8 @@ export default function HRApplicantDetail() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-wrap gap-1 max-w-[200px]">
-                      {applicant.skills.slice(0, 3).map((skill, idx) => (
+                    <div className="flex flex-wrap gap-1 max-w-[280px]">
+                      {applicant.skills.slice(0, 6).map((skill, idx) => (
                         <Badge
                           key={idx}
                           variant="secondary"
@@ -279,12 +280,13 @@ export default function HRApplicantDetail() {
                           {skill}
                         </Badge>
                       ))}
-                      {applicant.skills.length > 3 && (
+                      {applicant.skills.length > 6 && (
                         <Badge
                           variant="outline"
-                          className="text-[10px] px-1.5 py-0"
+                          className="text-[10px] px-1.5 py-0 cursor-help"
+                          title={applicant.skills.slice(6).join(", ")}
                         >
-                          +{applicant.skills.length - 3}
+                          +{applicant.skills.length - 6}
                         </Badge>
                       )}
                       {applicant.skills.length === 0 && (
@@ -347,32 +349,53 @@ export default function HRApplicantDetail() {
                   </TableCell>
                   <TableCell className="text-right pr-6">
                     <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {applicant.status === "PENDING" && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-8 gap-1.5 px-3 text-xs hover:bg-blue-500 hover:text-white transition-colors"
+                          title="Send interview invitation"
+                        >
+                          <Mail className="h-3.5 w-3.5" />
+                          Invite
+                        </Button>
+                      )}
                       {applicant.status === "COMPLETED" && (
-                        <Link href={`/interview/${applicant.interviewId}/results`}>
+                        <>
+                          <Link href={`/interview/${applicant.interviewId}/results`}>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="h-8 w-8 p-0 hover:bg-foreground hover:text-background transition-colors"
+                              title="View interview results"
+                            >
+                              <PlayCircle className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <div className="w-px h-4 bg-border/50 mx-1 self-center" />
                           <Button
                             size="sm"
-                            variant="secondary"
-                            className="h-8 w-8 p-0 hover:bg-foreground hover:text-background transition-colors"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-green-500 hover:bg-green-500/10"
+                            title="Accept candidate"
                           >
-                            <PlayCircle className="h-4 w-4" />
+                            <Check className="h-4 w-4" />
                           </Button>
-                        </Link>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-red-500 hover:bg-red-500/10"
+                            title="Reject candidate"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </>
                       )}
-                      <div className="w-px h-4 bg-border/50 mx-1 self-center" />
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0 text-green-500 hover:bg-green-500/10"
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0 text-red-500 hover:bg-red-500/10"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                      {applicant.status === "IN_PROGRESS" && (
+                        <span className="text-xs text-muted-foreground">
+                          Interview in progress...
+                        </span>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
