@@ -52,7 +52,6 @@ function buildPrompt(
   cvData: ExtractedCVData | null,
   jdData: ExtractedJobData | null,
 ): string {
-  const candidateName = cvData?.personalInfo.fullName || "Unknown";
   const skills = extractTopSkills(cvData);
   const experience = extractExperienceSummary(cvData);
   const education = cvData?.education?.[0]?.degree || "Unknown";
@@ -60,7 +59,6 @@ function buildPrompt(
   return `You are an expert technical interviewer creating personalized interview questions.
 
 **Candidate Background (from CV):**
-- Name: ${candidateName}
 - Experience: ${experience}
 - Top Skills: ${skills.join(", ") || "Not specified"}
 - Education: ${education}
@@ -78,6 +76,8 @@ Generate exactly 6-8 interview questions that:
 3. Cover both technical skills and behavioral aspects
 4. Are open-ended to encourage detailed responses
 5. Range from easy to challenging
+
+IMPORTANT: Do NOT include the candidate's name in any question. Use generic terms like "you", "your experience", etc.
 
 Return a JSON array with this structure:
 [

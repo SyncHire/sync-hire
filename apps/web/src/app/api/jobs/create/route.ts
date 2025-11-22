@@ -18,6 +18,7 @@ interface CreateJobRequest {
   description: string;
   location: string;
   employmentType: string;
+  workArrangement?: string;
   requirements: string[];
   responsibilities: string[];
   seniority: string;
@@ -57,7 +58,8 @@ export async function POST(request: NextRequest) {
       title: body.title,
       description: body.description,
       location: body.location,
-      type: body.employmentType || "Full-time",
+      type: body.employmentType || "Not specified",
+      workArrangement: body.workArrangement || "Not specified",
       requirements: body.requirements || [],
       company: body.company || "Company",
       department: body.department || "Engineering",
@@ -92,7 +94,8 @@ export async function POST(request: NextRequest) {
         requirements: body.requirements || [],
         seniority: body.seniority || "",
         location: body.location,
-        employmentType: body.employmentType || "Full-time",
+        employmentType: (body.employmentType || "Not specified") as ExtractedJobData["employmentType"],
+        workArrangement: (body.workArrangement || "Not specified") as ExtractedJobData["workArrangement"],
       };
 
       createJobDescriptionVersion(

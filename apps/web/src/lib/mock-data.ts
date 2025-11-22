@@ -40,7 +40,8 @@ export interface Job {
   company: string;
   department: string;
   location: string;
-  type: string;
+  type: string; // Employment type (Full-time, Part-time, etc.)
+  workArrangement?: WorkArrangement; // Remote, Hybrid, On-site, etc.
   salary: string;
   postedAt: string;
   applicantsCount: number;
@@ -110,6 +111,27 @@ export interface CustomQuestion {
   updatedAt: Date;
 }
 
+// Employment type options
+export const EMPLOYMENT_TYPES = [
+  "Full-time",
+  "Part-time",
+  "Contract",
+  "Temporary",
+  "Internship",
+  "Not specified",
+] as const;
+export type EmploymentType = (typeof EMPLOYMENT_TYPES)[number];
+
+// Work arrangement options
+export const WORK_ARRANGEMENTS = [
+  "Remote",
+  "Hybrid",
+  "On-site",
+  "Flexible",
+  "Not specified",
+] as const;
+export type WorkArrangement = (typeof WORK_ARRANGEMENTS)[number];
+
 export interface ExtractedJobData {
   title: string;
   company: string;
@@ -117,7 +139,8 @@ export interface ExtractedJobData {
   requirements: string[];
   seniority: string;
   location: string;
-  employmentType: string;
+  employmentType: EmploymentType;
+  workArrangement: WorkArrangement;
 }
 
 export interface ExtractedCVData {

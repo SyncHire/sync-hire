@@ -10,6 +10,7 @@ import {
   Building2,
   CheckCircle2,
   Clock,
+  FileText,
   MessageSquare,
   Star,
   Target,
@@ -19,7 +20,12 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCompanyLogoUrl } from "@/lib/logo-utils";
-import { getDemoUser, getJobById, mockInterviews } from "@/lib/mock-data";
+import {
+  getDemoUser,
+  getJobById,
+  mockInterviews,
+  type Interview,
+} from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
 
 interface ResultsPageProps {
@@ -28,8 +34,8 @@ interface ResultsPageProps {
   }>;
 }
 
-// Mock evaluation data (in real app, this comes from AI analysis)
-const mockEvaluation = {
+// Default evaluation data (used when no AI analysis is available)
+const defaultEvaluation = {
   overallScore: 87,
   categories: [
     {
@@ -69,18 +75,26 @@ const mockEvaluation = {
 
 export default async function ResultsPage({ params }: ResultsPageProps) {
   const { id } = await params;
+  const storage = getStorage();
   const demoUser = getDemoUser();
 
-  // Try to get interview from mock data first
-  let interview = mockInterviews[id];
-  let job = interview ? getJobById(interview.jobId) : null;
+  // Try to get interview from file storage first (real completed interviews)
+  let interview: Interview | null = await storage.getInterview(id);
+  let job = interview ? await storage.getJob(interview.jobId) : null;
 
-  // If not found, try to parse as application ID (format: application-{jobId}-{userId})
+  // If not found in storage, try mock data
+  if (!interview) {
+    interview = mockInterviews[id] || null;
+    if (interview) {
+      job = getJobById(interview.jobId) || null;
+    }
+  }
+
+  // If still not found, try to parse as application ID (format: application-{jobId}-{userId})
   if (!interview && id.startsWith("application-")) {
     const jobIdMatch = id.match(/^application-(job-\d+)-/);
     if (jobIdMatch) {
       const jobId = jobIdMatch[1];
-      const storage = getStorage();
       job = await storage.getJob(jobId);
 
       if (job) {
@@ -91,7 +105,7 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
           candidateId: demoUser.id,
           status: "COMPLETED" as const,
           durationMinutes: 30,
-          score: mockEvaluation.overallScore,
+          score: defaultEvaluation.overallScore,
           createdAt: new Date(),
         };
       }
@@ -107,7 +121,14 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
     notFound();
   }
 
+  // Use interview score if available, otherwise use default
+  const evaluation = {
+    ...defaultEvaluation,
+    overallScore: interview.score ?? defaultEvaluation.overallScore,
+  };
+
   const companyLogo = getCompanyLogoUrl(job.company);
+  const hasTranscript = Boolean(interview.transcript);
 
   return (
     <div className="min-h-screen bg-background overflow-y-auto">
@@ -170,13 +191,17 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
               </h2>
               <div className="flex items-baseline gap-2">
                 <span className="text-6xl font-bold text-foreground">
-                  {mockEvaluation.overallScore}
+                  {evaluation.overallScore}
                 </span>
                 <span className="text-2xl text-muted-foreground">/100</span>
               </div>
               <p className="mt-2 text-sm text-green-400 flex items-center gap-1">
                 <TrendingUp className="h-4 w-4" />
-                Above average performance
+                {evaluation.overallScore >= 80
+                  ? "Above average performance"
+                  : evaluation.overallScore >= 60
+                    ? "Good performance"
+                    : "Room for improvement"}
               </p>
             </div>
             <div className="h-32 w-32 rounded-full bg-gradient-to-br from-green-500/20 to-blue-500/20 border-4 border-green-500/30 flex items-center justify-center">
@@ -185,6 +210,21 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
           </div>
         </div>
 
+        {/* Transcript Section (if available) */}
+        {hasTranscript && (
+          <div className="mb-8 p-6 rounded-xl bg-card/40 backdrop-blur-sm border border-border">
+            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-purple-400" />
+              Interview Transcript
+            </h2>
+            <div className="max-h-64 overflow-y-auto">
+              <pre className="text-sm text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
+                {interview.transcript}
+              </pre>
+            </div>
+          </div>
+        )}
+
         {/* Category Scores */}
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
@@ -192,7 +232,7 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
             Performance by Category
           </h2>
           <div className="grid gap-4">
-            {mockEvaluation.categories.map((category) => (
+            {evaluation.categories.map((category) => (
               <div
                 key={category.name}
                 className="p-5 rounded-xl bg-card/40 backdrop-blur-sm border border-border"
@@ -227,7 +267,7 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
               Key Strengths
             </h3>
             <ul className="space-y-3">
-              {mockEvaluation.strengths.map((strength, i) => (
+              {evaluation.strengths.map((strength, i) => (
                 <li
                   key={i}
                   className="flex items-start gap-2 text-sm text-foreground"
@@ -245,7 +285,7 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
               Areas for Growth
             </h3>
             <ul className="space-y-3">
-              {mockEvaluation.improvements.map((improvement, i) => (
+              {evaluation.improvements.map((improvement, i) => (
                 <li
                   key={i}
                   className="flex items-start gap-2 text-sm text-foreground"
@@ -265,7 +305,7 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
             AI Interviewer Summary
           </h3>
           <p className="text-muted-foreground leading-relaxed">
-            {mockEvaluation.summary}
+            {evaluation.summary}
           </p>
         </div>
 
