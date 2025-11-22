@@ -507,20 +507,8 @@ function InterviewCallContent({
 
         {/* Left: Main Video Feed */}
         <div className="flex-1 flex flex-col gap-4 relative z-10">
-          {remoteParticipant && (
-            <div
-              className="absolute w-px h-px overflow-hidden"
-              style={{ opacity: 0.01, pointerEvents: "none" }}
-            >
-              <ParticipantView
-                participant={remoteParticipant}
-                muteAudio={false}
-              />
-            </div>
-          )}
-
           <div className="flex-1 rounded-2xl overflow-hidden bg-black relative border border-border shadow-2xl group">
-            {/* AI Avatar with Speaking Animation */}
+            {/* AI Video Feed - HeyGen or fallback avatar */}
             <div className="absolute inset-0">
               {/* Pulsing glow effect when speaking */}
               <AnimatePresence>
@@ -550,27 +538,37 @@ function InterviewCallContent({
                 )}
               </AnimatePresence>
 
-              {/* Avatar image with subtle animation */}
-              <motion.div
-                animate={{
-                  scale: isAISpeaking ? [1, 1.02, 1] : 1,
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: isAISpeaking ? Infinity : 0,
-                  ease: "easeInOut",
-                }}
-                className="absolute inset-0"
-              >
-                <Image
-                  src={photorealistic_professional_woman_headshot}
-                  alt="AI Interviewer"
-                  fill
-                  sizes="100vw"
-                  className="object-cover opacity-90"
-                />
-              </motion.div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              {/* Show HeyGen video stream if remote participant has video, otherwise show avatar */}
+              {remoteParticipant?.videoStream ? (
+                <div className="absolute inset-0 ai-video-container">
+                  <ParticipantView
+                    participant={remoteParticipant}
+                    muteAudio={false}
+                    ParticipantViewUI={null}
+                  />
+                </div>
+              ) : (
+                <motion.div
+                  animate={{
+                    scale: isAISpeaking ? [1, 1.02, 1] : 1,
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: isAISpeaking ? Infinity : 0,
+                    ease: "easeInOut",
+                  }}
+                  className="absolute inset-0"
+                >
+                  <Image
+                    src={photorealistic_professional_woman_headshot}
+                    alt="AI Interviewer"
+                    fill
+                    sizes="100vw"
+                    className="object-cover opacity-90"
+                  />
+                </motion.div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
             </div>
 
             {/* AI Visualization Overlay */}
