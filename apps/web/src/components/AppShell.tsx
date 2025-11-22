@@ -12,13 +12,26 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  // Prevent hydration mismatch by only rendering theme toggle after mount
+  // Prevent hydration mismatch by only rendering conditional content after mount
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Compute these values but only use them after mount to avoid hydration mismatch
   const isCandidate = pathname.startsWith('/candidate') || pathname.startsWith('/interview');
   const isInterview = pathname.startsWith('/interview');
+
+  // During SSR and initial hydration, render a neutral state
+  // After mount, render the correct conditional layout
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-background font-sans text-foreground selection:bg-white/20 selection:text-white transition-colors duration-300">
+        <main className="h-screen overflow-hidden">
+          {children}
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background font-sans text-foreground selection:bg-white/20 selection:text-white transition-colors duration-300">
@@ -82,11 +95,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 className="h-8 w-8 text-muted-foreground hover:text-foreground"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               >
-                {mounted ? (
-                  theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />
-                ) : (
-                  <div className="h-4 w-4" />
-                )}
+                {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
 
               <button className="text-muted-foreground hover:text-foreground">

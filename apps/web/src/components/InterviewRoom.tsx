@@ -4,7 +4,7 @@
  * Interview Room Component
  * Simplified orchestrator for interview flow
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useInterviewCall } from './interview/useInterviewCall';
 import {
   InterviewNameForm,
@@ -12,19 +12,23 @@ import {
   InterviewErrorScreen,
   InterviewEndedScreen,
 } from './interview/InterviewScreens';
-import { InterviewCallView } from './interview/InterviewCallView';
+import { InterviewCallViewEnhanced, InterviewCallViewSimple } from './interview/InterviewCallView';
+import { Button } from '@/components/ui/button';
+import { LayoutGrid, Layout } from 'lucide-react';
 
 interface InterviewRoomProps {
   callId: string;
   interviewId: string;
   candidateId: string;
   candidateName?: string;
+  jobTitle?: string;
 }
 
 export function InterviewRoom({
   interviewId,
   candidateId,
   candidateName,
+  jobTitle,
 }: InterviewRoomProps) {
   // Check if user has already started this interview
   const storageKey = `interview-${interviewId}-started`;
@@ -33,6 +37,7 @@ export function InterviewRoom({
 
   const [nameInput, setNameInput] = useState(storedName || candidateName || '');
   const [showNameForm, setShowNameForm] = useState(!hasStarted);
+  const [useEnhancedView, setUseEnhancedView] = useState(true);
 
   // Use custom hook to manage call lifecycle
   const { call, callEnded, isLoading, error, reset } = useInterviewCall({
@@ -94,5 +99,37 @@ export function InterviewRoom({
     return null;
   }
 
-  return <InterviewCallView call={call} interviewId={interviewId} />;
+  // Render call view with toggle button
+  return (
+    <div className="relative h-full w-full">
+      {/* View Toggle Button - positioned at bottom left to avoid header overlap */}
+      <div className="absolute bottom-24 left-6 z-50">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setUseEnhancedView(!useEnhancedView)}
+          className="bg-black/60 backdrop-blur-md border-white/10 hover:bg-white/10 text-white gap-2 shadow-lg"
+        >
+          {useEnhancedView ? (
+            <>
+              <Layout className="h-4 w-4" />
+              Simple View
+            </>
+          ) : (
+            <>
+              <LayoutGrid className="h-4 w-4" />
+              Enhanced View
+            </>
+          )}
+        </Button>
+      </div>
+
+      {/* Render selected view */}
+      {useEnhancedView ? (
+        <InterviewCallViewEnhanced call={call} interviewId={interviewId} jobTitle={jobTitle} />
+      ) : (
+        <InterviewCallViewSimple call={call} interviewId={interviewId} jobTitle={jobTitle} />
+      )}
+    </div>
+  );
 }
