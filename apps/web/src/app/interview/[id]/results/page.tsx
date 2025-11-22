@@ -121,11 +121,41 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
     notFound();
   }
 
-  // Use interview score if available, otherwise use default
-  const evaluation = {
-    ...defaultEvaluation,
-    overallScore: interview.score ?? defaultEvaluation.overallScore,
-  };
+  // Use AI evaluation from interview if available, otherwise use default
+  const evaluation = interview.aiEvaluation
+    ? {
+        overallScore: interview.aiEvaluation.overallScore,
+        categories: [
+          {
+            name: "Technical Knowledge",
+            score: interview.aiEvaluation.categories.technicalKnowledge,
+            feedback:
+              "Demonstrated understanding of core concepts and best practices.",
+          },
+          {
+            name: "Problem Solving",
+            score: interview.aiEvaluation.categories.problemSolving,
+            feedback: "Approached problems methodically with clear reasoning.",
+          },
+          {
+            name: "Communication",
+            score: interview.aiEvaluation.categories.communication,
+            feedback: "Articulated ideas clearly and provided relevant examples.",
+          },
+          {
+            name: "Experience Relevance",
+            score: interview.aiEvaluation.categories.experienceRelevance,
+            feedback: "Background aligns well with role requirements.",
+          },
+        ],
+        strengths: interview.aiEvaluation.strengths,
+        improvements: interview.aiEvaluation.improvements,
+        summary: interview.aiEvaluation.summary,
+      }
+    : {
+        ...defaultEvaluation,
+        overallScore: interview.score ?? defaultEvaluation.overallScore,
+      };
 
   const companyLogo = getCompanyLogoUrl(job.company);
   const hasTranscript = Boolean(interview.transcript);
@@ -310,13 +340,25 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-10 flex gap-4">
-          <Link
-            href="/candidate/history"
-            className="flex-1 h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium flex items-center justify-center gap-2 transition-colors"
-          >
-            View Interview History
-          </Link>
+        <div className="mt-10 flex flex-col gap-4">
+          <div className="flex gap-4">
+            <Link
+              href="/candidate/history"
+              className="flex-1 h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-medium flex items-center justify-center gap-2 transition-colors"
+            >
+              View Interview History
+            </Link>
+            <Link
+              href={`/hr/applicants/${interview.jobId}`}
+              className="flex-1 h-12 rounded-xl bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium flex items-center justify-center gap-2 transition-colors border border-border"
+            >
+              <Building2 className="h-4 w-4" />
+              View in HR Dashboard
+            </Link>
+          </div>
+          <p className="text-xs text-center text-muted-foreground">
+            Switch to HR view to see how recruiters review candidates
+          </p>
         </div>
       </div>
     </div>

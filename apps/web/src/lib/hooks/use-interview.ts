@@ -79,3 +79,45 @@ export function useStartInterview() {
     retry: 1,
   });
 }
+
+import type { Interview } from "@/lib/mock-data";
+
+interface InterviewDetailsResponse {
+  success: boolean;
+  data: {
+    interview: Interview;
+    job: {
+      id: string;
+      title: string;
+      company: string;
+    } | null;
+    candidate: {
+      id: string;
+      name: string;
+      email: string;
+    } | null;
+  };
+}
+
+/**
+ * Hook for fetching a single interview with full details
+ */
+export function useInterviewDetails(interviewId: string | null) {
+  return useQuery<InterviewDetailsResponse>({
+    queryKey: ["/api/interviews", interviewId],
+    queryFn: async () => {
+      if (!interviewId) {
+        throw new Error("Interview ID is required");
+      }
+      const response = await fetch(`/api/interviews/${interviewId}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch interview");
+      }
+      return response.json();
+    },
+    enabled: !!interviewId,
+    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
+  });
+}
+
+export type { InterviewDetailsResponse };

@@ -4,13 +4,26 @@
  * POST /api/webhooks/interview-complete
  */
 import { NextResponse } from "next/server";
-import type { Interview } from "@/lib/mock-data";
+import type { AIEvaluation, Interview } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
 
 interface TranscriptEntry {
   speaker: string;
   text: string;
   timestamp: number;
+}
+
+interface AIEvaluationPayload {
+  overallScore: number;
+  categories?: {
+    technicalKnowledge?: number;
+    problemSolving?: number;
+    communication?: number;
+    experienceRelevance?: number;
+  };
+  strengths?: string[];
+  improvements?: string[];
+  summary?: string;
 }
 
 interface InterviewCompletePayload {
@@ -21,6 +34,8 @@ interface InterviewCompletePayload {
   completedAt: string;
   status: string;
   transcript?: TranscriptEntry[];
+  score?: number;
+  aiEvaluation?: AIEvaluationPayload;
 }
 
 /**
@@ -127,6 +142,28 @@ export async function POST(request: Request) {
       ? formatTranscript(payload.transcript)
       : undefined;
 
+    // Build AI evaluation if provided
+    let aiEvaluation: AIEvaluation | undefined;
+    if (payload.aiEvaluation) {
+      aiEvaluation = {
+        overallScore: payload.aiEvaluation.overallScore,
+        categories: {
+          technicalKnowledge: payload.aiEvaluation.categories?.technicalKnowledge ?? 75,
+          problemSolving: payload.aiEvaluation.categories?.problemSolving ?? 75,
+          communication: payload.aiEvaluation.categories?.communication ?? 75,
+          experienceRelevance: payload.aiEvaluation.categories?.experienceRelevance ?? 75,
+        },
+        strengths: payload.aiEvaluation.strengths ?? [
+          "Good technical foundation",
+          "Clear communication",
+        ],
+        improvements: payload.aiEvaluation.improvements ?? [
+          "Could provide more detailed examples",
+        ],
+        summary: payload.aiEvaluation.summary ?? "Interview completed successfully.",
+      };
+    }
+
     // Create/update interview record with COMPLETED status
     const interview: Interview = {
       id: payload.interviewId,
@@ -135,8 +172,11 @@ export async function POST(request: Request) {
       status: "COMPLETED",
       callId: payload.interviewId,
       transcript: transcriptText,
+      score: payload.score ?? aiEvaluation?.overallScore,
       durationMinutes: payload.durationMinutes,
       createdAt: existingInterview?.createdAt || new Date(),
+      completedAt: new Date(payload.completedAt),
+      aiEvaluation,
     };
 
     // Save interview to storage

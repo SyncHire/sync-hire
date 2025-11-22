@@ -55,6 +55,19 @@ export interface Job {
   status?: "DRAFT" | "ACTIVE" | "CLOSED";
 }
 
+export interface AIEvaluation {
+  overallScore: number;
+  categories: {
+    technicalKnowledge: number;
+    problemSolving: number;
+    communication: number;
+    experienceRelevance: number;
+  };
+  strengths: string[];
+  improvements: string[];
+  summary: string;
+}
+
 export interface Interview {
   id: string;
   jobId: string;
@@ -65,6 +78,8 @@ export interface Interview {
   score?: number;
   durationMinutes: number;
   createdAt: Date;
+  completedAt?: Date;
+  aiEvaluation?: AIEvaluation;
 }
 
 /**
