@@ -284,13 +284,12 @@ export default function CandidateJobListings() {
                       return (
                         <div
                           key={interview.id}
-                          className="group relative h-full bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-6 hover:bg-card/80 transition-all cursor-pointer overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500"
+                          className="animate-in fade-in slide-in-from-bottom-4 duration-500"
                           style={{ animationDelay: `${index * 100}ms` }}
                         >
-                          <Link href={interview.status === "COMPLETED" ? `/interview/${interview.id}/results` : `/interview/${interview.id}`}>
-                            <div className="relative z-10 flex flex-col h-full">
-                              {/* Hover Glow */}
-                              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-duration-500" />
+                          <Link href={interview.status === "COMPLETED" ? `/interview/${interview.id}/results` : `/interview/${interview.id}`} className="group block">
+                            <div className="relative h-full group-hover:bg-gradient-to-br group-hover:from-blue-500/10 group-hover:via-blue-500/5 group-hover:to-transparent bg-card/50 backdrop-blur-sm border border-border group-hover:border-blue-500/50 rounded-2xl p-6 transition-all duration-300 cursor-pointer overflow-hidden">
+                              <div className="relative z-10 flex flex-col h-full">
 
                               <div className="flex justify-between items-start mb-6">
                                 <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center border border-border group-hover:border-blue-500/30 transition-colors overflow-hidden">
@@ -342,6 +341,7 @@ export default function CandidateJobListings() {
                                   {interview.status === "COMPLETED" ? "View Results" : "Start Interview"} <ArrowRightIcon className="h-4 w-4" />
                                 </span>
                               </div>
+                            </div>
                             </div>
                           </Link>
                         </div>
