@@ -49,6 +49,9 @@ export interface Job {
   questions: Question[];
   employerId: string;
   createdAt: Date;
+  customQuestions?: CustomQuestion[];
+  jdVersion?: JobDescriptionVersion;
+  status?: "DRAFT" | "ACTIVE" | "CLOSED";
 }
 
 export interface Interview {
@@ -71,6 +74,67 @@ export interface Applicant {
   matchScore: number;
   status: "pending" | "approved" | "rejected";
   jobId: string;
+}
+
+export type QuestionType = "SHORT_ANSWER" | "LONG_ANSWER" | "MULTIPLE_CHOICE" | "SCORED";
+
+export interface CustomQuestion {
+  id: string;
+  jobPostingId: string;
+  type: QuestionType;
+  content: string;
+  options?: string[];
+  scoringConfig?: { type: string; min: number; max: number };
+  required: boolean;
+  order: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ExtractedJobData {
+  title: string;
+  responsibilities: string[];
+  requirements: string[];
+  seniority: string;
+  location: string;
+  employmentType: string;
+}
+
+export interface JobDescriptionVersion {
+  id: string;
+  jobPostingId: string;
+  originalText: string;
+  extractedData: ExtractedJobData;
+  aiSuggestions: Array<{
+    category: string;
+    text: string;
+    original: string;
+    improved: string;
+    tag: string;
+  }>;
+  acceptedChanges: Array<{
+    category: string;
+    changes: string[];
+  }>;
+  documentUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface JDSuggestion {
+  id: string;
+  category: "inclusiveness" | "clarity" | "skills" | "seniority";
+  text: string;
+  original: string;
+  improved: string;
+  tag: string;
+  accepted: boolean;
+}
+
+export interface SuggestionResponse {
+  id: string;
+  suggestions: JDSuggestion[];
+  cached: boolean;
 }
 
 // =============================================================================
@@ -607,6 +671,9 @@ const jobs: Record<string, Job> = {
   },
 };
 
+const customQuestions: Record<string, CustomQuestion> = {};
+const jobDescriptionVersions: Record<string, JobDescriptionVersion> = {};
+
 // All interviews are for the demo user
 const interviews: Record<string, Interview> = {
   "interview-1": {
@@ -787,6 +854,152 @@ export function updateApplicantStatus(
   }
   applicants[id] = { ...applicant, status };
   return applicants[id];
+}
+
+// Custom Questions
+export function getCustomQuestionsByJobId(
+  jobPostingId: string
+): CustomQuestion[] {
+  return Object.values(customQuestions).filter(
+    (q) => q.jobPostingId === jobPostingId
+  );
+}
+
+export function createCustomQuestion(
+  jobPostingId: string,
+  type: QuestionType,
+  content: string,
+  order: number,
+  required: boolean = false,
+  options?: string[],
+  scoringConfig?: { type: string; min: number; max: number }
+): CustomQuestion {
+  const id = `question-${Date.now()}`;
+  const question: CustomQuestion = {
+    id,
+    jobPostingId,
+    type,
+    content,
+    order,
+    required,
+    options,
+    scoringConfig,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  customQuestions[id] = question;
+  return question;
+}
+
+export function updateCustomQuestion(
+  id: string,
+  updates: Partial<CustomQuestion>
+): CustomQuestion | undefined {
+  const question = customQuestions[id];
+  if (question === undefined) {
+    return undefined;
+  }
+  customQuestions[id] = {
+    ...question,
+    ...updates,
+    updatedAt: new Date(),
+  };
+  return customQuestions[id];
+}
+
+export function deleteCustomQuestion(id: string): boolean {
+  if (customQuestions[id] === undefined) {
+    return false;
+  }
+  delete customQuestions[id];
+  return true;
+}
+
+// Job Description Versions
+export function getJobDescriptionVersion(
+  jobPostingId: string
+): JobDescriptionVersion | undefined {
+  return Object.values(jobDescriptionVersions).find(
+    (v) => v.jobPostingId === jobPostingId
+  );
+}
+
+export function createJobDescriptionVersion(
+  jobPostingId: string,
+  originalText: string,
+  extractedData: ExtractedJobData,
+  documentUrl?: string
+): JobDescriptionVersion {
+  const id = `jd-version-${Date.now()}`;
+  const version: JobDescriptionVersion = {
+    id,
+    jobPostingId,
+    originalText,
+    extractedData,
+    aiSuggestions: [],
+    acceptedChanges: [],
+    documentUrl,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  jobDescriptionVersions[id] = version;
+  return version;
+}
+
+export function updateJobDescriptionVersion(
+  jobPostingId: string,
+  updates: Partial<JobDescriptionVersion>
+): JobDescriptionVersion | undefined {
+  const version = Object.values(jobDescriptionVersions).find(
+    (v) => v.jobPostingId === jobPostingId
+  );
+  if (version === undefined) {
+    return undefined;
+  }
+  jobDescriptionVersions[version.id] = {
+    ...version,
+    ...updates,
+    updatedAt: new Date(),
+  };
+  return jobDescriptionVersions[version.id];
+}
+
+// Job Updates
+export function createJob(jobData: Partial<Job>): Job {
+  const id = `job-${Date.now()}`;
+  const job: Job = {
+    id,
+    title: jobData.title || "Untitled Position",
+    company: jobData.company || "",
+    department: jobData.department || "",
+    location: jobData.location || "",
+    type: jobData.type || "Full-time",
+    salary: jobData.salary || "",
+    postedAt: jobData.postedAt || "Just now",
+    applicantsCount: jobData.applicantsCount || 0,
+    description: jobData.description || "",
+    requirements: jobData.requirements || [],
+    questions: jobData.questions || [],
+    employerId: jobData.employerId || "",
+    createdAt: jobData.createdAt || new Date(),
+    status: jobData.status || "DRAFT",
+    customQuestions: jobData.customQuestions || [],
+    jdVersion: jobData.jdVersion,
+  };
+  jobs[id] = job;
+  return job;
+}
+
+export function updateJob(
+  id: string,
+  updates: Partial<Job>
+): Job | undefined {
+  const job = jobs[id];
+  if (job === undefined) {
+    return undefined;
+  }
+  jobs[id] = { ...job, ...updates };
+  return jobs[id];
 }
 
 // =============================================================================
