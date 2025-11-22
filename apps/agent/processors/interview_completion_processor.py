@@ -1,11 +1,12 @@
 """
 Interview Completion Processor
-Intelligently detects when the interview is complete based on conversation context
+Intelligently detects when the interview is complete based on conversation context.
+Broadcasts AI transcript via Stream.io custom events for accurate frontend display.
 """
 import asyncio
 import logging
 import time
-from typing import Optional, List
+from typing import Optional, List, Any
 from dataclasses import dataclass, field, asdict
 from vision_agents.core.processors import Processor
 from vision_agents.core.llm.events import (
@@ -45,11 +46,15 @@ class InterviewCompletionProcessor(Processor):
         expected_questions: int,
         minimum_duration_minutes: int = 8,
         completion_callback: Optional[callable] = None,
+        call: Any = None,
+        agent_user_id: str = "",
     ):
         super().__init__()
         self.expected_questions = expected_questions
         self.minimum_duration_minutes = minimum_duration_minutes
         self.completion_callback = completion_callback
+        self.call = call  # Stream.io call for sending custom events
+        self.agent_user_id = agent_user_id
 
         # Track conversation state
         self.questions_asked = 0
@@ -77,6 +82,25 @@ class InterviewCompletionProcessor(Processor):
             "walk me through", "what was your", "?",
         }
 
+    async def _send_transcript_event(self, speaker: str, text: str, timestamp: float):
+        """Send transcript to frontend via Stream.io custom event"""
+        if not self.call or not self.agent_user_id:
+            return
+
+        try:
+            await self.call.send_call_event(
+                user_id=self.agent_user_id,
+                custom={
+                    "type": "transcript",
+                    "speaker": speaker,
+                    "text": text,
+                    "timestamp": timestamp,
+                }
+            )
+            logger.debug(f"📤 Sent transcript event: {speaker}: {text[:50]}...")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to send transcript event: {e}")
+
     async def setup(self, agent):
         """Initialize processor when agent starts"""
         self.interview_start_time = time.time()
@@ -89,7 +113,7 @@ class InterviewCompletionProcessor(Processor):
             text = event.text.strip()
             text_lower = text.lower()
 
-            # Add to transcript
+            # Add to transcript and broadcast to frontend
             if text:
                 elapsed = time.time() - self.interview_start_time
                 self.transcript.append(TranscriptEntry(
@@ -97,6 +121,8 @@ class InterviewCompletionProcessor(Processor):
                     text=text,
                     timestamp=round(elapsed, 2)
                 ))
+                # Send to frontend via custom event
+                await self._send_transcript_event("agent", text, round(elapsed, 2))
 
             # Count questions
             if any(indicator in text_lower for indicator in self.question_indicators):

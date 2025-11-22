@@ -109,6 +109,46 @@ function InterviewCallContent({
     setAgentConnected(hasAgent);
   }, [participants]);
 
+  // Listen for custom transcript events from AI agent (original Gemini text)
+  useEffect(() => {
+    const handleCustomEvent = (event: { custom?: { type?: string; speaker?: string; text?: string; timestamp?: number } }) => {
+      const payload = event.custom;
+      if (payload?.type === 'transcript' && payload.speaker === 'agent' && payload.text) {
+        const text = payload.text;
+        console.log('📨 AI transcript event:', text.substring(0, 50) + '...');
+
+        setTranscript(prev => {
+          const lastMessage = prev[prev.length - 1];
+
+          // If last message is from AI, append to it
+          if (lastMessage && lastMessage.isAI) {
+            const updated = [...prev];
+            updated[updated.length - 1] = {
+              ...lastMessage,
+              text: lastMessage.text + ' ' + text,
+            };
+            return updated;
+          }
+
+          // New AI message
+          return [...prev, {
+            id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            speakerId: 'agent',
+            speakerName: 'AI Interviewer',
+            text,
+            timestamp: Date.now(),
+            isAI: true,
+          }];
+        });
+      }
+    };
+
+    call.on('custom', handleCustomEvent);
+    return () => {
+      call.off('custom', handleCustomEvent);
+    };
+  }, [call]);
+
   // Track caption segments to handle Stream's segmented delivery
   // Key: speakerId, Value: { startTime, lastText }
   const captionSegmentsRef = useRef<Map<string, { startTime: string; lastText: string }>>(new Map());
@@ -133,6 +173,12 @@ function InterviewCallContent({
       const isAI = caption.user.name?.toLowerCase().includes('interviewer') ||
                    caption.user.name?.toLowerCase().includes('ai') ||
                    speakerId?.startsWith('agent-');
+
+      // Skip AI captions - we don't need re-transcription of AI speech
+      // The AI's original text is more accurate than Stream's re-transcription
+      if (isAI) {
+        return;
+      }
 
       // Get the last segment info for this speaker
       const lastSegment = captionSegmentsRef.current.get(speakerId);

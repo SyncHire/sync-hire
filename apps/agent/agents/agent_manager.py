@@ -187,10 +187,11 @@ class AgentManager:
         # Get call reference
         call = agent.edge.client.video.call("default", call_id)
 
-        # Create completion processor (no callback - we handle cleanup after wait)
+        # Create completion processor (agent_user_id will be set after join)
         completion_processor = InterviewCompletionProcessor(
             expected_questions=len(questions),
             minimum_duration_minutes=3,
+            call=call,
         )
 
         agent.processors.append(completion_processor)
@@ -211,6 +212,13 @@ class AgentManager:
             # Join call
             await agent.join(call)
             logger.info("✅ Agent joined call")
+
+            # Update processor with agent user ID (now available after join)
+            if hasattr(agent, 'agent_user') and agent.agent_user:
+                completion_processor.agent_user_id = agent.agent_user.id
+                logger.info(f"✅ Custom events enabled (agent_user_id: {agent.agent_user.id})")
+            else:
+                logger.warning("⚠️ Custom events disabled - agent user ID not available")
 
             # Send initial prompt
             await agent.simple_response(
