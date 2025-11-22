@@ -68,6 +68,7 @@ function InterviewCallContent({
 
   // Full transcript history built from caption events
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
+
   const processedCaptionIds = useRef<Set<string>>(new Set());
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -110,34 +111,58 @@ function InterviewCallContent({
     setAgentConnected(hasAgent);
   }, [participants]);
 
-  // Build transcript from closed captions
+  // Build transcript from closed captions - streaming updates
   useEffect(() => {
     if (closedCaptions.length === 0) {
       return;
     }
 
-    // Process each caption and add to transcript if not already processed
+    // Process each caption - update existing or add new
     closedCaptions.forEach((caption: CallClosedCaption) => {
-      const captionId = `${caption.user.id}-${caption.start_time}`;
+      const text = caption.text.trim();
+      if (!text) {
+        return;
+      }
 
-      if (!processedCaptionIds.current.has(captionId) && caption.text.trim()) {
+      const isAI = caption.user.name?.toLowerCase().includes('interviewer') ||
+                   caption.user.name?.toLowerCase().includes('ai') ||
+                   caption.user.id?.startsWith('agent-');
+
+      const speakerId = caption.user.id;
+      const timestamp = caption.start_time ? new Date(caption.start_time).getTime() : Date.now();
+
+      setTranscript(prev => {
+        const lastMessage = prev[prev.length - 1];
+
+        // If same speaker and within 10 seconds, update the last message
+        if (lastMessage &&
+            lastMessage.speakerId === speakerId &&
+            timestamp - lastMessage.timestamp < 10000) {
+          // Update last message with new text
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            ...lastMessage,
+            text: text, // Caption text is cumulative from Stream
+          };
+          return updated;
+        }
+
+        // New speaker or gap - create new message
+        const captionId = `${speakerId}-${timestamp}`;
+        if (processedCaptionIds.current.has(captionId)) {
+          return prev;
+        }
         processedCaptionIds.current.add(captionId);
 
-        const isAI = caption.user.name?.toLowerCase().includes('interviewer') ||
-                     caption.user.name?.toLowerCase().includes('ai') ||
-                     caption.user.id?.startsWith('agent-');
-
-        const newMessage: TranscriptMessage = {
+        return [...prev, {
           id: captionId,
-          speakerId: caption.user.id,
+          speakerId,
           speakerName: caption.user.name || 'Unknown',
-          text: caption.text,
-          timestamp: caption.start_time ? new Date(caption.start_time).getTime() : Date.now(),
+          text,
+          timestamp,
           isAI,
-        };
-
-        setTranscript(prev => [...prev, newMessage]);
-      }
+        }];
+      });
     });
   }, [closedCaptions]);
 
@@ -292,6 +317,14 @@ function InterviewCallContent({
 
         {/* Left: Main Video Feed */}
         <div className="flex-1 flex flex-col gap-4 relative z-10">
+          {remoteParticipant && (
+            <div className="absolute w-px h-px overflow-hidden" style={{ opacity: 0.01, pointerEvents: 'none' }}>
+              <ParticipantView
+                participant={remoteParticipant}
+                muteAudio={false}
+              />
+            </div>
+          )}
 
           <div className="flex-1 rounded-2xl overflow-hidden bg-black relative border border-border shadow-2xl group">
             {/* AI Avatar with Speaking Animation */}
@@ -336,6 +369,7 @@ function InterviewCallContent({
                   src={photorealistic_professional_woman_headshot}
                   alt="AI Interviewer"
                   fill
+                  sizes="100vw"
                   className="object-cover opacity-90"
                 />
               </motion.div>
@@ -405,12 +439,14 @@ function InterviewCallContent({
                 <ParticipantView
                   participant={localParticipant}
                   className="h-full w-full object-cover"
+                  ParticipantViewUI={null}
                 />
               ) : (
                 <Image
                   src={photorealistic_professional_man_headshot}
                   alt="You"
                   fill
+                  sizes="224px"
                   className="object-cover opacity-80"
                 />
               )}
@@ -423,7 +459,7 @@ function InterviewCallContent({
             </div>
 
             {/* Floating Controls */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/20 shadow-2xl">
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/20 shadow-2xl z-10">
               <Button
                 variant={isMicMuted ? "destructive" : "secondary"}
                 size="icon"
@@ -533,6 +569,7 @@ function InterviewCallContent({
                       src={msg.isAI ? photorealistic_professional_woman_headshot : photorealistic_professional_man_headshot}
                       alt={msg.isAI ? 'AI' : 'You'}
                       fill
+                      sizes="32px"
                       className="object-cover"
                     />
                   </div>
@@ -564,6 +601,7 @@ function InterviewCallContent({
                     src={photorealistic_professional_woman_headshot}
                     alt="AI"
                     fill
+                    sizes="32px"
                     className="object-cover"
                   />
                 </div>

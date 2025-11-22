@@ -4,6 +4,6 @@ SyncHire Agent Modules
 This package contains the core agent implementations.
 """
 
-from agents.interview_agent import InterviewAgent
+from agents.agent_manager import AgentManager
 
-__all__ = ["InterviewAgent"]
+__all__ = ["AgentManager"]

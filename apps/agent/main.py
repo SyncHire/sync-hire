@@ -12,9 +12,14 @@ This agent:
 
 import asyncio
 import logging
+import warnings
 from typing import List
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
+
+# Suppress dataclasses_json warnings from getstream SDK
+# These are about optional fields missing in API responses - not actionable
+warnings.filterwarnings("ignore", module="dataclasses_json.core", category=RuntimeWarning)
 
 # FastAPI imports (for HTTP endpoints)
 from fastapi import FastAPI, BackgroundTasks
@@ -25,8 +30,8 @@ import uvicorn
 # Configuration
 from config import Config
 
-# Agent
-from agents.interview_agent import InterviewAgent
+# Agent Manager
+from agents.agent_manager import AgentManager
 
 # Setup logging
 logging.basicConfig(
@@ -44,6 +49,17 @@ logging.getLogger("vision_agents").setLevel(logging.INFO)
 logging.getLogger("vision_agents.plugins.gemini").setLevel(logging.INFO)
 logging.getLogger("vision_agents.plugins.openai").setLevel(logging.INFO)
 
+# WebRTC/ICE logging level - configurable via LOG_LEVEL_WEBRTC env var
+# Set to DEBUG to diagnose STUN/TURN errors like "403 - Forbidden IP"
+webrtc_log_level = getattr(logging, Config.LOG_LEVEL_WEBRTC.upper(), logging.WARNING)
+logging.getLogger("aiortc").setLevel(webrtc_log_level)
+logging.getLogger("aioice").setLevel(webrtc_log_level)
+logging.getLogger("getstream.video.rtc").setLevel(webrtc_log_level)
+logging.getLogger("vision_agents.plugins.heygen").setLevel(webrtc_log_level)
+
+# Silence httpx INFO logs (Stream API requests)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 logger.info("=" * 80)
 logger.info("Agent started - logging to agent.log")
 logger.info("=" * 80)
@@ -53,31 +69,49 @@ logger.info("=" * 80)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan events"""
-    global interview_agent
-
     # Startup
     logger.info("🚀 Starting SyncHire AI Interview Agent...")
 
+    # Create agent manager
+    app.state.agent_manager = AgentManager()
+
     # Validate API keys are configured
-    if interview_agent.validate_configuration():
+    if Config.validate():
         logger.info("✅ API keys validated successfully")
+
+        # Log agent configuration
+        logger.info("📋 Agent Configuration:")
+        if Config.GEMINI_API_KEY:
+            if Config.GEMINI_USE_REALTIME:
+                logger.info("   LLM: Gemini Live (realtime)")
+                logger.info("   STT: Built-in (Gemini)")
+            else:
+                logger.info(f"   LLM: Gemini ({Config.GEMINI_MODEL})")
+                logger.info("   STT: Deepgram")
+        else:
+            logger.info("   LLM: OpenAI Realtime")
+            logger.info("   STT: Built-in (OpenAI)")
+        logger.info(f"   Avatar: {'HeyGen' if Config.HEYGEN_API_KEY else 'Audio-only'}")
+        logger.info(f"   WebRTC Log Level: {Config.LOG_LEVEL_WEBRTC}")
     else:
         logger.warning("⚠️  Missing API keys - agent will not be able to join interviews")
-        logger.info("   Set STREAM_API_KEY, DEEPGRAM_API_KEY, and (GEMINI_API_KEY or OPENAI_API_KEY)")
+        logger.info("   Required: STREAM_API_KEY and LLM key (GEMINI_API_KEY or OPENAI_API_KEY)")
+        logger.info("   DEEPGRAM_API_KEY only needed for text-based Gemini (not Realtime)")
 
     yield
 
     # Shutdown
     logger.info("🔄 Server shutting down gracefully...")
-    # Note: Background interview tasks will continue running autonomously
-    # The Vision-Agents framework handles cleanup internally
+    shutdown_count = await app.state.agent_manager.shutdown_all()
+    if shutdown_count > 0:
+        logger.info(f"   Shutdown {shutdown_count} active agent(s)")
 
 
 # Initialize FastAPI app for HTTP endpoints
 app = FastAPI(
     title="SyncHire AI Interview Agent",
     description="Vision-Agents powered AI interviewer",
-    version="0.2.0",
+    version="0.3.0",
     lifespan=lifespan,
 )
 
@@ -114,11 +148,8 @@ class HealthResponse(BaseModel):
     service: str
     version: str
     timestamp: str
-    agent_initialized: bool
-
-
-# Global agent instance
-interview_agent = InterviewAgent()
+    config_valid: bool
+    active_interviews: int
 
 
 # FastAPI Endpoints
@@ -128,13 +159,15 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         service="sync-hire-vision-agent",
-        version="0.2.0",
+        version="0.3.0",
         timestamp=datetime.now(timezone.utc).isoformat(),
-        agent_initialized=interview_agent.validate_configuration()
+        config_valid=Config.validate(),
+        active_interviews=app.state.agent_manager.active_count
     )
 
 
 async def _run_interview_background(
+    agent_manager: AgentManager,
     call_id: str,
     questions: List[Question],
     candidate_name: str,
@@ -151,13 +184,13 @@ async def _run_interview_background(
         # Extract question text from Question objects
         question_texts = [q.text for q in questions]
 
-        await interview_agent.join_interview(
+        await agent_manager.start_interview(
             call_id=call_id,
             questions=question_texts,
             candidate_name=candidate_name,
             job_title=job_title
         )
-        logger.info(f"✅ Background task: Agent joined and is conducting interview for {call_id}")
+        logger.info(f"✅ Background task: Interview completed for {call_id}")
     except asyncio.CancelledError:
         logger.info(f"⚠️  Background task cancelled for {call_id}")
         raise
@@ -175,11 +208,21 @@ async def join_interview(request: JoinInterviewRequest, background_tasks: Backgr
     """
     logger.info(f"📞 Received join-interview request for call: {request.callId}")
 
-    if not interview_agent.validate_configuration():
+    if not Config.validate():
         logger.error("❌ Agent configuration invalid")
         return {
             "success": False,
-            "error": "Agent configuration invalid - check STREAM_API_KEY, DEEPGRAM_API_KEY, and (GEMINI_API_KEY or OPENAI_API_KEY)"
+            "error": "Agent configuration invalid - check STREAM_API_KEY and LLM keys (GEMINI_API_KEY or OPENAI_API_KEY). DEEPGRAM_API_KEY is required when using text-based Gemini."
+        }
+
+    agent_manager: AgentManager = app.state.agent_manager
+
+    # Check if already active
+    if agent_manager.is_call_active(request.callId):
+        logger.warning(f"⚠️  Interview already active for call: {request.callId}")
+        return {
+            "success": False,
+            "error": "Interview already in progress for this call"
         }
 
     # Add interview to background tasks
@@ -188,6 +231,7 @@ async def join_interview(request: JoinInterviewRequest, background_tasks: Backgr
 
     background_tasks.add_task(
         _run_interview_background,
+        agent_manager=agent_manager,
         call_id=request.callId,
         questions=request.questions,
         candidate_name=request.candidateName,
@@ -202,6 +246,21 @@ async def join_interview(request: JoinInterviewRequest, background_tasks: Backgr
     }
 
 
+@app.get("/agents/status")
+async def agents_status():
+    """Get status of all active agents"""
+    return app.state.agent_manager.get_status()
+
+
+@app.post("/agents/{call_id}/shutdown")
+async def shutdown_agent(call_id: str):
+    """Shutdown a specific agent by call ID"""
+    success = await app.state.agent_manager.shutdown_agent(call_id)
+    if success:
+        return {"success": True, "message": f"Agent for {call_id} shutdown"}
+    return {"success": False, "error": f"No active agent for {call_id}"}
+
+
 @app.get("/")
 async def root():
     """Root endpoint"""
@@ -213,17 +272,22 @@ async def root():
     else:
         llm_name = "None (no API keys configured)"
 
+    agent_manager: AgentManager = app.state.agent_manager
+
     return {
         "service": "SyncHire AI Interview Agent",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "status": "running",
         "framework": "Vision-Agents",
         "llm": llm_name,
         "avatar": "HeyGen" if Config.HEYGEN_API_KEY else "Audio-only",
-        "agent_initialized": interview_agent.validate_configuration(),
+        "config_valid": Config.validate(),
+        "active_interviews": agent_manager.active_count,
         "endpoints": {
             "health": "/health",
             "join_interview": "/join-interview (POST)",
+            "agents_status": "/agents/status",
+            "shutdown_agent": "/agents/{call_id}/shutdown (POST)",
             "docs": "/docs",
         },
     }

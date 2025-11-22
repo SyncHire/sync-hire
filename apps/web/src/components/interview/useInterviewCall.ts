@@ -66,6 +66,14 @@ export function useInterviewCall({
         // Join the call
         await videoCall.join({ create: true, video: true });
 
+        // Start transcription for closed captions
+        try {
+          await videoCall.startTranscription();
+          console.log('🎤 Transcription started');
+        } catch (transcriptionErr) {
+          console.warn('⚠️ Could not start transcription:', transcriptionErr);
+        }
+
         // Listen for call ended events
         videoCall.on('call.ended', () => {
           console.log('📞 Call ended by host');

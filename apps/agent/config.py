@@ -14,6 +14,9 @@ load_dotenv()
 class Config:
     """Application configuration"""
 
+    # Cached validation result
+    _validated: bool | None = None
+
     # Stream Video
     STREAM_API_KEY: str = os.getenv("STREAM_API_KEY", "")
     STREAM_API_SECRET: Optional[str] = os.getenv("STREAM_API_SECRET")
@@ -24,6 +27,8 @@ class Config:
 
     # Alternative: Gemini
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    GEMINI_USE_REALTIME: bool = os.getenv("GEMINI_USE_REALTIME", "false").lower() == "true"
 
     # Deepgram STT
     DEEPGRAM_API_KEY: Optional[str] = os.getenv("DEEPGRAM_API_KEY")
@@ -53,22 +58,47 @@ class Config:
     AGENT_TIMEOUT: int = int(os.getenv("AGENT_TIMEOUT", "3600"))  # 1 hour
     PORT: int = int(os.getenv("PORT", "8080"))
 
+    # Logging
+    LOG_LEVEL_WEBRTC: str = os.getenv("LOG_LEVEL_WEBRTC", "WARNING")  # DEBUG to diagnose ICE/STUN issues
+
     @classmethod
-    def validate(cls) -> bool:
-        """Validate required configuration"""
+    def validate(cls, force: bool = False) -> bool:
+        """Validate required configuration.
+
+        Args:
+            force: If True, re-validate even if already validated (prints messages again)
+
+        Returns:
+            bool: True if configuration is valid
+        """
+        # Return cached result if already validated (avoid duplicate log messages)
+        if cls._validated is not None and not force:
+            return cls._validated
+
+        # Always required
         required = [
             ("STREAM_API_KEY", cls.STREAM_API_KEY),
-            ("DEEPGRAM_API_KEY", cls.DEEPGRAM_API_KEY),
-            ("NEXTJS_WEBHOOK_URL", cls.NEXTJS_WEBHOOK_URL)
         ]
+
+        # Need at least one LLM
+        has_llm = bool(cls.GEMINI_API_KEY or cls.OPENAI_API_KEY)
+        if not has_llm:
+            required.append(("GEMINI_API_KEY or OPENAI_API_KEY", None))
+
+        # Deepgram only required when NOT using Realtime (which has built-in STT)
+        uses_realtime = cls.GEMINI_USE_REALTIME or (cls.OPENAI_API_KEY and not cls.GEMINI_API_KEY)
+        if not uses_realtime and not cls.DEEPGRAM_API_KEY:
+            required.append(("DEEPGRAM_API_KEY", None))
 
         missing = [name for name, value in required if not value]
 
         if missing:
             print(f"❌ Missing required config: {', '.join(missing)}")
+            cls._validated = False
             return False
 
         print("✅ Configuration validated")
+        cls._validated = True
         return True
 
 
