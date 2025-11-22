@@ -123,18 +123,22 @@ function InterviewCallContent({
         setTranscript(prev => {
           const lastMessage = prev[prev.length - 1];
           const speakerId = isAgent ? 'agent' : 'user';
+          const now = Date.now();
+          const timeSinceLastMessage = lastMessage ? now - lastMessage.timestamp : Infinity;
+          const TIME_GAP_THRESHOLD = 1500; // 1.5 seconds
 
-          // If last message is from same speaker, append to it
-          if (lastMessage && lastMessage.isAI === isAgent) {
+          // If last message is from same speaker AND within time threshold, append to it
+          if (lastMessage && lastMessage.isAI === isAgent && timeSinceLastMessage < TIME_GAP_THRESHOLD) {
             const updated = [...prev];
             updated[updated.length - 1] = {
               ...lastMessage,
               text: lastMessage.text + ' ' + text,
+              timestamp: now, // Update timestamp to track last update
             };
             return updated;
           }
 
-          // New message
+          // New message (different speaker OR time gap exceeded)
           return [...prev, {
             id: `${speakerId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             speakerId,
@@ -206,9 +210,27 @@ function InterviewCallContent({
         const lastMessage = prev[prev.length - 1];
         const speakerIcon = isAI ? '🤖' : '👤';
         const speakerName = isAI ? 'AI' : caption.user.name || 'User';
+        const now = Date.now();
+        const timeSinceLastMessage = lastMessage ? now - lastMessage.timestamp : Infinity;
+        const TIME_GAP_THRESHOLD = 1500; // 1.5 seconds
 
         // Same speaker
         if (lastMessage && lastMessage.speakerId === speakerId) {
+          // If time gap exceeded, start new message even for same speaker
+          if (timeSinceLastMessage >= TIME_GAP_THRESHOLD) {
+            console.log(`📝 ${speakerIcon} ${speakerName} (new after ${Math.round(timeSinceLastMessage / 1000)}s gap): ${text}`);
+            lastLoggedSpeakerRef.current = speakerId;
+            const newId = `msg-${now}-${Math.random().toString(36).substr(2, 9)}`;
+            return [...prev, {
+              id: newId,
+              speakerId,
+              speakerName: caption.user.name || 'Unknown',
+              text,
+              timestamp: now,
+              isAI,
+            }];
+          }
+
           if (isNewSegment) {
             // New segment from same speaker - APPEND to existing message
             const updated = [...prev];
@@ -216,6 +238,7 @@ function InterviewCallContent({
             updated[updated.length - 1] = {
               ...lastMessage,
               text: newText,
+              timestamp: now, // Update timestamp to track last update
             };
             // Log continuation
             console.log(`📝 ${speakerIcon} ${speakerName}: ...${text}`);
@@ -228,6 +251,7 @@ function InterviewCallContent({
               updated[updated.length - 1] = {
                 ...lastMessage,
                 text: text,
+                timestamp: now, // Update timestamp to track last update
               };
               return updated;
             }
@@ -678,35 +702,6 @@ function InterviewCallContent({
               ))
             )}
 
-            {/* Typing indicator - only show when AI is speaking */}
-            {isAISpeaking && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex gap-4"
-              >
-                <div className="h-8 w-8 rounded-lg shrink-0 overflow-hidden border border-border relative">
-                  <Image
-                    src={photorealistic_professional_woman_headshot}
-                    alt="AI"
-                    fill
-                    sizes="32px"
-                    className="object-cover"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-blue-400">
-                    AI Interviewer
-                  </div>
-                  <div className="p-4 rounded-2xl bg-secondary/50 border border-border w-24 rounded-tl-none flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" />
-                    <div className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '75ms' }} />
-                    <div className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  </div>
-                </div>
-              </motion.div>
-            )}
           </div>
 
         </div>
