@@ -93,6 +93,7 @@ export interface CustomQuestion {
 
 export interface ExtractedJobData {
   title: string;
+  company: string;
   responsibilities: string[];
   requirements: string[];
   seniority: string;

@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
     if (body.originalJDText) {
       const extractedData: ExtractedJobData = {
         title: body.title,
+        company: body.company || "Company",
         responsibilities: body.responsibilities || [],
         requirements: body.requirements || [],
         seniority: body.seniority || "",
