@@ -4,10 +4,10 @@ version = "0.2.0"
 description = "AI Interview Agent for SyncHire powered by Vision-Agents"
 requires-python = ">=3.11"
 dependencies = [
-    # Vision-Agents from GitHub main with Gemini and OpenAI support
-    "vision-agents[gemini,getstream,openai]>=0.2.0",
+    # Vision-Agents with Deepgram STT, Gemini, OpenAI, and HeyGen support
+    "vision-agents[gemini,getstream,openai,deepgram]>=0.2.0",
     # Vision-Agents HeyGen plugin for interactive avatar
-    "vision-agents-plugins-heygen>=0.1.0",
+    "vision-agents-plugins-heygen>=0.2.1",
     # Vision-Agents profiling dependency (required by GitHub version)
     "pyinstrument>=5.0.0",
     # Web framework

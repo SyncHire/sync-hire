@@ -27,24 +27,27 @@ SyncHire is a real-time AI-powered interview platform that revolutionizes the hi
 - ❌ **Not Implemented** - Needs to be built
 
 ### Infrastructure (Foundation)
-- ✅ Monorepo setup (Turborepo + PNPM)
-- ✅ Next.js 16 application with TypeScript 5
-- ✅ Python FastAPI agent with minimal endpoints
+- ✅ Monorepo setup (Turborepo + PNPM workspace)
+- ✅ Next.js 16.0.1 application with TypeScript 5.9.3
+- ✅ Python FastAPI agent (v0.115+) with comprehensive endpoints
 - ✅ Docker Compose configuration for local development
 - ✅ Next.js ↔ Python API communication (HTTP/REST)
-- ✅ Stream Video SDK integration (Node + React SDKs)
-- ✅ Vision-Agents framework v0.2.0 integration
-- 📋 Biome configuration (linting and formatting)
-- 📋 CI/CD pipeline (GitHub Actions)
+- ✅ Stream Video SDK integration (React SDK v1.25.1, Node SDK v0.7.17)
+- ✅ Vision-Agents framework v0.2.0+ with multimodal support
+- ✅ Biome configuration (linting and formatting)
+- ❌ CI/CD pipeline (GitHub Actions)
 
 ### Frontend & UI
-- ✅ Basic Next.js App Router structure
-- ✅ TanStack Query (React Query) setup
-- 📋 Shadcn UI component library
-- 📋 Tailwind CSS v4 configuration
+- ✅ Complete Next.js App Router structure with React 19.2
+- ✅ TanStack Query v5.90+ for data fetching
+- ✅ Comprehensive Radix UI component library (19+ components)
+- ✅ Tailwind CSS v4 configuration with PostCSS
+- ✅ React Hook Form + Zod validation
+- ✅ Next-themes for dark mode support
+- ✅ React Compiler enabled
 - 📋 Authentication UI (login, signup)
 - 📋 Job posting creation form
-- 📋 Interview room UI
+- 📋 Interview room UI with Stream integration
 - 📋 Results dashboard
 
 ### Backend Services
@@ -54,39 +57,54 @@ SyncHire is a real-time AI-powered interview platform that revolutionizes the hi
 - 📋 AI question generation API (Gemini 2.0 Flash)
 - 📋 CV analysis API (Gemini 2.0 Flash)
 - 📋 Interview summary generation API (Gemini 2.0 Flash)
-- 📋 Webhook handlers for interview completion
+- 🚧 Webhook handlers for interview completion
 
 ### AI Interview Agent
-- ✅ FastAPI server with health endpoint
-- ✅ Vision-Agents framework integration
-- 🚧 OpenAI Realtime API integration
-- 🚧 Gemini Live API fallback
-- 🚧 Stream Video agent connection
-- 📋 Interview instructions (personality and flow)
-- 📋 Real-time question adaptation logic
-- 📋 Interview completion detection
-- 📋 Transcript export to Next.js
+- ✅ FastAPI server with health and root endpoints
+- ✅ Complete Vision-Agents framework integration
+- ✅ OpenAI GPT-4o Realtime API integration
+- ✅ Google Gemini Live API integration
+- ✅ Deepgram STT (Speech-to-Text) integration
+- ✅ HeyGen Avatar integration for interactive video
+- ✅ Stream Video agent connection system
+- ✅ Background task processing for interviews
+- ✅ Comprehensive configuration management
+- ✅ Interview agent with join_interview endpoint
+- 📋 Interview completion detection and webhook sending
+
+### Development Tools
+- ✅ TypeScript strict mode with advanced type checking
+- ✅ Biome v2.2 for formatting and linting
+- ✅ uv package manager for Python (faster than pip)
+- ✅ React Compiler support for performance optimization
+- 📋 Test frameworks (Jest, Playwright, pytest configured)
 
 ### Deployment
 - 📋 Vercel deployment (Next.js)
 - 📋 Google Cloud Run deployment (Python agent)
-- 📋 Environment variable configuration
+- ✅ Environment variable configuration system
 - 📋 Production monitoring (Sentry)
 
-**Current Phase:** Foundation complete, transitioning to AI integration and feature development.
+**Current Phase:** Advanced foundation complete with sophisticated AI and video infrastructure, now focusing on business logic features.
 
 ## Tech Stack
 
 ### Frontend & Primary Backend (90% of codebase)
-- **Framework:** Next.js 16 with App Router (latest stable)
-- **UI Library:** React 19.2 (with React Compiler support)
-- **Language:** TypeScript 5 (strict mode)
-- **Styling:** Tailwind CSS v4 (beta) + Shadcn UI components
-- **State Management:** Zustand (lightweight, TypeScript-first) - _Planned_
-- **Form Handling:** React Hook Form + Zod validation - _Planned_
-- **Video SDK:** Stream Video React SDK v1.25+ (WebRTC)
-- **Animations:** Framer Motion - _Planned_
-- **Data Fetching:** TanStack Query (React Query) v5.90+
+- **Framework:** Next.js 16.0.1 with App Router (latest stable)
+- **UI Library:** React 19.2.0 (with React Compiler enabled)
+- **Language:** TypeScript 5.9.3 (strict mode)
+- **Styling:** Tailwind CSS v4 + Radix UI components (19+ components)
+- **State Management:** TanStack Query v5.90.7 (server state), planned Zustand for client state
+- **Form Handling:** React Hook Form v7.66.1 + Zod v4.1.12 validation
+- **Video SDK:** Stream Video React SDK v1.25.1 + Node SDK v0.7.17 (WebRTC)
+- **Animations:** Framer Motion (available via dependencies)
+- **UI Components:** Comprehensive Radix UI suite (Accordion, Dialog, Dropdown, Select, etc.)
+- **Date Handling:** date-fns v4.1.0
+- **Charts:** Recharts v3.4.1 + React Chart.js v5.3.1
+- **Theme:** next-themes v0.4.6 (dark mode support)
+- **Icons:** Lucide React v0.554.0
+- **Notification:** Sonner v2.0.7
+- **Code Quality:** Biome v2.2.0 (formatting + linting)
 
 ### Backend Services
 - **API Framework:** Next.js API Routes (serverless)
@@ -97,27 +115,35 @@ SyncHire is a real-time AI-powered interview platform that revolutionizes the hi
 - **AI Integration:** Google Gemini 2.0 Flash (question generation, CV analysis, summary generation) - _Planned_
 
 ### AI Interview Agent (10% of codebase - Python Microservice)
-- **Framework:** GetStream Vision-Agents v0.2.0+
+- **Framework:** GetStream Vision-Agents v0.2.0+ with multimodal support
 - **Language:** Python 3.11+ (tested with 3.11, 3.12, 3.13)
 - **Package Manager:** uv (fast Python package installer)
-- **LLM Provider:** OpenAI Realtime API (primary) - _Integration in Progress_
-- **LLM Fallback:** Google Gemini Live (cost-effective alternative) - _Integration in Progress_
-- **STT:** Deepgram (via Vision-Agents integration)
-- **TTS:** ElevenLabs (via Vision-Agents integration)
-- **Web Server:** FastAPI v0.115+ with Uvicorn
+- **LLM Providers:**
+  - OpenAI GPT-4o Realtime API (primary) ✅ Integrated
+  - Google Gemini Live API (fallback) ✅ Integrated
+- **STT:** Deepgram (via Vision-Agents integration) ✅ Active
+- **TTS:** ElevenLabs (via Vision-Agents integration) ✅ Available
+- **Avatar:** HeyGen Interactive Avatar (vision-agents-plugins-heygen) ✅ Integrated
+- **Web Server:** FastAPI v0.115+ with Uvicorn ✅ Complete
 - **Deployment:** Docker container on Google Cloud Run
-- **Type Checking:** mypy for static type analysis
+- **Development Tools:**
+  - Ruff v0.8+ for formatting and linting
+  - mypy v1.0+ for static type analysis
+  - pytest v8.3+ for testing
+- **Monitoring:** Comprehensive logging with file output
 
 ### Infrastructure & Services
-- **Monorepo Manager:** Turborepo (task orchestration, caching)
-- **Package Manager:** PNPM v9.15+ (Node.js workspaces), uv (Python)
+- **Monorepo Manager:** Turborepo v2.6.0 (task orchestration, caching)
+- **Package Manager:** PNPM v9.15.0 (Node.js workspaces), uv (Python)
 - **Frontend Hosting:** Vercel (Next.js deployment with edge functions) - _Planned_
 - **Agent Hosting:** Google Cloud Run (Python container, serverless) - _Planned_
-- **Video Infrastructure:** Stream Video (managed WebRTC service)
+- **Video Infrastructure:** Stream Video (managed WebRTC service) ✅ Active
 - **Database:** Supabase (managed PostgreSQL with real-time subscriptions) - _Planned_
 - **Monitoring:** Sentry + Vercel Analytics - _Planned_
 - **CI/CD:** GitHub Actions - _Planned_
-- **Development:** Docker Compose (local multi-service development)
+- **Development:** Docker Compose (local multi-service development) ✅ Active
+- **Node Version:** >=20.0.0 (engines requirement)
+- **Python Version:** >=3.11 (project requirement)
 
 ## Project Conventions
 
@@ -167,29 +193,38 @@ SyncHire is a real-time AI-powered interview platform that revolutionizes the hi
 ```
 sync-hire/
 ├── apps/
-│   ├── web/              # Next.js 16 application (frontend + API routes)
+│   ├── web/              # Next.js 16.0.1 application (frontend + API routes)
 │   │   ├── src/
 │   │   │   ├── app/      # Next.js App Router (pages, layouts, API routes)
-│   │   │   ├── components/  # React components
+│   │   │   ├── components/  # React components (84+ TypeScript files)
 │   │   │   └── lib/      # Shared utilities, clients
-│   │   ├── package.json
-│   │   └── next.config.js
+│   │   ├── package.json  # 63 production dependencies
+│   │   ├── biome.json    # Biome v2.2 configuration
+│   │   ├── next.config.ts # React Compiler enabled
+│   │   └── postcss.config.mjs
 │   └── agent/            # Python FastAPI agent (AI interview service)
-│       ├── main.py       # FastAPI application entry point
-│       ├── pyproject.toml  # Python dependencies (uv compatible)
-│       └── .env          # Python environment variables
+│       ├── main.py       # FastAPI application entry point (226 lines)
+│       ├── config.py     # Configuration management
+│       ├── agents/       # Interview agent implementation
+│       ├── pyproject.toml  # Python dependencies (vision-agents + plugins)
+│       └── .env.example  # Environment variables template
 ├── docs/                 # Project documentation
 ├── openspec/             # OpenSpec specifications and changes
+│   ├── project.md        # This file
+│   ├── AGENTS.md         # Agent instructions
+│   └── changes/          # Change proposals
 ├── package.json          # Root workspace configuration
 ├── pnpm-workspace.yaml   # PNPM workspace definition
-├── turbo.json            # Turborepo task configuration
+├── turbo.json            # Turborepo v2.6.0 task configuration
 └── docker-compose.yml    # Local development orchestration
 ```
 
 **Workspace Configuration:**
-- **Root:** Turborepo orchestration, shared scripts
-- **apps/web:** Independent Next.js workspace with own dependencies
-- **apps/agent:** Python microservice with pyproject.toml (not part of PNPM workspace)
+- **Root:** Turborepo orchestration, shared scripts (dev, build, lint, test, clean)
+- **apps/web:** Independent Next.js workspace with comprehensive UI stack
+- **apps/agent:** Python microservice with uv package management (6 Python files)
+- **Node.js Version:** >=20.0.0 required
+- **Python Version:** >=3.11 required
 - **Shared:** No shared packages yet (planned for future)
 
 ### Architecture Patterns
@@ -330,10 +365,17 @@ sync-hire/
 
 **Development Commands:**
 - `pnpm dev` - Start all services (Next.js on :3000, Python agent on :8080)
-- `pnpm build` - Build all applications
-- `pnpm lint` - Lint all code (Biome for JS/TS, Ruff for Python)
-- `pnpm clean` - Clean all build artifacts
+- `pnpm build` - Build all applications (Turborepo orchestration)
+- `pnpm lint` - Lint all code (Biome for JS/TS, configured for Next.js/React)
+- `pnpm test` - Run all tests (Jest for TypeScript, pytest for Python)
+- `pnpm clean` - Clean all build artifacts (Turborepo + node_modules)
+- `pnpm sync` - Sync dependencies
 - `docker-compose up --build` - Start all services in Docker
+- **Individual commands:**
+  - `pnpm --filter web dev` - Start only Next.js app
+  - `uv run python apps/agent/main.py` - Start only Python agent
+  - `uv run mypy apps/agent/` - Type check Python code
+  - `uv run ruff check apps/agent/` - Lint Python code
 
 ## Domain Context
 
@@ -562,17 +604,17 @@ sync-hire/
 ## Key Project Files
 
 **Critical Configuration Files:**
-- `/apps/web/package.json` - Next.js dependencies and scripts
-- `/apps/web/next.config.js` - Next.js configuration - _To be created_
-- `/apps/web/.env.local` - Next.js environment variables - _To be created_
-- `/apps/agent/pyproject.toml` - Python dependencies (uv compatible)
-- `/apps/agent/.env` - Python agent environment variables
-- `/apps/agent/interview_instructions.md` - AI agent personality - _To be created_
-- `/package.json` - Root workspace configuration (Turborepo scripts)
+- `/apps/web/package.json` - Next.js dependencies (63 packages) and scripts
+- `/apps/web/next.config.ts` - Next.js configuration with React Compiler enabled
+- `/apps/web/biome.json` - Biome v2.2 formatter/linter configuration
+- `/apps/web/postcss.config.mjs` - Tailwind CSS v4 PostCSS configuration
+- `/apps/agent/pyproject.toml` - Python dependencies with vision-agents + plugins
+- `/apps/agent/config.py` - Python agent configuration management
+- `/apps/agent/.env.example` - Python agent environment variables template
+- `/package.json` - Root workspace configuration (Turborepo v2.6.0)
 - `/turbo.json` - Turborepo task pipeline configuration
-- `/pnpm-workspace.yaml` - PNPM workspace definition
+- `/pnpm-workspace.yaml` - PNPM v9.15.0 workspace definition
 - `/docker-compose.yml` - Local development orchestration
-- `/biome.json` - Biome formatter/linter configuration - _To be created_
 
 **Core Application Structure:**
 - `/apps/web/src/app/` - Next.js App Router pages and API routes
