@@ -96,17 +96,11 @@ export function useInterviewCall({
 
     initializeInterview();
 
-    // Cleanup
+    // Cleanup - use a local reference to avoid TypeScript flow issues
     return () => {
       cancelled = true;
       // Don't reset joinedRef here - let it persist to prevent re-runs on StrictMode remount
       initializingRef.current = false;
-      if (call) {
-        console.log('🧹 Cleanup: Leaving call');
-        call.leave().catch(() => {
-          console.log('Cleanup: Call already left or ended');
-        });
-      }
     };
   }, [enabled, client, call, interviewId, candidateId, candidateName]);
 

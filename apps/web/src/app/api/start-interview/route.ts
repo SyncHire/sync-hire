@@ -5,7 +5,7 @@
  */
 import { NextResponse } from 'next/server';
 import { getStreamClient } from '@/lib/stream-token';
-import { mockInterviews, mockJobs } from '@/lib/mock-data';
+import { mockInterviews, getJobById } from '@/lib/mock-data';
 
 const AGENT_API_URL = process.env.AGENT_API_URL || 'http://localhost:8080';
 
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const job = mockJobs[interview.jobId];
+    const job = getJobById(interview.jobId);
     if (!job) {
       return NextResponse.json(
         { error: 'Job not found' },
@@ -63,16 +63,16 @@ export async function POST(request: Request) {
             target_resolution: {
               width: 1280,
               height: 720,
+              bitrate: 3000000,
             },
           },
         },
+        members: [
+          { user_id: candidateId },
+        ],
       },
-      members: [
-        { user_id: candidateId },
-      ],
       ring: false,
       notify: false,
-      video: true,
     });
 
     // Check if this is a new call or existing call
