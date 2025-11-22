@@ -531,6 +531,7 @@ export default function HRJDDetail() {
                   checked={aiMatchingEnabled}
                   onCheckedChange={handleToggleAiMatching}
                   disabled={updateSettingsMutation.isPending || matchCandidatesMutation.isPending}
+                  className="data-[state=checked]:bg-blue-500"
                 />
               </div>
             </div>
