@@ -2,7 +2,6 @@
 
 import {
   ArrowLeft,
-  ArrowUpDown,
   BrainCircuit,
   Check,
   Download,
@@ -14,7 +13,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,42 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-interface Applicant {
-  id: string;
-  interviewId: string;
-  candidateId: string;
-  name: string;
-  email: string;
-  status: "PENDING" | "IN_PROGRESS" | "COMPLETED";
-  score?: number;
-  durationMinutes: number;
-  createdAt: string;
-  skills: string[];
-}
-
-interface JobInfo {
-  id: string;
-  title: string;
-  company: string;
-}
-
-interface Stats {
-  total: number;
-  completed: number;
-  pending: number;
-  inProgress: number;
-  averageScore: number | null;
-}
-
-interface ApplicantsResponse {
-  success: boolean;
-  data: {
-    job: JobInfo;
-    applicants: Applicant[];
-    stats: Stats;
-  };
-}
+import { useJobApplicants } from "@/lib/hooks/use-job-applicants";
 
 // Generate avatar URL from name
 function getAvatarUrl(name: string, index: number): string {
@@ -83,37 +46,7 @@ export default function HRApplicantDetail() {
   const params = useParams();
   const jobId = params?.id as string;
 
-  const [data, setData] = useState<ApplicantsResponse["data"] | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchApplicants() {
-      if (!jobId) {
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        const response = await fetch(`/api/jobs/${jobId}/applicants`);
-        const result: ApplicantsResponse = await response.json();
-
-        if (!response.ok || !result.success) {
-          setError("Failed to load applicants");
-          return;
-        }
-
-        setData(result.data);
-      } catch (err) {
-        console.error("Error fetching applicants:", err);
-        setError("Failed to load applicants");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchApplicants();
-  }, [jobId]);
+  const { data: response, isLoading, error } = useJobApplicants(jobId);
 
   if (isLoading) {
     return (
@@ -125,7 +58,7 @@ export default function HRApplicantDetail() {
     );
   }
 
-  if (error || !data) {
+  if (error || !response?.data) {
     return (
       <div className="max-w-7xl mx-auto space-y-8 px-4 py-8">
         <Link href="/hr/jobs">
@@ -138,7 +71,7 @@ export default function HRApplicantDetail() {
         </Link>
         <div className="text-center py-12">
           <h2 className="text-2xl font-semibold text-foreground mb-2">
-            {error ?? "Job not found"}
+            {error ? "Failed to load applicants" : "Job not found"}
           </h2>
           <p className="text-muted-foreground mb-4">
             Unable to load applicants for this job.
@@ -151,7 +84,7 @@ export default function HRApplicantDetail() {
     );
   }
 
-  const { job, applicants, stats } = data;
+  const { job, applicants, stats } = response.data;
   const topApplicant = applicants.find(
     (a) => a.status === "COMPLETED" && a.score !== undefined,
   );

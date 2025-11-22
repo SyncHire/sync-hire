@@ -91,18 +91,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="cursor-help text-muted-foreground/70 hover:text-muted-foreground transition-colors">
-                            Candidates
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>View candidates from a specific job</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
                           <span className="cursor-not-allowed text-muted-foreground/50">
                             Analytics
                           </span>
