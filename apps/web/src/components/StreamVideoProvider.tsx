@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
+import { StreamVideo, StreamVideoClient } from "@stream-io/video-react-sdk";
 /**
  * Stream Video Provider Component
  * Wraps the application with Stream Video Client
  */
-import { ReactNode, useEffect, useState } from 'react';
-import { StreamVideo, StreamVideoClient } from '@stream-io/video-react-sdk';
-import { streamConfig } from '@/lib/stream-config';
-import { useStreamToken } from '@/lib/hooks/use-interview';
+import { type ReactNode, useEffect, useState } from "react";
+import { useStreamToken } from "@/lib/hooks/use-interview";
+import { streamConfig } from "@/lib/stream-config";
 
-import '@stream-io/video-react-sdk/dist/css/styles.css';
+import "@stream-io/video-react-sdk/dist/css/styles.css";
 
 interface StreamVideoProviderProps {
   children: ReactNode;
@@ -30,7 +30,7 @@ export function StreamVideoProvider({
   useEffect(() => {
     const initializeClient = async () => {
       if (!streamConfig.apiKey) {
-        console.error('Stream API key not configured');
+        console.error("Stream API key not configured");
         return;
       }
 
@@ -51,7 +51,7 @@ export function StreamVideoProvider({
 
         setClient(videoClient);
       } catch (error) {
-        console.error('Error initializing Stream client:', error);
+        console.error("Error initializing Stream client:", error);
       }
     };
 
@@ -74,7 +74,9 @@ export function StreamVideoProvider({
           <div className="mb-4 flex justify-center">
             <div className="h-12 w-12 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin"></div>
           </div>
-          <div className="text-lg font-medium text-gray-700">Connecting to Stream...</div>
+          <div className="text-lg font-medium text-gray-700">
+            Connecting to Stream...
+          </div>
         </div>
       </div>
     );
@@ -86,12 +88,24 @@ export function StreamVideoProvider({
         <div className="max-w-md rounded-lg bg-white p-8 shadow-xl border border-red-100 text-center">
           <div className="mb-6 flex justify-center">
             <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center">
-              <svg className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="h-8 w-8 text-red-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </div>
           </div>
-          <h2 className="mb-3 text-xl font-bold text-gray-900">Connection Failed</h2>
+          <h2 className="mb-3 text-xl font-bold text-gray-900">
+            Connection Failed
+          </h2>
           <p className="text-gray-600">{error.message}</p>
         </div>
       </div>
@@ -104,12 +118,24 @@ export function StreamVideoProvider({
         <div className="max-w-md rounded-lg bg-white p-8 shadow-xl border border-red-100 text-center">
           <div className="mb-6 flex justify-center">
             <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center">
-              <svg className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="h-8 w-8 text-red-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </div>
           </div>
-          <h2 className="mb-3 text-xl font-bold text-gray-900">Connection Failed</h2>
+          <h2 className="mb-3 text-xl font-bold text-gray-900">
+            Connection Failed
+          </h2>
           <p className="text-gray-600">Failed to connect to Stream Video</p>
         </div>
       </div>

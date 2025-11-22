@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
 /**
  * React Query hooks for interview API calls
  */
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 interface StartInterviewParams {
   interviewId: string;
@@ -28,16 +28,16 @@ interface StreamTokenResponse {
  */
 export function useStreamToken(userId: string) {
   return useQuery({
-    queryKey: ['stream-token', userId],
+    queryKey: ["stream-token", userId],
     queryFn: async (): Promise<StreamTokenResponse> => {
-      const response = await fetch('/api/stream-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/stream-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch Stream token');
+        throw new Error("Failed to fetch Stream token");
       }
 
       return response.json();
@@ -57,16 +57,20 @@ export function useStreamToken(userId: string) {
  */
 export function useStartInterview() {
   return useMutation({
-    mutationFn: async (params: StartInterviewParams): Promise<StartInterviewResponse> => {
-      const response = await fetch('/api/start-interview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+    mutationFn: async (
+      params: StartInterviewParams,
+    ): Promise<StartInterviewResponse> => {
+      const response = await fetch("/api/start-interview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(params),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to start interview' }));
-        throw new Error(errorData.error || 'Failed to start interview');
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Failed to start interview" }));
+        throw new Error(errorData.error || "Failed to start interview");
       }
 
       return response.json();

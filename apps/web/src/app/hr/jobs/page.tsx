@@ -1,11 +1,21 @@
 "use client";
 
-import { getCompanyLogoUrl } from "@/lib/logo-utils";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Users, Clock, MapPin, ArrowRight, MoreHorizontal, Building2, Sparkles, Zap } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  Clock,
+  MapPin,
+  MoreHorizontal,
+  Plus,
+  Sparkles,
+  Users,
+  Zap,
+} from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { getCompanyLogoUrl } from "@/lib/logo-utils";
 import type { Job } from "@/lib/mock-data";
 
 export default function HRJDListings() {
@@ -44,11 +54,16 @@ export default function HRJDListings() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
             Job Listings
-            <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-blue-500/20 gap-1 font-normal">
+            <Badge
+              variant="secondary"
+              className="bg-blue-500/10 text-blue-500 border-blue-500/20 gap-1 font-normal"
+            >
               <Sparkles className="h-3 w-3" /> AI Active
             </Badge>
           </h1>
-          <p className="text-muted-foreground mt-2">Manage your open positions and track AI-screened applicants.</p>
+          <p className="text-muted-foreground mt-2">
+            Manage your open positions and track AI-screened applicants.
+          </p>
         </div>
         <Link href="/hr/jobs/create">
           <Button className="gap-2 h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-lg shadow-blue-500/20 transition-all">
@@ -66,35 +81,50 @@ export default function HRJDListings() {
 
               <div className="relative z-10 space-y-5">
                 <div className="flex justify-between items-start">
-                  <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center border border-border group-hover:border-blue-500/30 transition-colors overflow-hidden">
-                    {getCompanyLogoUrl(job.company) ? (
-                      <img
-                        src={getCompanyLogoUrl(job.company)!}
-                        alt={`${job.company} logo`}
-                        className="h-8 w-8 object-contain"
-                      />
-                    ) : (
-                      <Building2 className="h-6 w-6 text-muted-foreground group-hover:text-blue-400 transition-colors" />
-                    )}
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center border border-border group-hover:border-blue-500/30 transition-colors overflow-hidden">
+                      {getCompanyLogoUrl(job.company) ? (
+                        <img
+                          src={getCompanyLogoUrl(job.company)!}
+                          alt={`${job.company} logo`}
+                          className="h-8 w-8 object-contain"
+                        />
+                      ) : (
+                        <Building2 className="h-6 w-6 text-muted-foreground group-hover:text-blue-400 transition-colors" />
+                      )}
+                    </div>
+                    <span className="text-lg font-bold text-foreground">
+                      {job.company}
+                    </span>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground"
+                  >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </div>
 
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                     <Badge variant="outline" className="bg-green-500/5 text-green-500 border-green-500/20 text-[10px] px-2 h-5">
-                       <Zap className="h-3 w-3 mr-1 fill-current" /> AI MATCHING ON
-                     </Badge>
-                     <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                       <Clock className="h-3 w-3" /> {job.postedAt}
-                     </span>
+                    <Badge
+                      variant="outline"
+                      className="bg-green-500/5 text-green-500 border-green-500/20 text-[10px] px-2 h-5"
+                    >
+                      <Zap className="h-3 w-3 mr-1 fill-current" /> AI MATCHING
+                      ON
+                    </Badge>
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" /> {job.postedAt}
+                    </span>
                   </div>
                   <h3 className="font-semibold text-xl text-foreground group-hover:text-blue-400 transition-colors">
                     {job.title}
                   </h3>
-                  <p className="text-sm text-muted-foreground mt-1">{job.department}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {job.department}
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -110,12 +140,18 @@ export default function HRJDListings() {
               <div className="relative z-10 mt-8 pt-5 border-t border-border flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex -space-x-2">
-                     {[1,2,3].map(i => (
-                       <div key={i} className="h-7 w-7 rounded-full border-2 border-card bg-secondary" />
-                     ))}
+                    {[1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="h-7 w-7 rounded-full border-2 border-card bg-secondary"
+                      />
+                    ))}
                   </div>
                   <span className="text-xs font-medium text-muted-foreground">
-                    <strong className="text-foreground">{job.applicantsCount}</strong> Applicants
+                    <strong className="text-foreground">
+                      {job.applicantsCount}
+                    </strong>{" "}
+                    Applicants
                   </span>
                 </div>
 

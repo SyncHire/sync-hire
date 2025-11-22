@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useState } from "react";
 import { Upload } from "lucide-react";
-import { validateFiles, type FileValidationConfig } from "./FileValidation";
+import { useCallback, useState } from "react";
 import { FilePreview } from "./FilePreview";
-import { UploadProgress } from "./UploadProgress";
 import { FileUploadError } from "./FileUploadError";
+import { type FileValidationConfig, validateFiles } from "./FileValidation";
+import { UploadProgress } from "./UploadProgress";
 
 interface FileUploadContainerProps {
   config: FileValidationConfig;
@@ -43,7 +43,7 @@ export function FileUploadContainer({
       setSelectedFile(file);
       onFileSelect(file);
     },
-    [config, onFileSelect]
+    [config, onFileSelect],
   );
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -69,7 +69,7 @@ export function FileUploadContainer({
         handleFile(files[0]);
       }
     },
-    [handleFile, isProcessing]
+    [handleFile, isProcessing],
   );
 
   const handleFileInput = useCallback(
@@ -81,7 +81,7 @@ export function FileUploadContainer({
         handleFile(files[0]);
       }
     },
-    [handleFile, isProcessing]
+    [handleFile, isProcessing],
   );
 
   const clearFile = useCallback(() => {

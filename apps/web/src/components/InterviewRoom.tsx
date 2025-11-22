@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Interview Room Component
@@ -7,16 +7,16 @@
  * 2. Loading screen - while connecting
  * 3. Active interview - video call with AI
  */
-import { useState } from 'react';
-import { useInterviewCall } from './interview/useInterviewCall';
-import type { Question } from '@/lib/mock-data';
+import { useState } from "react";
+import type { Question } from "@/lib/mock-data";
+import { InterviewCallView } from "./interview/InterviewCallView";
 import {
-  InterviewPreviewScreen,
-  InterviewLoadingScreen,
-  InterviewErrorScreen,
   InterviewEndedScreen,
-} from './interview/InterviewScreens';
-import { InterviewCallView } from './interview/InterviewCallView';
+  InterviewErrorScreen,
+  InterviewLoadingScreen,
+  InterviewPreviewScreen,
+} from "./interview/InterviewScreens";
+import { useInterviewCall } from "./interview/useInterviewCall";
 
 interface InterviewRoomProps {
   interviewId: string;
@@ -75,7 +75,12 @@ export function InterviewRoom({
   }
 
   if (error) {
-    return <InterviewErrorScreen errorMessage={error.message} onRetry={handleRetry} />;
+    return (
+      <InterviewErrorScreen
+        errorMessage={error.message}
+        onRetry={handleRetry}
+      />
+    );
   }
 
   if (callEnded) {

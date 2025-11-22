@@ -1,20 +1,20 @@
 /**
  * Server-side Stream token generation
  */
-import { StreamClient } from '@stream-io/node-sdk';
-import { streamConfig } from './stream-config';
+import { StreamClient } from "@stream-io/node-sdk";
+import { streamConfig } from "./stream-config";
 
 let streamClient: StreamClient | null = null;
 
 export function getStreamClient(): StreamClient {
   if (!streamClient) {
     if (!streamConfig.apiKey || !streamConfig.apiSecret) {
-      throw new Error('Stream API credentials not configured');
+      throw new Error("Stream API credentials not configured");
     }
 
     streamClient = new StreamClient(
       streamConfig.apiKey,
-      streamConfig.apiSecret
+      streamConfig.apiSecret,
     );
   }
 

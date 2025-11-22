@@ -4,14 +4,14 @@
  * Creates a new job posting with extracted data and custom questions
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
+import type { CustomQuestion, ExtractedJobData, Job } from "@/lib/mock-data";
 import {
-  createJob,
   createCustomQuestion,
+  createJob,
   createJobDescriptionVersion,
 } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
-import type { Job, CustomQuestion, ExtractedJobData } from "@/lib/mock-data";
 
 interface CreateJobRequest {
   title: string;
@@ -44,8 +44,11 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     if (!body.title || !body.description || !body.location) {
       return NextResponse.json(
-        { success: false, error: "Missing required fields: title, description, location" },
-        { status: 400 }
+        {
+          success: false,
+          error: "Missing required fields: title, description, location",
+        },
+        { status: 400 },
       );
     }
 
@@ -74,7 +77,7 @@ export async function POST(request: NextRequest) {
           q.order,
           q.required,
           q.options,
-          q.scoringConfig
+          q.scoringConfig,
         );
         questions.push(question);
       }
@@ -96,7 +99,7 @@ export async function POST(request: NextRequest) {
         job.id,
         body.originalJDText,
         extractedData,
-        undefined
+        undefined,
       );
     }
 
@@ -115,17 +118,16 @@ export async function POST(request: NextRequest) {
           status: job.status,
         },
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Create job error:", error);
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error ? error.message : "Failed to create job",
+        error: error instanceof Error ? error.message : "Failed to create job",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

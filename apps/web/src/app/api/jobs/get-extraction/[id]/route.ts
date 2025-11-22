@@ -4,12 +4,12 @@
  * Retrieves cached extraction data by hash ID
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { getStorage } from "@/lib/storage/storage-factory";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -17,7 +17,7 @@ export async function GET(
     if (!id) {
       return NextResponse.json(
         { success: false, error: "No ID provided" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -27,19 +27,19 @@ export async function GET(
     if (!extractedData) {
       return NextResponse.json(
         { success: false, error: "Extraction not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     return NextResponse.json(
       { success: true, data: extractedData },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Get extraction error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to retrieve extraction" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

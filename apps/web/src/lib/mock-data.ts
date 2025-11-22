@@ -66,6 +66,21 @@ export interface Interview {
   createdAt: Date;
 }
 
+/**
+ * JobApplication represents a job from the candidate's perspective
+ * Includes the full job details plus candidate-specific application data
+ */
+export interface JobApplication {
+  id: string;
+  job: Job;
+  candidateId: string;
+  matchPercentage: number;
+  status: "NOT_APPLIED" | "APPLIED" | "INTERVIEWING" | "COMPLETED";
+  interviewId?: string; // Links to Interview once created
+  appliedAt?: Date;
+  createdAt: Date;
+}
+
 export interface Applicant {
   id: string;
   name: string;
@@ -76,7 +91,11 @@ export interface Applicant {
   jobId: string;
 }
 
-export type QuestionType = "SHORT_ANSWER" | "LONG_ANSWER" | "MULTIPLE_CHOICE" | "SCORED";
+export type QuestionType =
+  | "SHORT_ANSWER"
+  | "LONG_ANSWER"
+  | "MULTIPLE_CHOICE"
+  | "SCORED";
 
 export interface CustomQuestion {
   id: string;
@@ -191,8 +210,10 @@ export interface SuggestionResponse {
 // Single demo user for the candidate experience
 // Configurable via environment variables
 const DEMO_USER_ID = "demo-user";
-const DEMO_USER_NAME = process.env.NEXT_PUBLIC_DEMO_USER_NAME || "Demo Candidate";
-const DEMO_USER_EMAIL = process.env.NEXT_PUBLIC_DEMO_USER_EMAIL || "demo@synchire.com";
+const DEMO_USER_NAME =
+  process.env.NEXT_PUBLIC_DEMO_USER_NAME || "Demo Candidate";
+const DEMO_USER_EMAIL =
+  process.env.NEXT_PUBLIC_DEMO_USER_EMAIL || "demo@synchire.com";
 
 const users: Record<string, User> = {
   "employer-1": {
@@ -238,7 +259,11 @@ const jobs: Record<string, Job> = {
         type: "video",
         duration: 3,
         category: "Introduction",
-        keyPoints: ["Professional background", "React expertise", "Recent projects"],
+        keyPoints: [
+          "Professional background",
+          "React expertise",
+          "Recent projects",
+        ],
       },
       {
         id: "q2",
@@ -254,7 +279,11 @@ const jobs: Record<string, Job> = {
         type: "video",
         duration: 3,
         category: "Problem Solving",
-        keyPoints: ["Problem identification", "Debugging approach", "Solution impact"],
+        keyPoints: [
+          "Problem identification",
+          "Debugging approach",
+          "Solution impact",
+        ],
       },
       {
         id: "q4",
@@ -358,7 +387,11 @@ const jobs: Record<string, Job> = {
         type: "video",
         duration: 3,
         category: "Technical Skills",
-        keyPoints: ["SSR vs CSR", "Performance trade-offs", "SEO considerations"],
+        keyPoints: [
+          "SSR vs CSR",
+          "Performance trade-offs",
+          "SEO considerations",
+        ],
       },
       {
         id: "q3",
@@ -374,7 +407,11 @@ const jobs: Record<string, Job> = {
         type: "video",
         duration: 2,
         category: "Behavioral",
-        keyPoints: ["Learning approach", "Community involvement", "Experimentation"],
+        keyPoints: [
+          "Learning approach",
+          "Community involvement",
+          "Experimentation",
+        ],
       },
     ],
     employerId: "employer-1",
@@ -439,7 +476,7 @@ const jobs: Record<string, Job> = {
   "job-5": {
     id: "job-5",
     title: "ML Engineer",
-    company: "OpenAI",
+    company: "Google",
     department: "Engineering",
     location: "San Francisco, CA",
     type: "Full-time",
@@ -840,7 +877,7 @@ export function getAllInterviews(): Interview[] {
 }
 
 export function getInterviewsByStatus(
-  status: Interview["status"]
+  status: Interview["status"],
 ): Interview[] {
   return Object.values(interviews).filter((i) => i.status === status);
 }
@@ -852,7 +889,7 @@ export function getInterviewsForUser(userId: string): Interview[] {
 export function createInterview(
   jobId: string,
   candidateId: string,
-  durationMinutes = 30
+  durationMinutes = 30,
 ): Interview {
   const id = `interview-${Date.now()}`;
   const interview: Interview = {
@@ -869,7 +906,7 @@ export function createInterview(
 
 export function updateInterview(
   id: string,
-  updates: Partial<Interview>
+  updates: Partial<Interview>,
 ): Interview | undefined {
   const interview = interviews[id];
   if (interview === undefined) {
@@ -894,7 +931,7 @@ export function getApplicantsByJobId(jobId: string): Applicant[] {
 
 export function updateApplicantStatus(
   id: string,
-  status: Applicant["status"]
+  status: Applicant["status"],
 ): Applicant | undefined {
   const applicant = applicants[id];
   if (applicant === undefined) {
@@ -906,10 +943,10 @@ export function updateApplicantStatus(
 
 // Custom Questions
 export function getCustomQuestionsByJobId(
-  jobPostingId: string
+  jobPostingId: string,
 ): CustomQuestion[] {
   return Object.values(customQuestions).filter(
-    (q) => q.jobPostingId === jobPostingId
+    (q) => q.jobPostingId === jobPostingId,
   );
 }
 
@@ -920,7 +957,7 @@ export function createCustomQuestion(
   order: number,
   required: boolean = false,
   options?: string[],
-  scoringConfig?: { type: string; min: number; max: number }
+  scoringConfig?: { type: string; min: number; max: number },
 ): CustomQuestion {
   const id = `question-${Date.now()}`;
   const question: CustomQuestion = {
@@ -941,7 +978,7 @@ export function createCustomQuestion(
 
 export function updateCustomQuestion(
   id: string,
-  updates: Partial<CustomQuestion>
+  updates: Partial<CustomQuestion>,
 ): CustomQuestion | undefined {
   const question = customQuestions[id];
   if (question === undefined) {
@@ -965,10 +1002,10 @@ export function deleteCustomQuestion(id: string): boolean {
 
 // Job Description Versions
 export function getJobDescriptionVersion(
-  jobPostingId: string
+  jobPostingId: string,
 ): JobDescriptionVersion | undefined {
   return Object.values(jobDescriptionVersions).find(
-    (v) => v.jobPostingId === jobPostingId
+    (v) => v.jobPostingId === jobPostingId,
   );
 }
 
@@ -976,7 +1013,7 @@ export function createJobDescriptionVersion(
   jobPostingId: string,
   originalText: string,
   extractedData: ExtractedJobData,
-  documentUrl?: string
+  documentUrl?: string,
 ): JobDescriptionVersion {
   const id = `jd-version-${Date.now()}`;
   const version: JobDescriptionVersion = {
@@ -996,10 +1033,10 @@ export function createJobDescriptionVersion(
 
 export function updateJobDescriptionVersion(
   jobPostingId: string,
-  updates: Partial<JobDescriptionVersion>
+  updates: Partial<JobDescriptionVersion>,
 ): JobDescriptionVersion | undefined {
   const version = Object.values(jobDescriptionVersions).find(
-    (v) => v.jobPostingId === jobPostingId
+    (v) => v.jobPostingId === jobPostingId,
   );
   if (version === undefined) {
     return undefined;
@@ -1038,10 +1075,7 @@ export function createJob(jobData: Partial<Job>): Job {
   return job;
 }
 
-export function updateJob(
-  id: string,
-  updates: Partial<Job>
-): Job | undefined {
+export function updateJob(id: string, updates: Partial<Job>): Job | undefined {
   const job = jobs[id];
   if (job === undefined) {
     return undefined;

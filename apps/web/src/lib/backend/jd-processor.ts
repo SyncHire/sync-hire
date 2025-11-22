@@ -6,60 +6,53 @@
  * Implements structured output with Zod schemas.
  */
 
+import { z } from "zod";
+import { geminiClient } from "@/lib/gemini-client";
 import type { ExtractedJobData } from "@/lib/mock-data";
 import type { StorageInterface } from "@/lib/storage/storage-interface";
 import { generateFileHash } from "@/lib/utils/hash-utils";
-import { geminiClient } from "@/lib/gemini-client";
-import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
-import { inspect } from "node:util";
-import { log } from "node:console";
 
 // Define Zod schema for extracted job data
 const extractedJobDataSchema = z.object({
-  title: z
-    .string()
-    .nullable()
-    .transform(val => val || "")
-    .describe("The job title or position name"),
-  company: z
-    .string()
-    .describe("The company or organization name"),
+  title: z.string().describe("The job title or position name"),
+  company: z.string().describe("The company or organization name"),
   responsibilities: z
-    .array(z.string().nullable().transform(val => val || ""))
-    .transform(arr => arr || [])
+    .array(z.string())
     .describe("List of key job responsibilities and duties"),
   requirements: z
-    .array(z.string().nullable().transform(val => val || ""))
-    .transform(arr => arr || [])
+    .array(z.string())
     .describe("List of required skills, qualifications, and experience"),
   seniority: z
     .string()
-    .nullable()
-    .transform(val => val || "")
-    .describe("Seniority level (e.g., Junior, Mid-level, Senior, Staff, Principal)"),
-  location: z
-    .string()
-    .nullable()
-    .transform(val => val || "")
-    .describe("Job location or Remote if work-from-home"),
+    .describe(
+      "Seniority level (e.g., Junior, Mid-level, Senior, Staff, Principal)",
+    ),
+  location: z.string().describe("Job location or Remote if work-from-home"),
   employmentType: z
     .string()
-    .nullable()
-    .transform(val => val || "")
-    .describe("Employment type (e.g., Full-time, Part-time, Contract, Temporary)"),
+    .describe(
+      "Employment type (e.g., Full-time, Part-time, Contract, Temporary)",
+    ),
 });
 
 // Define Zod schema for combined AI generation (suggestions + questions)
 const aiContentSchema = z.object({
-  suggestions: z.array(z.object({
-    original: z.string().describe("The original text being improved"),
-    improved: z.string().describe("The improved version of the text"),
-  })),
-  questions: z.array(z.object({
-    content: z.string().describe("The question text that AI will ask candidates"),
-    reason: z.string().describe("Why this question is relevant for the position"),
-  })),
+  suggestions: z.array(
+    z.object({
+      original: z.string().describe("The original text being improved"),
+      improved: z.string().describe("The improved version of the text"),
+    }),
+  ),
+  questions: z.array(
+    z.object({
+      content: z
+        .string()
+        .describe("The question text that AI will ask candidates"),
+      reason: z
+        .string()
+        .describe("Why this question is relevant for the position"),
+    }),
+  ),
 });
 
 export class JobDescriptionProcessor {
@@ -68,7 +61,10 @@ export class JobDescriptionProcessor {
   /**
    * Process a PDF file and extract structured job data
    */
-  async processFile(buffer: Buffer, fileName: string): Promise<{
+  async processFile(
+    buffer: Buffer,
+    fileName: string,
+  ): Promise<{
     hash: string;
     extractedData: ExtractedJobData;
     aiSuggestions: Array<{
@@ -84,7 +80,9 @@ export class JobDescriptionProcessor {
     // Validate PDF file type
     const ext = fileName.toLowerCase().split(".").pop();
     if (ext !== "pdf") {
-      throw new Error(`Unsupported file type: ${ext}. Only PDF files are supported.`);
+      throw new Error(
+        `Unsupported file type: ${ext}. Only PDF files are supported.`,
+      );
     }
 
     // Generate hash for deduplication
@@ -95,19 +93,22 @@ export class JobDescriptionProcessor {
     if (cached) {
       const extractedData = await this.storage.getExtraction(hash);
       if (extractedData) {
-        console.log("📋 Using cached extracted data, generating fresh AI content...");
+        console.log(
+          "📋 Using cached extracted data, generating fresh AI content...",
+        );
         // Generate AI content (suggestions + questions) for cached data
-        const { aiSuggestions, aiQuestions } = await this.generateAIContent(extractedData);
+        const { aiSuggestions, aiQuestions } =
+          await this.generateAIContent(extractedData);
         console.log("✅ AI content generation completed for cached data:", {
           suggestionsCount: aiSuggestions.length,
-          questionsCount: aiQuestions.length
+          questionsCount: aiQuestions.length,
         });
         return {
           hash,
           extractedData,
           aiSuggestions,
           aiQuestions,
-          cached: true
+          cached: true,
         };
       }
     }
@@ -120,15 +121,18 @@ export class JobDescriptionProcessor {
       responsibilitiesCount: extractedData.responsibilities.length,
       requirementsCount: extractedData.requirements.length,
       location: extractedData.location,
-      seniority: extractedData.seniority
+      seniority: extractedData.seniority,
     });
 
     // Generate AI content (suggestions + questions) in single call
-    console.log("🤖 Starting AI content generation (suggestions + questions)...");
-    const { aiSuggestions, aiQuestions } = await this.generateAIContent(extractedData);
+    console.log(
+      "🤖 Starting AI content generation (suggestions + questions)...",
+    );
+    const { aiSuggestions, aiQuestions } =
+      await this.generateAIContent(extractedData);
     console.log("✅ AI content generation completed:", {
       suggestionsCount: aiSuggestions.length,
-      questionsCount: aiQuestions.length
+      questionsCount: aiQuestions.length,
     });
 
     // Save to cache
@@ -143,7 +147,9 @@ export class JobDescriptionProcessor {
   /**
    * Extract structured data from PDF using Gemini
    */
-  private async extractStructuredData(buffer: Buffer): Promise<ExtractedJobData> {
+  private async extractStructuredData(
+    buffer: Buffer,
+  ): Promise<ExtractedJobData> {
     try {
       const base64Data = buffer.toString("base64");
       console.log("📖 Sending PDF to Gemini for structured data extraction...");
@@ -154,7 +160,7 @@ export class JobDescriptionProcessor {
         model: "gemini-2.5-flash",
         contents: [
           {
-            text: "Extract structured job information from the provided PDF job description. You MUST return a valid JSON object with these exact fields: title, company, responsibilities (array of strings), requirements (array of strings), seniority, location, and employmentType. All fields must be present even if empty."
+            text: "Extract structured job information from the provided PDF job description. You MUST return a valid JSON object with these exact fields: title, company, responsibilities (array of strings), requirements (array of strings), seniority, location, and employmentType. All fields must be present even if empty.",
           },
           {
             inlineData: {
@@ -170,10 +176,16 @@ export class JobDescriptionProcessor {
       });
 
       const structuredContent = structuredResponse.text || "";
-      console.log("📥 Gemini structured data response length:", structuredContent.length);
+      console.log(
+        "📥 Gemini structured data response length:",
+        structuredContent.length,
+      );
 
       const structuredParsed = JSON.parse(structuredContent);
-      console.log("📋 Structured data parsed successfully:", Object.keys(structuredParsed));
+      console.log(
+        "📋 Structured data parsed successfully:",
+        Object.keys(structuredParsed),
+      );
 
       const extractedData = extractedJobDataSchema.parse(structuredParsed);
       console.log("✅ Structured data validation passed");
@@ -184,7 +196,7 @@ export class JobDescriptionProcessor {
       console.error("Error details:", {
         message: error instanceof Error ? error.message : "Unknown error",
         name: error instanceof Error ? error.name : "Unknown",
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
       });
       // Return empty data on failure
       console.log("🔄 Returning empty structured data as fallback");
@@ -217,9 +229,9 @@ export class JobDescriptionProcessor {
       const jobDescription = `
 Title: ${extractedData.title}
 Responsibilities:
-${extractedData.responsibilities.map(r => `- ${r}`).join('\n')}
+${extractedData.responsibilities.map((r) => `- ${r}`).join("\n")}
 Requirements:
-${extractedData.requirements.map(r => `- ${r}`).join('\n')}
+${extractedData.requirements.map((r) => `- ${r}`).join("\n")}
 Seniority: ${extractedData.seniority}
 Location: ${extractedData.location}
 Employment Type: ${extractedData.employmentType}
@@ -229,7 +241,7 @@ Employment Type: ${extractedData.employmentType}
         hasTitle: !!extractedData.title,
         responsibilitiesCount: extractedData.responsibilities.length,
         requirementsCount: extractedData.requirements.length,
-        hasSeniority: !!extractedData.seniority
+        hasSeniority: !!extractedData.seniority,
       });
 
       const prompt = `Based on this job description, generate AI content to help improve the job posting and create interview questions.
@@ -288,7 +300,10 @@ Return ONLY valid JSON in the exact format shown above. All arrays must contain 
         parsed = JSON.parse(content);
         console.log("✅ Direct JSON parsing successful");
       } catch (parseError) {
-        console.log("⚠️ Direct JSON parsing failed, attempting extraction:", parseError instanceof Error ? parseError.message : String(parseError));
+        console.log(
+          "⚠️ Direct JSON parsing failed, attempting extraction:",
+          parseError instanceof Error ? parseError.message : String(parseError),
+        );
 
         // Try to extract JSON from response if it contains extra text
         const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -298,7 +313,9 @@ Return ONLY valid JSON in the exact format shown above. All arrays must contain 
           console.log("✅ Extracted JSON parsing successful");
         } else {
           console.log("❌ Could not find JSON in response");
-          throw new Error("Could not parse JSON from response - no valid JSON found");
+          throw new Error(
+            "Could not parse JSON from response - no valid JSON found",
+          );
         }
       }
 
@@ -309,19 +326,19 @@ Return ONLY valid JSON in the exact format shown above. All arrays must contain 
       const validated = aiContentSchema.parse(parsed);
       console.log("✅ Zod validation successful:", {
         suggestionsCount: validated.suggestions.length,
-        questionsCount: validated.questions.length
+        questionsCount: validated.questions.length,
       });
 
       return {
         aiSuggestions: validated.suggestions,
-        aiQuestions: validated.questions
+        aiQuestions: validated.questions,
       };
     } catch (error) {
       console.error("❌ AI content generation error:", error);
       console.error("Error details:", {
         message: error instanceof Error ? error.message : "Unknown error",
         name: error instanceof Error ? error.name : "Unknown",
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
       });
 
       console.log("🔄 Returning fallback AI content");
@@ -330,28 +347,34 @@ Return ONLY valid JSON in the exact format shown above. All arrays must contain 
       return {
         aiSuggestions: [
           {
-            original: extractedData.responsibilities[0] || "Current responsibilities",
-            improved: "Enhanced responsibility description with specific daily tasks and outcomes"
+            original:
+              extractedData.responsibilities[0] || "Current responsibilities",
+            improved:
+              "Enhanced responsibility description with specific daily tasks and outcomes",
           },
           {
             original: extractedData.requirements[0] || "Current requirements",
-            improved: "Detailed technical requirements with specific years of experience and proficiency levels"
-          }
+            improved:
+              "Detailed technical requirements with specific years of experience and proficiency levels",
+          },
         ],
         aiQuestions: [
           {
-            content: "Can you tell me about your experience with the technologies mentioned in this role?",
-            reason: "Helps assess technical skills and experience level"
+            content:
+              "Can you tell me about your experience with the technologies mentioned in this role?",
+            reason: "Helps assess technical skills and experience level",
           },
           {
-            content: "What interests you most about this position and our company?",
-            reason: "Evaluates motivation and cultural fit"
+            content:
+              "What interests you most about this position and our company?",
+            reason: "Evaluates motivation and cultural fit",
           },
           {
-            content: "Describe a challenging project you've worked on and how you approached it?",
-            reason: "Assesses problem-solving and project management skills"
-          }
-        ]
+            content:
+              "Describe a challenging project you've worked on and how you approached it?",
+            reason: "Assesses problem-solving and project management skills",
+          },
+        ],
       };
     }
   }

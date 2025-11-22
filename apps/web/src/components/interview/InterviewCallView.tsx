@@ -1,33 +1,44 @@
-'use client';
+"use client";
 
+import {
+  type Call,
+  type CallClosedCaption,
+  ParticipantView,
+  StreamCall,
+  useCallStateHooks,
+} from "@stream-io/video-react-sdk";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  BarChart3,
+  BrainCircuit,
+  CheckCircle2,
+  ChevronLeft,
+  Circle,
+  Clock,
+  Cpu,
+  Mic,
+  MicOff,
+  PhoneOff,
+  Sparkles,
+  Video as VideoIcon,
+  VideoOff,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 /**
  * Active interview call view with video
  * Integrated design with Stream.io video call
  */
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from "react";
 import {
-  Call,
-  StreamCall,
-  useCallStateHooks,
-  ParticipantView,
-  CallClosedCaption,
-} from '@stream-io/video-react-sdk';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-  Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff,
-  ChevronLeft, Sparkles, Cpu, BarChart3, BrainCircuit, Clock, CheckCircle2, Circle
-} from 'lucide-react';
-import type { Question, InterviewStage } from '@/lib/mock-data';
-import { formatTime } from '@/lib/date-utils';
-import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from '@/lib/hooks/use-toast';
-import {
+  photorealistic_professional_man_headshot,
   photorealistic_professional_woman_headshot,
-  photorealistic_professional_man_headshot
-} from '@/assets/generated_images';
-import Image from 'next/image';
+} from "@/assets/generated_images";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { formatTime } from "@/lib/date-utils";
+import { toast } from "@/lib/hooks/use-toast";
+import type { InterviewStage, Question } from "@/lib/mock-data";
 
 interface InterviewCallViewProps {
   call: Call;
@@ -38,7 +49,13 @@ interface InterviewCallViewProps {
 }
 
 // All possible interview stages in order
-const INTERVIEW_STAGES: InterviewStage[] = ['Introduction', 'Technical Skills', 'Problem Solving', 'Behavioral', 'Wrap-up'];
+const INTERVIEW_STAGES: InterviewStage[] = [
+  "Introduction",
+  "Technical Skills",
+  "Problem Solving",
+  "Behavioral",
+  "Wrap-up",
+];
 
 interface TranscriptMessage {
   id: string;
@@ -55,11 +72,17 @@ interface TranscriptMessage {
 function InterviewCallContent({
   call,
   interviewId,
-  jobTitle = 'AI Interview',
+  jobTitle = "AI Interview",
   durationMinutes = 30,
-  questions = []
+  questions = [],
 }: InterviewCallViewProps) {
-  const { useParticipants, useMicrophoneState, useCameraState, useCallClosedCaptions, useIsCallCaptioningInProgress } = useCallStateHooks();
+  const {
+    useParticipants,
+    useMicrophoneState,
+    useCameraState,
+    useCallClosedCaptions,
+    useIsCallCaptioningInProgress,
+  } = useCallStateHooks();
   const participants = useParticipants();
   const { microphone, isMute: isMicMuted } = useMicrophoneState();
   const { camera, isMute: isCameraMuted } = useCameraState();
@@ -77,23 +100,24 @@ function InterviewCallContent({
   // Get current question and compute progress
   const currentQuestion = questions[currentQuestionIndex];
   const completedStages = new Set(
-    questions.slice(0, currentQuestionIndex).map(q => q.category)
+    questions.slice(0, currentQuestionIndex).map((q) => q.category),
   );
-  const progressPercentage = questions.length > 0
-    ? Math.round((currentQuestionIndex / questions.length) * 100)
-    : 0;
+  const progressPercentage =
+    questions.length > 0
+      ? Math.round((currentQuestionIndex / questions.length) * 100)
+      : 0;
 
   // Timer effect
   useEffect(() => {
     const interval = setInterval(() => {
-      setElapsedSeconds(prev => prev + 1);
+      setElapsedSeconds((prev) => prev + 1);
     }, 1000);
     return () => clearInterval(interval);
   }, []);
 
   // Find local and remote participants
-  const localParticipant = participants.find(p => p.isLocalParticipant);
-  const remoteParticipant = participants.find(p => !p.isLocalParticipant);
+  const localParticipant = participants.find((p) => p.isLocalParticipant);
+  const remoteParticipant = participants.find((p) => !p.isLocalParticipant);
 
   // Check if AI is speaking (for avatar animation)
   const isAISpeaking = remoteParticipant?.isSpeaking ?? false;
@@ -101,9 +125,10 @@ function InterviewCallContent({
   // Check if agent is connected
   useEffect(() => {
     const hasAgent = participants.some((p) => {
-      const nameMatch = p.name?.toLowerCase().includes('interviewer') ||
-                        p.name?.toLowerCase().includes('ai');
-      const userIdMatch = p.userId?.startsWith('agent-');
+      const nameMatch =
+        p.name?.toLowerCase().includes("interviewer") ||
+        p.name?.toLowerCase().includes("ai");
+      const userIdMatch = p.userId?.startsWith("agent-");
       return (nameMatch || userIdMatch) && !p.isLocalParticipant;
     });
     setAgentConnected(hasAgent);
@@ -111,61 +136,91 @@ function InterviewCallContent({
 
   // Listen for custom events from AI agent (transcript and progress)
   useEffect(() => {
-    const handleCustomEvent = (event: { custom?: { type?: string; speaker?: string; text?: string; timestamp?: number; questionIndex?: number; category?: string } }) => {
+    const handleCustomEvent = (event: {
+      custom?: {
+        type?: string;
+        speaker?: string;
+        text?: string;
+        timestamp?: number;
+        questionIndex?: number;
+        category?: string;
+      };
+    }) => {
       const payload = event.custom;
 
       // Handle transcript events (both AI and user from Gemini)
-      if (payload?.type === 'transcript' && payload.text) {
+      if (payload?.type === "transcript" && payload.text) {
         const text = payload.text;
-        const isAgent = payload.speaker === 'agent';
-        console.log(`📨 ${isAgent ? 'AI' : 'User'} transcript event:`, text.substring(0, 50) + '...');
+        const isAgent = payload.speaker === "agent";
+        console.log(
+          `📨 ${isAgent ? "AI" : "User"} transcript event:`,
+          text.substring(0, 50) + "...",
+        );
 
-        setTranscript(prev => {
+        setTranscript((prev) => {
           const lastMessage = prev[prev.length - 1];
-          const speakerId = isAgent ? 'agent' : 'user';
+          const speakerId = isAgent ? "agent" : "user";
           const now = Date.now();
-          const timeSinceLastMessage = lastMessage ? now - lastMessage.timestamp : Infinity;
+          const timeSinceLastMessage = lastMessage
+            ? now - lastMessage.timestamp
+            : Infinity;
           const TIME_GAP_THRESHOLD = 2000; // 2 seconds
 
           // If last message is from same speaker AND within time threshold, append to it
-          if (lastMessage && lastMessage.isAI === isAgent && timeSinceLastMessage < TIME_GAP_THRESHOLD) {
+          if (
+            lastMessage &&
+            lastMessage.isAI === isAgent &&
+            timeSinceLastMessage < TIME_GAP_THRESHOLD
+          ) {
             const updated = [...prev];
             updated[updated.length - 1] = {
               ...lastMessage,
-              text: lastMessage.text + ' ' + text,
+              text: lastMessage.text + " " + text,
               timestamp: now, // Update timestamp to track last update
             };
             return updated;
           }
 
           // New message (different speaker OR time gap exceeded)
-          return [...prev, {
-            id: `${speakerId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            speakerId,
-            speakerName: isAgent ? 'AI Interviewer' : 'You',
-            text,
-            timestamp: Date.now(),
-            isAI: isAgent,
-          }];
+          return [
+            ...prev,
+            {
+              id: `${speakerId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              speakerId,
+              speakerName: isAgent ? "AI Interviewer" : "You",
+              text,
+              timestamp: Date.now(),
+              isAI: isAgent,
+            },
+          ];
         });
       }
 
       // Handle progress events
-      if (payload?.type === 'progress' && typeof payload.questionIndex === 'number') {
-        console.log('📊 Progress event:', payload.questionIndex + 1, payload.category);
+      if (
+        payload?.type === "progress" &&
+        typeof payload.questionIndex === "number"
+      ) {
+        console.log(
+          "📊 Progress event:",
+          payload.questionIndex + 1,
+          payload.category,
+        );
         setCurrentQuestionIndex(payload.questionIndex);
       }
     };
 
-    call.on('custom', handleCustomEvent);
+    call.on("custom", handleCustomEvent);
     return () => {
-      call.off('custom', handleCustomEvent);
+      call.off("custom", handleCustomEvent);
     };
   }, [call]);
 
   // Track caption segments to handle Stream's segmented delivery
   // Key: speakerId, Value: { startTime, lastText }
-  const captionSegmentsRef = useRef<Map<string, { startTime: string; lastText: string }>>(new Map());
+  const captionSegmentsRef = useRef<
+    Map<string, { startTime: string; lastText: string }>
+  >(new Map());
   // Track last logged speaker for batched logging
   const lastLoggedSpeakerRef = useRef<string | null>(null);
 
@@ -183,10 +238,11 @@ function InterviewCallContent({
       }
 
       const speakerId = caption.user.id;
-      const startTime = caption.start_time || '';
-      const isAI = caption.user.name?.toLowerCase().includes('interviewer') ||
-                   caption.user.name?.toLowerCase().includes('ai') ||
-                   speakerId?.startsWith('agent-');
+      const startTime = caption.start_time || "";
+      const isAI =
+        caption.user.name?.toLowerCase().includes("interviewer") ||
+        caption.user.name?.toLowerCase().includes("ai") ||
+        speakerId?.startsWith("agent-");
 
       // Skip AI captions - we get AI text from custom events instead
       if (isAI) {
@@ -206,35 +262,42 @@ function InterviewCallContent({
       // Update segment tracking
       captionSegmentsRef.current.set(speakerId, { startTime, lastText: text });
 
-      setTranscript(prev => {
+      setTranscript((prev) => {
         const lastMessage = prev[prev.length - 1];
-        const speakerIcon = isAI ? '🤖' : '👤';
-        const speakerName = isAI ? 'AI' : caption.user.name || 'User';
+        const speakerIcon = isAI ? "🤖" : "👤";
+        const speakerName = isAI ? "AI" : caption.user.name || "User";
         const now = Date.now();
-        const timeSinceLastMessage = lastMessage ? now - lastMessage.timestamp : Infinity;
+        const timeSinceLastMessage = lastMessage
+          ? now - lastMessage.timestamp
+          : Infinity;
         const TIME_GAP_THRESHOLD = 1500; // 1.5 seconds
 
         // Same speaker
         if (lastMessage && lastMessage.speakerId === speakerId) {
           // If time gap exceeded, start new message even for same speaker
           if (timeSinceLastMessage >= TIME_GAP_THRESHOLD) {
-            console.log(`📝 ${speakerIcon} ${speakerName} (new after ${Math.round(timeSinceLastMessage / 1000)}s gap): ${text}`);
+            console.log(
+              `📝 ${speakerIcon} ${speakerName} (new after ${Math.round(timeSinceLastMessage / 1000)}s gap): ${text}`,
+            );
             lastLoggedSpeakerRef.current = speakerId;
             const newId = `msg-${now}-${Math.random().toString(36).substr(2, 9)}`;
-            return [...prev, {
-              id: newId,
-              speakerId,
-              speakerName: caption.user.name || 'Unknown',
-              text,
-              timestamp: now,
-              isAI,
-            }];
+            return [
+              ...prev,
+              {
+                id: newId,
+                speakerId,
+                speakerName: caption.user.name || "Unknown",
+                text,
+                timestamp: now,
+                isAI,
+              },
+            ];
           }
 
           if (isNewSegment) {
             // New segment from same speaker - APPEND to existing message
             const updated = [...prev];
-            const newText = lastMessage.text + ' ' + text;
+            const newText = lastMessage.text + " " + text;
             updated[updated.length - 1] = {
               ...lastMessage,
               text: newText,
@@ -267,14 +330,17 @@ function InterviewCallContent({
         }
 
         const newId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        return [...prev, {
-          id: newId,
-          speakerId,
-          speakerName: caption.user.name || 'Unknown',
-          text,
-          timestamp: Date.now(),
-          isAI,
-        }];
+        return [
+          ...prev,
+          {
+            id: newId,
+            speakerId,
+            speakerName: caption.user.name || "Unknown",
+            text,
+            timestamp: Date.now(),
+            isAI,
+          },
+        ];
       });
     });
   }, [closedCaptions]);
@@ -290,11 +356,11 @@ function InterviewCallContent({
     try {
       await microphone.toggle();
     } catch (err) {
-      console.error('Failed to toggle microphone:', err);
+      console.error("Failed to toggle microphone:", err);
       toast({
-        title: 'Microphone Error',
-        description: 'Unable to toggle microphone. Please check permissions.',
-        variant: 'destructive',
+        title: "Microphone Error",
+        description: "Unable to toggle microphone. Please check permissions.",
+        variant: "destructive",
       });
     }
   };
@@ -303,28 +369,31 @@ function InterviewCallContent({
     try {
       await camera.toggle();
     } catch (err) {
-      console.error('Failed to toggle camera:', err);
+      console.error("Failed to toggle camera:", err);
       toast({
-        title: 'Camera Error',
-        description: 'Unable to toggle camera. Please check permissions.',
-        variant: 'destructive',
+        title: "Camera Error",
+        description: "Unable to toggle camera. Please check permissions.",
+        variant: "destructive",
       });
     }
   };
 
   const handleEndCall = async () => {
     await call.leave();
-    window.location.href = '/candidate/jobs';
+    window.location.href = "/candidate/jobs";
   };
 
   return (
     <div className="str-video h-full w-full bg-background flex flex-col font-sans overflow-hidden">
-
       {/* AI-Themed Header */}
       <div className="h-16 border-b border-border flex items-center justify-between px-6 bg-background/80 backdrop-blur-md z-20">
         <div className="flex items-center gap-4">
           <Link href="/candidate/jobs">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground gap-2 pl-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground gap-2 pl-0"
+            >
               <ChevronLeft className="h-4 w-4" /> Exit
             </Button>
           </Link>
@@ -332,7 +401,9 @@ function InterviewCallContent({
           <div>
             <h1 className="text-sm font-semibold flex items-center gap-2">
               {jobTitle}
-              <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[10px] border border-blue-500/20">AI EVALUATION</span>
+              <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[10px] border border-blue-500/20">
+                AI EVALUATION
+              </span>
             </h1>
           </div>
         </div>
@@ -349,14 +420,18 @@ function InterviewCallContent({
                     <div
                       key={stage}
                       className={`h-1.5 w-4 rounded-full transition-colors ${
-                        isCompleted ? 'bg-green-500' : isCurrent ? 'bg-blue-500' : 'bg-white/20'
+                        isCompleted
+                          ? "bg-green-500"
+                          : isCurrent
+                            ? "bg-blue-500"
+                            : "bg-white/20"
                       }`}
                     />
                   );
                 })}
               </div>
               <span className="text-xs font-medium text-foreground ml-1">
-                {currentQuestion?.category || 'Introduction'}
+                {currentQuestion?.category || "Introduction"}
               </span>
             </div>
 
@@ -378,7 +453,9 @@ function InterviewCallContent({
                       ) : (
                         <Circle className="h-3.5 w-3.5 text-muted-foreground/40" />
                       )}
-                      <span className={`text-xs ${isCompleted ? 'text-muted-foreground' : isCurrent ? 'text-foreground font-medium' : 'text-muted-foreground/60'}`}>
+                      <span
+                        className={`text-xs ${isCompleted ? "text-muted-foreground" : isCurrent ? "text-foreground font-medium" : "text-muted-foreground/60"}`}
+                      >
                         {stage}
                       </span>
                     </div>
@@ -412,12 +489,12 @@ function InterviewCallContent({
               transition={{ duration: 2, repeat: Infinity }}
               className={`h-2 w-2 rounded-full shadow-lg ${
                 agentConnected
-                  ? 'bg-green-500 shadow-green-500/50'
-                  : 'bg-yellow-500 shadow-yellow-500/50'
+                  ? "bg-green-500 shadow-green-500/50"
+                  : "bg-yellow-500 shadow-yellow-500/50"
               }`}
             />
             <span className="text-xs font-medium text-muted-foreground tracking-wide">
-              {agentConnected ? 'LIVE' : 'CONNECTING...'}
+              {agentConnected ? "LIVE" : "CONNECTING..."}
             </span>
           </div>
         </div>
@@ -431,7 +508,10 @@ function InterviewCallContent({
         {/* Left: Main Video Feed */}
         <div className="flex-1 flex flex-col gap-4 relative z-10">
           {remoteParticipant && (
-            <div className="absolute w-px h-px overflow-hidden" style={{ opacity: 0.01, pointerEvents: 'none' }}>
+            <div
+              className="absolute w-px h-px overflow-hidden"
+              style={{ opacity: 0.01, pointerEvents: "none" }}
+            >
               <ParticipantView
                 participant={remoteParticipant}
                 muteAudio={false}
@@ -454,12 +534,16 @@ function InterviewCallContent({
                     <motion.div
                       animate={{
                         boxShadow: [
-                          'inset 0 0 60px 20px rgba(59, 130, 246, 0.1)',
-                          'inset 0 0 80px 30px rgba(59, 130, 246, 0.2)',
-                          'inset 0 0 60px 20px rgba(59, 130, 246, 0.1)',
+                          "inset 0 0 60px 20px rgba(59, 130, 246, 0.1)",
+                          "inset 0 0 80px 30px rgba(59, 130, 246, 0.2)",
+                          "inset 0 0 60px 20px rgba(59, 130, 246, 0.1)",
                         ],
                       }}
-                      transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
                       className="absolute inset-0 rounded-2xl"
                     />
                   </motion.div>
@@ -474,7 +558,7 @@ function InterviewCallContent({
                 transition={{
                   duration: 2,
                   repeat: isAISpeaking ? Infinity : 0,
-                  ease: 'easeInOut',
+                  ease: "easeInOut",
                 }}
                 className="absolute inset-0"
               >
@@ -496,7 +580,9 @@ function InterviewCallContent({
                   <Cpu className="h-5 w-5 text-blue-400" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-white drop-shadow-lg">AI Interviewer</div>
+                  <div className="text-sm font-medium text-white drop-shadow-lg">
+                    AI Interviewer
+                  </div>
                   <div className="text-xs text-white/70 flex items-center gap-1">
                     {isAISpeaking ? (
                       <>
@@ -530,8 +616,8 @@ function InterviewCallContent({
                       height: isAISpeaking
                         ? [10, Math.random() * 60 + 20, 10]
                         : agentConnected
-                        ? [8, 12, 8]
-                        : 6,
+                          ? [8, 12, 8]
+                          : 6,
                     }}
                     transition={{
                       duration: isAISpeaking ? 0.3 : 0.8,
@@ -539,7 +625,7 @@ function InterviewCallContent({
                       repeatDelay: Math.random() * 0.1,
                     }}
                     className={`w-1 rounded-full transition-colors ${
-                      isAISpeaking ? 'bg-blue-400/60' : 'bg-blue-500/30'
+                      isAISpeaking ? "bg-blue-400/60" : "bg-blue-500/30"
                     }`}
                   />
                 ))}
@@ -575,18 +661,26 @@ function InterviewCallContent({
               <Button
                 variant={isMicMuted ? "destructive" : "ghost"}
                 size="icon"
-                className={`h-8 w-8 rounded-md transition-colors ${!isMicMuted && 'text-white/80 hover:text-white hover:bg-white/10'}`}
+                className={`h-8 w-8 rounded-md transition-colors ${!isMicMuted && "text-white/80 hover:text-white hover:bg-white/10"}`}
                 onClick={handleToggleMic}
               >
-                {isMicMuted ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+                {isMicMuted ? (
+                  <MicOff className="h-3.5 w-3.5" />
+                ) : (
+                  <Mic className="h-3.5 w-3.5" />
+                )}
               </Button>
               <Button
                 variant={isCameraMuted ? "destructive" : "ghost"}
                 size="icon"
-                className={`h-8 w-8 rounded-md transition-colors ${!isCameraMuted && 'text-white/80 hover:text-white hover:bg-white/10'}`}
+                className={`h-8 w-8 rounded-md transition-colors ${!isCameraMuted && "text-white/80 hover:text-white hover:bg-white/10"}`}
                 onClick={handleToggleCamera}
               >
-                {isCameraMuted ? <VideoOff className="h-3.5 w-3.5" /> : <VideoIcon className="h-3.5 w-3.5" />}
+                {isCameraMuted ? (
+                  <VideoOff className="h-3.5 w-3.5" />
+                ) : (
+                  <VideoIcon className="h-3.5 w-3.5" />
+                )}
               </Button>
               <div className="w-px h-5 bg-white/20" />
               <Button
@@ -605,7 +699,10 @@ function InterviewCallContent({
             <div className="mt-4 p-5 rounded-2xl bg-card/60 backdrop-blur-xl border border-border">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="bg-secondary/50 text-foreground border-border text-xs">
+                  <Badge
+                    variant="outline"
+                    className="bg-secondary/50 text-foreground border-border text-xs"
+                  >
                     {currentQuestion.category}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
@@ -616,30 +713,15 @@ function InterviewCallContent({
                   {currentQuestion.duration} min
                 </Badge>
               </div>
-              <p className="text-sm font-medium text-foreground leading-relaxed mb-4">
+              <p className="text-sm font-medium text-foreground leading-relaxed">
                 {currentQuestion.text}
               </p>
-              {currentQuestion.keyPoints && currentQuestion.keyPoints.length > 0 && (
-                <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
-                    Key points to cover:
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {currentQuestion.keyPoints.map((point, idx) => (
-                      <Badge key={idx} variant="secondary" className="bg-secondary/50 text-muted-foreground border-border text-xs font-normal">
-                        {point}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
 
         {/* Right: Transcript Panel */}
         <div className="w-[400px] bg-card/60 backdrop-blur-xl border border-border rounded-2xl flex flex-col shadow-2xl overflow-hidden relative z-10">
-
           {/* Transcript Header */}
           <div className="p-4 border-b border-border bg-secondary/30">
             <div className="flex items-center justify-between">
@@ -675,46 +757,63 @@ function InterviewCallContent({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   key={msg.id}
-                  className={`flex gap-4 ${!msg.isAI ? 'flex-row-reverse' : ''}`}
+                  className={`flex gap-4 ${!msg.isAI ? "flex-row-reverse" : ""}`}
                 >
                   <div className="h-8 w-8 rounded-lg shrink-0 overflow-hidden border border-border shadow-sm relative">
                     <Image
-                      src={msg.isAI ? photorealistic_professional_woman_headshot : photorealistic_professional_man_headshot}
-                      alt={msg.isAI ? 'AI' : 'You'}
+                      src={
+                        msg.isAI
+                          ? photorealistic_professional_woman_headshot
+                          : photorealistic_professional_man_headshot
+                      }
+                      alt={msg.isAI ? "AI" : "You"}
                       fill
                       sizes="32px"
                       className="object-cover"
                     />
                   </div>
                   <div className="flex flex-col gap-1 max-w-[85%]">
-                    <div className={`text-[10px] font-bold uppercase tracking-wider ${!msg.isAI ? 'text-right text-muted-foreground' : 'text-blue-400'}`}>
-                      {msg.isAI ? 'AI Interviewer' : msg.speakerName}
+                    <div
+                      className={`text-[10px] font-bold uppercase tracking-wider ${!msg.isAI ? "text-right text-muted-foreground" : "text-blue-400"}`}
+                    >
+                      {msg.isAI ? "AI Interviewer" : msg.speakerName}
                     </div>
-                    <div className={`p-4 rounded-2xl text-sm leading-relaxed backdrop-blur-sm border ${
-                      msg.isAI
-                        ? 'bg-secondary/50 border-border text-foreground rounded-tl-none'
-                        : 'bg-blue-600/10 border-blue-500/20 text-foreground rounded-tr-none'
-                    }`}>
+                    <div
+                      className={`p-4 rounded-2xl text-sm leading-relaxed backdrop-blur-sm border ${
+                        msg.isAI
+                          ? "bg-secondary/50 border-border text-foreground rounded-tl-none"
+                          : "bg-blue-600/10 border-blue-500/20 text-foreground rounded-tr-none"
+                      }`}
+                    >
                       {msg.text}
                     </div>
                   </div>
                 </motion.div>
               ))
             )}
-
           </div>
-
         </div>
-
       </div>
     </div>
   );
 }
 
-export function InterviewCallView({ call, interviewId, jobTitle, durationMinutes, questions }: InterviewCallViewProps) {
+export function InterviewCallView({
+  call,
+  interviewId,
+  jobTitle,
+  durationMinutes,
+  questions,
+}: InterviewCallViewProps) {
   return (
     <StreamCall call={call}>
-      <InterviewCallContent call={call} interviewId={interviewId} jobTitle={jobTitle} durationMinutes={durationMinutes} questions={questions} />
+      <InterviewCallContent
+        call={call}
+        interviewId={interviewId}
+        jobTitle={jobTitle}
+        durationMinutes={durationMinutes}
+        questions={questions}
+      />
     </StreamCall>
   );
 }

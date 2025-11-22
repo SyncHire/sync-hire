@@ -3,7 +3,7 @@
  * Receives notification when an AI interview is completed
  * POST /api/webhooks/interview-complete
  */
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
 interface InterviewCompletePayload {
   interviewId: string;
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   try {
     const payload: InterviewCompletePayload = await request.json();
 
-    console.log('📥 Interview completion webhook received:', {
+    console.log("📥 Interview completion webhook received:", {
       interviewId: payload.interviewId,
       candidateName: payload.candidateName,
       jobTitle: payload.jobTitle,
@@ -35,10 +35,12 @@ export async function POST(request: Request) {
 
     // Log transcript summary
     if (payload.transcript && payload.transcript.length > 0) {
-      console.log('📝 Transcript received:');
+      console.log("📝 Transcript received:");
       payload.transcript.forEach((entry, i) => {
-        const prefix = entry.speaker === 'agent' ? '🤖' : '👤';
-        console.log(`   ${prefix} [${entry.timestamp.toFixed(1)}s] ${entry.text.substring(0, 100)}${entry.text.length > 100 ? '...' : ''}`);
+        const prefix = entry.speaker === "agent" ? "🤖" : "👤";
+        console.log(
+          `   ${prefix} [${entry.timestamp.toFixed(1)}s] ${entry.text.substring(0, 100)}${entry.text.length > 100 ? "..." : ""}`,
+        );
       });
     }
 
@@ -50,14 +52,14 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Interview completion received',
+      message: "Interview completion received",
       interviewId: payload.interviewId,
     });
   } catch (error) {
-    console.error('Error processing interview completion webhook:', error);
+    console.error("Error processing interview completion webhook:", error);
     return NextResponse.json(
-      { error: 'Failed to process webhook' },
-      { status: 500 }
+      { error: "Failed to process webhook" },
+      { status: 500 },
     );
   }
 }

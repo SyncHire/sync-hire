@@ -2,8 +2,8 @@
  * API Route: Generate Stream Video token for a user
  * POST /api/stream-token
  */
-import { NextResponse } from 'next/server';
-import { generateStreamToken } from '@/lib/stream-token';
+import { NextResponse } from "next/server";
+import { generateStreamToken } from "@/lib/stream-token";
 
 export async function POST(request: Request) {
   try {
@@ -11,8 +11,8 @@ export async function POST(request: Request) {
 
     if (!userId) {
       return NextResponse.json(
-        { error: 'userId is required' },
-        { status: 400 }
+        { error: "userId is required" },
+        { status: 400 },
       );
     }
 
@@ -20,10 +20,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ token, userId });
   } catch (error) {
-    console.error('Error generating Stream token:', error);
+    console.error("Error generating Stream token:", error);
     return NextResponse.json(
-      { error: 'Failed to generate token' },
-      { status: 500 }
+      { error: "Failed to generate token" },
+      { status: 500 },
     );
   }
 }

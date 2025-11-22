@@ -1,11 +1,45 @@
 /**
- * Storage Interface for Job Description Extractions, CV Extractions and Job Postings
+ * Storage Interface for Job Description Extractions, CV Extractions, Job Postings, and Interview Questions
  *
- * Provides abstraction for storing and retrieving extracted job data, CV data and created jobs.
+ * Provides abstraction for storing and retrieving extracted job data, CV data, created jobs, and generated interview questions.
  * Can be implemented with files, database, or cloud storage.
  */
 
-import type { ExtractedJobData, Job, ExtractedCVData } from "@/lib/mock-data";
+import type {
+  ExtractedCVData,
+  ExtractedJobData,
+  Interview,
+  Job,
+  User,
+} from "@/lib/mock-data";
+
+/**
+ * Interview questions storage format with both custom HR questions and AI-generated suggested questions
+ */
+export interface InterviewQuestions {
+  metadata: {
+    cvId: string;
+    jobId: string;
+    generatedAt: string; // ISO timestamp
+    questionCount: number;
+    customQuestionCount: number;
+    suggestedQuestionCount: number;
+  };
+  customQuestions: Array<{
+    id: string;
+    type: "SHORT_ANSWER" | "LONG_ANSWER" | "MULTIPLE_CHOICE" | "SCORED";
+    content: string;
+    options?: Array<{ label: string }>;
+    scoringConfig?: { type: string; min: number; max: number };
+    required: boolean;
+    order: number;
+  }>;
+  suggestedQuestions: Array<{
+    content: string;
+    reason: string;
+    category?: "technical" | "behavioral" | "experience" | "problem-solving";
+  }>;
+}
 
 export interface StorageInterface {
   /**
@@ -77,4 +111,73 @@ export interface StorageInterface {
    * Check if CV extraction exists
    */
   hasCVExtraction(hash: string): Promise<boolean>;
+
+  /**
+   * Get interview questions by combined hash (cvId + jobId)
+   * Questions are stored in /data/questions-set/ directory
+   */
+  getInterviewQuestions(hash: string): Promise<InterviewQuestions | null>;
+
+  /**
+   * Save interview questions with combined hash key
+   * Questions are stored in /data/questions-set/{hash}.json
+   */
+  saveInterviewQuestions(hash: string, data: InterviewQuestions): Promise<void>;
+
+  /**
+   * Check if interview questions exist in questions-set storage
+   */
+  hasInterviewQuestions(hash: string): Promise<boolean>;
+
+  // =============================================================================
+  // Interview Methods
+  // =============================================================================
+
+  /**
+   * Get interview by ID
+   */
+  getInterview(id: string): Promise<Interview | null>;
+
+  /**
+   * Get all interviews
+   */
+  getAllInterviews(): Promise<Interview[]>;
+
+  /**
+   * Get interviews for a specific user
+   */
+  getInterviewsForUser(userId: string): Promise<Interview[]>;
+
+  /**
+   * Save interview data
+   */
+  saveInterview(id: string, interview: Interview): Promise<void>;
+
+  // =============================================================================
+  // User Methods
+  // =============================================================================
+
+  /**
+   * Get user by ID
+   */
+  getUser(id: string): Promise<User | null>;
+
+  /**
+   * Get current/demo user
+   */
+  getCurrentUser(): Promise<User>;
+
+  // =============================================================================
+  // User CV Methods
+  // =============================================================================
+
+  /**
+   * Get the CV ID associated with a user
+   */
+  getUserCVId(userId: string): Promise<string | null>;
+
+  /**
+   * Save/link a CV ID to a user
+   */
+  saveUserCVId(userId: string, cvId: string): Promise<void>;
 }

@@ -1,23 +1,26 @@
 /**
  * Interview Results Page
  * Shows candidate's interview performance and feedback
+ * Supports both mock interview IDs and application IDs
  */
-import { mockInterviews, getDemoUser, getJobById } from '@/lib/mock-data';
-import { getCompanyLogoUrl } from '@/lib/logo-utils';
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
+
 import {
-  CheckCircle2,
   ArrowLeft,
-  Clock,
-  Star,
-  TrendingUp,
-  MessageSquare,
   Award,
+  Building2,
+  CheckCircle2,
+  Clock,
+  MessageSquare,
+  Star,
   Target,
+  TrendingUp,
   Zap,
-  Building2
-} from 'lucide-react';
+} from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getCompanyLogoUrl } from "@/lib/logo-utils";
+import { getDemoUser, getJobById, mockInterviews } from "@/lib/mock-data";
+import { getStorage } from "@/lib/storage/storage-factory";
 
 interface ResultsPageProps {
   params: Promise<{
@@ -29,37 +32,78 @@ interface ResultsPageProps {
 const mockEvaluation = {
   overallScore: 87,
   categories: [
-    { name: 'Technical Knowledge', score: 92, feedback: 'Demonstrated strong understanding of core concepts and best practices.' },
-    { name: 'Problem Solving', score: 85, feedback: 'Approached problems methodically with clear reasoning.' },
-    { name: 'Communication', score: 88, feedback: 'Articulated ideas clearly and provided relevant examples.' },
-    { name: 'Experience Relevance', score: 82, feedback: 'Background aligns well with role requirements.' },
+    {
+      name: "Technical Knowledge",
+      score: 92,
+      feedback:
+        "Demonstrated strong understanding of core concepts and best practices.",
+    },
+    {
+      name: "Problem Solving",
+      score: 85,
+      feedback: "Approached problems methodically with clear reasoning.",
+    },
+    {
+      name: "Communication",
+      score: 88,
+      feedback: "Articulated ideas clearly and provided relevant examples.",
+    },
+    {
+      name: "Experience Relevance",
+      score: 82,
+      feedback: "Background aligns well with role requirements.",
+    },
   ],
   strengths: [
-    'Strong technical foundation in mobile development',
-    'Clear communication of complex concepts',
-    'Good problem-solving approach',
+    "Strong technical foundation in mobile development",
+    "Clear communication of complex concepts",
+    "Good problem-solving approach",
   ],
   improvements: [
-    'Could elaborate more on system design decisions',
-    'Consider discussing scalability implications',
+    "Could elaborate more on system design decisions",
+    "Consider discussing scalability implications",
   ],
-  summary: 'The candidate demonstrated solid technical skills and communication abilities. They showed good problem-solving methodology and relevant experience for the role. Overall, a strong performance that indicates readiness for the position.',
+  summary:
+    "The candidate demonstrated solid technical skills and communication abilities. They showed good problem-solving methodology and relevant experience for the role. Overall, a strong performance that indicates readiness for the position.",
 };
 
 export default async function ResultsPage({ params }: ResultsPageProps) {
   const { id } = await params;
+  const demoUser = getDemoUser();
 
-  // Get interview from mock data
-  const interview = mockInterviews[id];
+  // Try to get interview from mock data first
+  let interview = mockInterviews[id];
+  let job = interview ? getJobById(interview.jobId) : null;
 
-  if (!interview || interview.status !== 'COMPLETED') {
+  // If not found, try to parse as application ID (format: application-{jobId}-{userId})
+  if (!interview && id.startsWith("application-")) {
+    const jobIdMatch = id.match(/^application-(job-\d+)-/);
+    if (jobIdMatch) {
+      const jobId = jobIdMatch[1];
+      const storage = getStorage();
+      job = await storage.getJob(jobId);
+
+      if (job) {
+        // Create a synthetic completed interview object for results
+        interview = {
+          id,
+          jobId,
+          candidateId: demoUser.id,
+          status: "COMPLETED" as const,
+          durationMinutes: 30,
+          score: mockEvaluation.overallScore,
+          createdAt: new Date(),
+        };
+      }
+    }
+  }
+
+  if (!interview || !job) {
     notFound();
   }
 
-  const demoUser = getDemoUser();
-  const job = getJobById(interview.jobId);
-
-  if (!job) {
+  // For non-completed interviews, redirect (unless it's a synthetic one)
+  if (interview.status !== "COMPLETED" && !id.startsWith("application-")) {
     notFound();
   }
 
@@ -96,8 +140,12 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
               )}
             </div>
             <div>
-              <h1 className="text-2xl font-semibold text-foreground">{job.title}</h1>
-              <p className="text-muted-foreground">{job.company} - {job.location}</p>
+              <h1 className="text-2xl font-semibold text-foreground">
+                {job.title}
+              </h1>
+              <p className="text-muted-foreground">
+                {job.company} - {job.location}
+              </p>
             </div>
           </div>
 
@@ -117,9 +165,13 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
         <div className="mb-8 p-8 rounded-2xl bg-card/60 backdrop-blur-xl border border-border">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-medium text-muted-foreground mb-1">Overall Score</h2>
+              <h2 className="text-lg font-medium text-muted-foreground mb-1">
+                Overall Score
+              </h2>
               <div className="flex items-baseline gap-2">
-                <span className="text-6xl font-bold text-foreground">{mockEvaluation.overallScore}</span>
+                <span className="text-6xl font-bold text-foreground">
+                  {mockEvaluation.overallScore}
+                </span>
                 <span className="text-2xl text-muted-foreground">/100</span>
               </div>
               <p className="mt-2 text-sm text-green-400 flex items-center gap-1">
@@ -146,8 +198,12 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
                 className="p-5 rounded-xl bg-card/40 backdrop-blur-sm border border-border"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-medium text-foreground">{category.name}</span>
-                  <span className="text-lg font-semibold text-foreground">{category.score}%</span>
+                  <span className="font-medium text-foreground">
+                    {category.name}
+                  </span>
+                  <span className="text-lg font-semibold text-foreground">
+                    {category.score}%
+                  </span>
                 </div>
                 <div className="h-2 bg-secondary/50 rounded-full overflow-hidden mb-3">
                   <div
@@ -155,7 +211,9 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
                     style={{ width: `${category.score}%` }}
                   />
                 </div>
-                <p className="text-sm text-muted-foreground">{category.feedback}</p>
+                <p className="text-sm text-muted-foreground">
+                  {category.feedback}
+                </p>
               </div>
             ))}
           </div>
@@ -170,7 +228,10 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
             </h3>
             <ul className="space-y-3">
               {mockEvaluation.strengths.map((strength, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                <li
+                  key={i}
+                  className="flex items-start gap-2 text-sm text-foreground"
+                >
                   <CheckCircle2 className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
                   {strength}
                 </li>
@@ -185,7 +246,10 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
             </h3>
             <ul className="space-y-3">
               {mockEvaluation.improvements.map((improvement, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                <li
+                  key={i}
+                  className="flex items-start gap-2 text-sm text-foreground"
+                >
                   <div className="h-4 w-4 rounded-full border-2 border-blue-400 mt-0.5 shrink-0" />
                   {improvement}
                 </li>

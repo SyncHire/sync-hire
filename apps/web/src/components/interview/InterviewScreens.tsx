@@ -1,15 +1,26 @@
-'use client';
+"use client";
 
+import {
+  AlertTriangle,
+  Camera,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  Mic,
+  MicOff,
+  Sparkles,
+  Video,
+  VideoOff,
+} from "lucide-react";
 /**
  * UI screens for different interview states
  * Updated to match dark theme design system
  */
-import React, { useState, useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, AlertTriangle, CheckCircle2, Sparkles, Video, Clock, Mic, Camera, VideoOff, MicOff } from 'lucide-react';
-import type { Question } from '@/lib/mock-data';
-import { getCompanyLogoUrl } from '@/lib/logo-utils';
+import React, { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { getCompanyLogoUrl } from "@/lib/logo-utils";
+import type { Question } from "@/lib/mock-data";
 
 interface InterviewPreviewScreenProps {
   candidateName: string;
@@ -20,7 +31,7 @@ interface InterviewPreviewScreenProps {
   onJoin: () => void;
 }
 
-type PermissionStatus = 'pending' | 'granted' | 'denied';
+type PermissionStatus = "pending" | "granted" | "denied";
 
 export function InterviewPreviewScreen({
   candidateName,
@@ -32,11 +43,13 @@ export function InterviewPreviewScreen({
 }: InterviewPreviewScreenProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [cameraPermission, setCameraPermission] = useState<PermissionStatus>('pending');
-  const [micPermission, setMicPermission] = useState<PermissionStatus>('pending');
+  const [cameraPermission, setCameraPermission] =
+    useState<PermissionStatus>("pending");
+  const [micPermission, setMicPermission] =
+    useState<PermissionStatus>("pending");
 
   // Get unique stages from questions
-  const stages = [...new Set(questions.map(q => q.category))];
+  const stages = [...new Set(questions.map((q) => q.category))];
   const companyLogo = getCompanyLogoUrl(company);
 
   // Request permissions on mount
@@ -49,20 +62,20 @@ export function InterviewPreviewScreen({
         });
 
         setStream(mediaStream);
-        setCameraPermission('granted');
-        setMicPermission('granted');
+        setCameraPermission("granted");
+        setMicPermission("granted");
 
         // Connect stream to video element
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
         }
       } catch (err) {
-        console.error('Permission error:', err);
+        console.error("Permission error:", err);
         // Try to get more specific error info
         if (err instanceof Error) {
-          if (err.name === 'NotAllowedError') {
-            setCameraPermission('denied');
-            setMicPermission('denied');
+          if (err.name === "NotAllowedError") {
+            setCameraPermission("denied");
+            setMicPermission("denied");
           }
         }
       }
@@ -73,7 +86,7 @@ export function InterviewPreviewScreen({
     // Cleanup: stop all tracks when component unmounts
     return () => {
       if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       }
     };
   }, []);
@@ -85,13 +98,15 @@ export function InterviewPreviewScreen({
     }
   }, [stream]);
 
-  const permissionsGranted = cameraPermission === 'granted' && micPermission === 'granted';
-  const permissionsDenied = cameraPermission === 'denied' || micPermission === 'denied';
+  const permissionsGranted =
+    cameraPermission === "granted" && micPermission === "granted";
+  const permissionsDenied =
+    cameraPermission === "denied" || micPermission === "denied";
 
   const handleJoin = () => {
     // Stop preview stream before joining (the call will create its own)
     if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach((track) => track.stop());
     }
     onJoin();
   };
@@ -132,20 +147,24 @@ export function InterviewPreviewScreen({
                 playsInline
                 muted
                 className="w-full h-full object-cover mirror"
-                style={{ transform: 'scaleX(-1)' }}
+                style={{ transform: "scaleX(-1)" }}
               />
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-secondary/50">
-                {cameraPermission === 'pending' ? (
+                {cameraPermission === "pending" ? (
                   <>
                     <Loader2 className="h-8 w-8 text-muted-foreground animate-spin mb-3" />
-                    <p className="text-sm text-muted-foreground">Requesting camera access...</p>
+                    <p className="text-sm text-muted-foreground">
+                      Requesting camera access...
+                    </p>
                   </>
                 ) : (
                   <>
                     <VideoOff className="h-8 w-8 text-red-400 mb-3" />
                     <p className="text-sm text-red-400">Camera access denied</p>
-                    <p className="text-xs text-muted-foreground mt-1">Please enable camera in browser settings</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Please enable camera in browser settings
+                    </p>
                   </>
                 )}
               </div>
@@ -154,56 +173,82 @@ export function InterviewPreviewScreen({
             {/* Candidate name overlay */}
             {permissionsGranted && (
               <div className="absolute bottom-3 left-3 px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-lg">
-                <p className="text-sm text-white font-medium">{candidateName}</p>
+                <p className="text-sm text-white font-medium">
+                  {candidateName}
+                </p>
               </div>
             )}
           </div>
 
           {/* Permission Status */}
           <div className="mb-6 flex gap-3">
-            <div className={`flex-1 p-3 rounded-lg border ${
-              cameraPermission === 'granted'
-                ? 'bg-green-500/10 border-green-500/30'
-                : cameraPermission === 'denied'
-                ? 'bg-red-500/10 border-red-500/30'
-                : 'bg-secondary/50 border-border'
-            }`}>
+            <div
+              className={`flex-1 p-3 rounded-lg border ${
+                cameraPermission === "granted"
+                  ? "bg-green-500/10 border-green-500/30"
+                  : cameraPermission === "denied"
+                    ? "bg-red-500/10 border-red-500/30"
+                    : "bg-secondary/50 border-border"
+              }`}
+            >
               <div className="flex items-center gap-2">
-                {cameraPermission === 'granted' ? (
+                {cameraPermission === "granted" ? (
                   <Camera className="h-4 w-4 text-green-600 dark:text-green-400" />
-                ) : cameraPermission === 'denied' ? (
+                ) : cameraPermission === "denied" ? (
                   <VideoOff className="h-4 w-4 text-red-600 dark:text-red-400" />
                 ) : (
                   <Camera className="h-4 w-4 text-muted-foreground" />
                 )}
-                <span className={`text-sm ${
-                  cameraPermission === 'granted' ? 'text-green-600 dark:text-green-400' :
-                  cameraPermission === 'denied' ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'
-                }`}>
-                  Camera {cameraPermission === 'granted' ? 'Ready' : cameraPermission === 'denied' ? 'Blocked' : 'Pending'}
+                <span
+                  className={`text-sm ${
+                    cameraPermission === "granted"
+                      ? "text-green-600 dark:text-green-400"
+                      : cameraPermission === "denied"
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-muted-foreground"
+                  }`}
+                >
+                  Camera{" "}
+                  {cameraPermission === "granted"
+                    ? "Ready"
+                    : cameraPermission === "denied"
+                      ? "Blocked"
+                      : "Pending"}
                 </span>
               </div>
             </div>
-            <div className={`flex-1 p-3 rounded-lg border ${
-              micPermission === 'granted'
-                ? 'bg-green-500/10 border-green-500/30'
-                : micPermission === 'denied'
-                ? 'bg-red-500/10 border-red-500/30'
-                : 'bg-secondary/50 border-border'
-            }`}>
+            <div
+              className={`flex-1 p-3 rounded-lg border ${
+                micPermission === "granted"
+                  ? "bg-green-500/10 border-green-500/30"
+                  : micPermission === "denied"
+                    ? "bg-red-500/10 border-red-500/30"
+                    : "bg-secondary/50 border-border"
+              }`}
+            >
               <div className="flex items-center gap-2">
-                {micPermission === 'granted' ? (
+                {micPermission === "granted" ? (
                   <Mic className="h-4 w-4 text-green-600 dark:text-green-400" />
-                ) : micPermission === 'denied' ? (
+                ) : micPermission === "denied" ? (
                   <MicOff className="h-4 w-4 text-red-600 dark:text-red-400" />
                 ) : (
                   <Mic className="h-4 w-4 text-muted-foreground" />
                 )}
-                <span className={`text-sm ${
-                  micPermission === 'granted' ? 'text-green-600 dark:text-green-400' :
-                  micPermission === 'denied' ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'
-                }`}>
-                  Microphone {micPermission === 'granted' ? 'Ready' : micPermission === 'denied' ? 'Blocked' : 'Pending'}
+                <span
+                  className={`text-sm ${
+                    micPermission === "granted"
+                      ? "text-green-600 dark:text-green-400"
+                      : micPermission === "denied"
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-muted-foreground"
+                  }`}
+                >
+                  Microphone{" "}
+                  {micPermission === "granted"
+                    ? "Ready"
+                    : micPermission === "denied"
+                      ? "Blocked"
+                      : "Pending"}
                 </span>
               </div>
             </div>
@@ -239,12 +284,17 @@ export function InterviewPreviewScreen({
             className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-lg shadow-blue-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Sparkles className="h-4 w-4 mr-2" />
-            {permissionsGranted ? 'Join Interview' : permissionsDenied ? 'Permissions Required' : 'Checking Permissions...'}
+            {permissionsGranted
+              ? "Join Interview"
+              : permissionsDenied
+                ? "Permissions Required"
+                : "Checking Permissions..."}
           </Button>
 
           {permissionsDenied && (
             <p className="mt-3 text-xs text-center text-red-400">
-              Please allow camera and microphone access in your browser to continue.
+              Please allow camera and microphone access in your browser to
+              continue.
             </p>
           )}
         </CardContent>
@@ -280,15 +330,27 @@ export function InterviewLoadingScreen() {
 
         {/* Progress Dots */}
         <div className="flex justify-center gap-2 mb-8">
-          <div className="h-2 w-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-          <div className="h-2 w-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-          <div className="h-2 w-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+          <div
+            className="h-2 w-2 rounded-full bg-blue-500 animate-bounce"
+            style={{ animationDelay: "0ms" }}
+          />
+          <div
+            className="h-2 w-2 rounded-full bg-blue-500 animate-bounce"
+            style={{ animationDelay: "150ms" }}
+          />
+          <div
+            className="h-2 w-2 rounded-full bg-blue-500 animate-bounce"
+            style={{ animationDelay: "300ms" }}
+          />
         </div>
 
         {/* Tips */}
         <div className="p-4 bg-card/50 backdrop-blur-sm rounded-xl border border-border">
           <p className="text-sm text-muted-foreground">
-            <span className="text-blue-600 dark:text-blue-400 font-medium">Tip:</span> Speak clearly and take your time with each answer
+            <span className="text-blue-600 dark:text-blue-400 font-medium">
+              Tip:
+            </span>{" "}
+            Speak clearly and take your time with each answer
           </p>
         </div>
       </div>
@@ -301,7 +363,10 @@ interface InterviewErrorScreenProps {
   onRetry: () => void;
 }
 
-export function InterviewErrorScreen({ errorMessage, onRetry }: InterviewErrorScreenProps) {
+export function InterviewErrorScreen({
+  errorMessage,
+  onRetry,
+}: InterviewErrorScreenProps) {
   return (
     <div className="flex h-screen items-center justify-center bg-background">
       {/* Ambient Background */}
@@ -358,7 +423,8 @@ export function InterviewEndedScreen({ onRejoin }: InterviewEndedScreenProps) {
             Interview Complete
           </h2>
           <p className="mb-8 text-muted-foreground text-sm">
-            Thank you for completing your interview! We&apos;ll review your responses and get back to you soon.
+            Thank you for completing your interview! We&apos;ll review your
+            responses and get back to you soon.
           </p>
 
           <div className="space-y-3">
@@ -369,7 +435,7 @@ export function InterviewEndedScreen({ onRejoin }: InterviewEndedScreenProps) {
               Start New Interview
             </Button>
             <Button
-              onClick={() => window.location.href = '/candidate/jobs'}
+              onClick={() => (window.location.href = "/candidate/jobs")}
               variant="outline"
               className="w-full h-11 border-border bg-secondary/50 hover:bg-secondary"
             >
