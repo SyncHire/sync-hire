@@ -1,22 +1,25 @@
 "use client";
 
-import { mockJobs, getAllInterviews } from "@/lib/mock-data";
+import { getAllInterviews, getJobById, getUserById } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, ArrowRight, Search, Building2, Clock, Sparkles, Zap } from "lucide-react";
+import { MapPin, ArrowRight, Search, Building2, Sparkles, Zap, Clock, CheckCircle2, Play } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 
 export default function CandidateJobListings() {
-  // Get all interviews and create a map of jobId -> interviewId
-  const interviews = getAllInterviews();
-  const jobToInterview = new Map<string, string>();
-  for (const interview of interviews) {
-    // Use first interview found for each job (for demo purposes)
-    if (!jobToInterview.has(interview.jobId)) {
-      jobToInterview.set(interview.jobId, interview.id);
-    }
-  }
+  // Get all interviews with their job details
+  const allInterviews = getAllInterviews();
+  // Show first 6 interviews for display
+  const interviews = allInterviews.slice(0, 6).map((interview) => {
+    const job = getJobById(interview.jobId);
+    const candidate = getUserById(interview.candidateId);
+    return {
+      ...interview,
+      job,
+      candidate,
+    };
+  });
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -59,58 +62,71 @@ export default function CandidateJobListings() {
           </div>
         </div>
 
-        {/* Interactive Job Cards */}
+        {/* Interactive Interview Cards */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {mockJobs.map((job, i) => (
-            <div
-              key={job.id}
-              className="animate-in fade-in slide-in-from-bottom-4 duration-500"
-              style={{ animationDelay: `${i * 100}ms` }}
-            >
-              <Link href={`/interview/${jobToInterview.get(job.id) || job.id}`}>
-                <div className="group relative h-full bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6 hover:bg-card/80 transition-all cursor-pointer overflow-hidden">
-                  {/* Hover Glow */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-duration-500" />
+          {interviews.map((interview, i) => {
+            const statusConfig = {
+              PENDING: { label: "Ready", icon: Play, color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+              IN_PROGRESS: { label: "In Progress", icon: Clock, color: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20" },
+              COMPLETED: { label: "Completed", icon: CheckCircle2, color: "bg-green-500/10 text-green-400 border-green-500/20" },
+            };
+            const status = statusConfig[interview.status];
+            const StatusIcon = status.icon;
 
-                  <div className="relative z-10 flex flex-col h-full">
-                    <div className="flex justify-between items-start mb-6">
-                      <div className="h-12 w-12 rounded-xl bg-secondary/50 flex items-center justify-center border border-white/5 group-hover:border-blue-500/30 transition-colors">
-                         <Building2 className="h-6 w-6 text-muted-foreground group-hover:text-blue-400 transition-colors" />
+            return (
+              <div
+                key={interview.id}
+                className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+                style={{ animationDelay: `${i * 100}ms` }}
+              >
+                <Link href={`/interview/${interview.id}`}>
+                  <div className="group relative h-full bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6 hover:bg-card/80 transition-all cursor-pointer overflow-hidden">
+                    {/* Hover Glow */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-duration-500" />
+
+                    <div className="relative z-10 flex flex-col h-full">
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="h-12 w-12 rounded-xl bg-secondary/50 flex items-center justify-center border border-white/5 group-hover:border-blue-500/30 transition-colors">
+                          <Building2 className="h-6 w-6 text-muted-foreground group-hover:text-blue-400 transition-colors" />
+                        </div>
+                        <Badge variant="outline" className={`${status.color} flex items-center gap-1.5 px-3 py-1`}>
+                          <StatusIcon className="h-3 w-3" /> {status.label}
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20 flex items-center gap-1.5 px-3 py-1">
-                        <Zap className="h-3 w-3 fill-current" /> 95% Match
-                      </Badge>
-                    </div>
 
-                    <h3 className="text-xl font-semibold text-foreground mb-2 group-hover:text-blue-400 transition-colors">
-                      {job.title}
-                    </h3>
+                      <h3 className="text-xl font-semibold text-foreground mb-2 group-hover:text-blue-400 transition-colors">
+                        {interview.job?.title || "Interview"}
+                      </h3>
 
-                    <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-6">
-                      <span className="flex items-center gap-1.5">
-                        <Building2 className="h-3.5 w-3.5" /> {job.department}
-                      </span>
-                      <span className="w-1 h-1 rounded-full bg-white/20" />
-                      <span className="flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5" /> {job.location}
-                      </span>
-                    </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {interview.candidate?.name || "Candidate"}
+                      </p>
 
-                    <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
-                      <div className="flex -space-x-2">
-                        <div className="h-6 w-6 rounded-full border border-card bg-zinc-800" />
-                        <div className="h-6 w-6 rounded-full border border-card bg-zinc-700" />
-                        <div className="h-6 w-6 rounded-full border border-card bg-zinc-600 flex items-center justify-center text-[8px]">12+</div>
+                      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-6">
+                        <span className="flex items-center gap-1.5">
+                          <Building2 className="h-3.5 w-3.5" /> {interview.job?.company}
+                        </span>
+                        <span className="w-1 h-1 rounded-full bg-white/20" />
+                        <span className="flex items-center gap-1.5">
+                          <MapPin className="h-3.5 w-3.5" /> {interview.job?.location}
+                        </span>
                       </div>
-                      <span className="text-sm font-medium flex items-center gap-2 group-hover:translate-x-1 transition-transform">
-                        Start Interview <ArrowRight className="h-4 w-4" />
-                      </span>
+
+                      <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span>{interview.durationMinutes} min</span>
+                        </div>
+                        <span className="text-sm font-medium flex items-center gap-2 group-hover:translate-x-1 transition-transform">
+                          {interview.status === "COMPLETED" ? "View Results" : "Start Interview"} <ArrowRight className="h-4 w-4" />
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            </div>
-          ))}
+                </Link>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

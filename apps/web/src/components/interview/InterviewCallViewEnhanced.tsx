@@ -16,10 +16,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff,
-  ChevronLeft, Sparkles, Cpu, BarChart3, BrainCircuit
+  ChevronLeft, Sparkles, Cpu, BarChart3, BrainCircuit, Clock, CheckCircle2, Circle
 } from 'lucide-react';
+import type { Question, InterviewStage } from '@/lib/mock-data';
+import { formatTime } from '@/lib/date-utils';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from '@/lib/hooks/use-toast';
 import {
   photorealistic_professional_woman_headshot,
   photorealistic_professional_man_headshot
@@ -30,7 +33,12 @@ interface InterviewCallViewProps {
   call: Call;
   interviewId: string;
   jobTitle?: string;
+  durationMinutes?: number;
+  questions?: Question[];
 }
+
+// All possible interview stages in order
+const INTERVIEW_STAGES: InterviewStage[] = ['Introduction', 'Technical Skills', 'Problem Solving', 'Behavioral', 'Wrap-up'];
 
 interface TranscriptMessage {
   role: 'ai' | 'user';
@@ -43,7 +51,9 @@ interface TranscriptMessage {
 function InterviewCallContent({
   call,
   interviewId,
-  jobTitle = 'AI Interview'
+  jobTitle = 'AI Interview',
+  durationMinutes = 30,
+  questions = []
 }: InterviewCallViewProps) {
   const { useParticipants, useMicrophoneState, useCameraState } = useCallStateHooks();
   const participants = useParticipants();
@@ -57,6 +67,25 @@ function InterviewCallContent({
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [agentConnected, setAgentConnected] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+
+  // Get current question and compute progress
+  const currentQuestion = questions[currentQuestionIndex];
+  const completedStages = new Set(
+    questions.slice(0, currentQuestionIndex).map(q => q.category)
+  );
+  const progressPercentage = questions.length > 0
+    ? Math.round((currentQuestionIndex / questions.length) * 100)
+    : 0;
+
+  // Timer effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsedSeconds(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Find local and remote participants
   const localParticipant = participants.find(p => p.isLocalParticipant);
@@ -81,11 +110,29 @@ function InterviewCallContent({
   }, [transcript]);
 
   const handleToggleMic = async () => {
-    await microphone.toggle();
+    try {
+      await microphone.toggle();
+    } catch (err) {
+      console.error('Failed to toggle microphone:', err);
+      toast({
+        title: 'Microphone Error',
+        description: 'Unable to toggle microphone. Please check permissions.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleToggleCamera = async () => {
-    await camera.toggle();
+    try {
+      await camera.toggle();
+    } catch (err) {
+      console.error('Failed to toggle camera:', err);
+      toast({
+        title: 'Camera Error',
+        description: 'Unable to toggle camera. Please check permissions.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleEndCall = async () => {
@@ -113,7 +160,19 @@ function InterviewCallContent({
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* Timer */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/30 border border-white/5">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs font-mono font-medium text-foreground">
+              {formatTime(elapsedSeconds)}
+            </span>
+            <span className="text-xs text-muted-foreground">/</span>
+            <span className="text-xs font-mono text-muted-foreground">
+              {formatTime(durationMinutes * 60)}
+            </span>
+          </div>
+          {/* Connection Status */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/30 border border-white/5">
             <motion.div
               animate={{ scale: [1, 1.2, 1] }}
@@ -125,7 +184,7 @@ function InterviewCallContent({
               }`}
             />
             <span className="text-xs font-medium text-muted-foreground tracking-wide">
-              {agentConnected ? 'LIVE CONNECTION' : 'CONNECTING...'}
+              {agentConnected ? 'LIVE' : 'CONNECTING...'}
             </span>
           </div>
         </div>
@@ -247,46 +306,80 @@ function InterviewCallContent({
               </Button>
             </div>
           </div>
+
+          {/* Current Question Panel */}
+          {currentQuestion && (
+            <div className="mt-4 p-5 rounded-2xl bg-card/60 backdrop-blur-xl border border-white/5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-white/5 text-foreground border-white/10 text-xs">
+                    {currentQuestion.category}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    Question {currentQuestionIndex + 1} of {questions.length}
+                  </span>
+                </div>
+                <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs">
+                  {currentQuestion.duration} min
+                </Badge>
+              </div>
+              <p className="text-sm font-medium text-foreground leading-relaxed mb-4">
+                {currentQuestion.text}
+              </p>
+              {currentQuestion.keyPoints && currentQuestion.keyPoints.length > 0 && (
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
+                    Key points to cover:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {currentQuestion.keyPoints.map((point, idx) => (
+                      <Badge key={idx} variant="secondary" className="bg-white/5 text-muted-foreground border-white/10 text-xs font-normal">
+                        {point}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right: Intelligence Panel */}
         <div className="w-[400px] bg-card/60 backdrop-blur-xl border border-white/5 rounded-2xl flex flex-col shadow-2xl overflow-hidden relative z-10">
 
-          {/* Real-time Analysis Tab */}
+          {/* Interview Progress */}
           <div className="p-5 border-b border-white/5 bg-white/5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" /> Real-time Analysis
-              </h3>
-              <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px]">
-                BETA
-              </Badge>
+            <h3 className="text-xs font-bold text-foreground uppercase tracking-widest mb-4">
+              Interview Progress
+            </h3>
+            <div className="space-y-2">
+              {INTERVIEW_STAGES.map((stage) => {
+                const isCompleted = completedStages.has(stage);
+                const isCurrent = currentQuestion?.category === stage;
+                return (
+                  <div key={stage} className="flex items-center gap-3">
+                    {isCompleted ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    ) : isCurrent ? (
+                      <div className="h-4 w-4 rounded-full border-2 border-blue-500 bg-blue-500/20" />
+                    ) : (
+                      <Circle className="h-4 w-4 text-muted-foreground/50" />
+                    )}
+                    <span className={`text-sm ${isCompleted ? 'text-muted-foreground' : isCurrent ? 'text-foreground font-medium' : 'text-muted-foreground/70'}`}>
+                      {stage}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
-            <div className="space-y-3">
-              <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>Technical Accuracy</span>
-                <span className="text-green-400">High</span>
-              </div>
-              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: "85%" }}
-                  transition={{ duration: 2 }}
-                  className="h-full bg-gradient-to-r from-blue-500 to-green-400"
-                />
-              </div>
-
-              <div className="flex justify-between text-xs text-muted-foreground mb-1 mt-3">
-                <span>Communication Clarity</span>
-                <span className="text-blue-400">Analyzing...</span>
-              </div>
-              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                <motion.div
-                  animate={{ width: ["60%", "70%", "65%"] }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                  className="h-full bg-blue-500/50"
-                />
-              </div>
+            {/* Progress bar */}
+            <div className="mt-4 h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${progressPercentage}%` }}
+                transition={{ duration: 0.5 }}
+                className="h-full bg-gradient-to-r from-blue-500 to-green-400"
+              />
             </div>
           </div>
 
@@ -351,14 +444,17 @@ function InterviewCallContent({
             )}
           </div>
 
-          {/* Current Question Context */}
-          <div className="p-5 border-t border-white/5 bg-black/20 backdrop-blur-sm">
-            <div className="text-[10px] font-bold text-blue-400 mb-2 uppercase tracking-wider flex items-center gap-2">
-              <Sparkles className="h-3 w-3" /> Current Context
+          {/* Live Transcript Header */}
+          <div className="p-4 border-t border-white/5 bg-black/20 backdrop-blur-sm">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-bold text-foreground uppercase tracking-wider">
+                Live Transcript
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                Recording
+              </div>
             </div>
-            <p className="text-sm font-medium leading-relaxed text-white/90">
-              Listening to your response...
-            </p>
           </div>
         </div>
 
@@ -367,10 +463,10 @@ function InterviewCallContent({
   );
 }
 
-export function InterviewCallViewEnhanced({ call, interviewId, jobTitle }: InterviewCallViewProps) {
+export function InterviewCallViewEnhanced({ call, interviewId, jobTitle, durationMinutes, questions }: InterviewCallViewProps) {
   return (
     <StreamCall call={call}>
-      <InterviewCallContent call={call} interviewId={interviewId} jobTitle={jobTitle} />
+      <InterviewCallContent call={call} interviewId={interviewId} jobTitle={jobTitle} durationMinutes={durationMinutes} questions={questions} />
     </StreamCall>
   );
 }

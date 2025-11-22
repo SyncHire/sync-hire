@@ -4,17 +4,16 @@
  * Interview Room Component
  * Simplified orchestrator for interview flow
  */
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useInterviewCall } from './interview/useInterviewCall';
+import type { Question } from '@/lib/mock-data';
 import {
   InterviewNameForm,
   InterviewLoadingScreen,
   InterviewErrorScreen,
   InterviewEndedScreen,
 } from './interview/InterviewScreens';
-import { InterviewCallViewEnhanced, InterviewCallViewSimple } from './interview/InterviewCallView';
-import { Button } from '@/components/ui/button';
-import { LayoutGrid, Layout } from 'lucide-react';
+import { InterviewCallViewEnhanced } from './interview/InterviewCallView';
 
 interface InterviewRoomProps {
   callId: string;
@@ -22,6 +21,8 @@ interface InterviewRoomProps {
   candidateId: string;
   candidateName?: string;
   jobTitle?: string;
+  durationMinutes?: number;
+  questions?: Question[];
 }
 
 export function InterviewRoom({
@@ -29,6 +30,8 @@ export function InterviewRoom({
   candidateId,
   candidateName,
   jobTitle,
+  durationMinutes = 30,
+  questions = [],
 }: InterviewRoomProps) {
   // Check if user has already started this interview
   const storageKey = `interview-${interviewId}-started`;
@@ -37,7 +40,6 @@ export function InterviewRoom({
 
   const [nameInput, setNameInput] = useState(storedName || candidateName || '');
   const [showNameForm, setShowNameForm] = useState(!hasStarted);
-  const [useEnhancedView, setUseEnhancedView] = useState(true);
 
   // Use custom hook to manage call lifecycle
   const { call, callEnded, isLoading, error, reset } = useInterviewCall({
@@ -99,37 +101,13 @@ export function InterviewRoom({
     return null;
   }
 
-  // Render call view with toggle button
   return (
-    <div className="relative h-full w-full">
-      {/* View Toggle Button - positioned at bottom left to avoid header overlap */}
-      <div className="absolute bottom-24 left-6 z-50">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setUseEnhancedView(!useEnhancedView)}
-          className="bg-black/60 backdrop-blur-md border-white/10 hover:bg-white/10 text-white gap-2 shadow-lg"
-        >
-          {useEnhancedView ? (
-            <>
-              <Layout className="h-4 w-4" />
-              Simple View
-            </>
-          ) : (
-            <>
-              <LayoutGrid className="h-4 w-4" />
-              Enhanced View
-            </>
-          )}
-        </Button>
-      </div>
-
-      {/* Render selected view */}
-      {useEnhancedView ? (
-        <InterviewCallViewEnhanced call={call} interviewId={interviewId} jobTitle={jobTitle} />
-      ) : (
-        <InterviewCallViewSimple call={call} interviewId={interviewId} jobTitle={jobTitle} />
-      )}
-    </div>
+    <InterviewCallViewEnhanced
+      call={call}
+      interviewId={interviewId}
+      jobTitle={jobTitle}
+      durationMinutes={durationMinutes}
+      questions={questions}
+    />
   );
 }

@@ -40,6 +40,8 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
         candidateId={candidate.id}
         candidateName={candidate.name}
         jobTitle={job?.title}
+        durationMinutes={interview.durationMinutes}
+        questions={job?.questions}
       />
     </StreamVideoProvider>
   );

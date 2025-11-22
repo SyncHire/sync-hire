@@ -30,3 +30,10 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - Always use `uv run python` to execute Python scripts
 - This ensures the correct virtual environment and dependencies are used
 - Example: `uv run python apps/agent/main.py`
+
+## TypeScript/JavaScript Development
+
+### Import Rules
+- **Never use inline/dynamic imports** - always use static imports at the top of the file
+- Bad: `const { toast } = await import('@/lib/hooks/use-toast');`
+- Good: `import { toast } from '@/lib/hooks/use-toast';` at the top of the file

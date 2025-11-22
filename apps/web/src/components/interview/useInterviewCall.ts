@@ -25,42 +25,57 @@ export function useInterviewCall({
   const [call, setCall] = useState<Call | null>(null);
   const [callEnded, setCallEnded] = useState(false);
   const startInterviewMutation = useStartInterview();
-  const initializingRef = useRef(false);
+  const mutationStartedRef = useRef(false); // Persists across StrictMode remounts
   const joinedRef = useRef(false); // Track if we've successfully joined
 
   useEffect(() => {
-    // Guard: don't run if not enabled or already initializing/joined
-    if (!enabled || !client || call || initializingRef.current || joinedRef.current) {
+    // Guard: don't run if not enabled, no client, already have call, or already started
+    if (!enabled || !client || call || mutationStartedRef.current || joinedRef.current) {
       return;
     }
+
+    // Mark mutation as started IMMEDIATELY (before any async work)
+    // This prevents double-calls in StrictMode
+    mutationStartedRef.current = true;
 
     let cancelled = false;
 
     const initializeInterview = async () => {
-      if (cancelled) return;
+      // Don't check cancelled at the start - in StrictMode, cancelled may be set
+      // before this async function body even executes. We only check cancelled
+      // after joining the call, where we can properly clean up.
 
       try {
-        initializingRef.current = true;
         console.log('🚀 Starting interview for:', candidateName);
 
-        // Start interview and get call ID
+        // Start interview and get call ID (idempotent - uses getOrCreate)
         const data = await startInterviewMutation.mutateAsync({
           interviewId,
           candidateId,
           candidateName,
         });
 
-        if (cancelled) {
-          console.log('⚠️ Cancelled before joining call');
-          initializingRef.current = false;
-          return;
-        }
-
+        // Don't check cancelled here - once mutation succeeds, complete the join
+        // The mutation is idempotent, so we should finish what we started
         console.log('📞 Interview started, joining call:', data.callId);
 
-        // Join the call
+        // Create the call object
         const videoCall = client.call('default', data.callId);
-        await videoCall.join();
+
+        // Enable camera and microphone BEFORE joining (per Stream.io docs)
+        try {
+          await videoCall.camera.enable();
+        } catch (camErr) {
+          console.warn('⚠️ Could not enable camera:', camErr);
+        }
+        try {
+          await videoCall.microphone.enable();
+        } catch (micErr) {
+          console.warn('⚠️ Could not enable microphone:', micErr);
+        }
+
+        // Then join the call
+        await videoCall.join({ create: true, video: true });
 
         // Mark as joined - prevents re-running even if StrictMode remounts
         joinedRef.current = true;
@@ -69,7 +84,6 @@ export function useInterviewCall({
           console.log('⚠️ Cancelled after joining, leaving call');
           await videoCall.leave();
           joinedRef.current = false;
-          initializingRef.current = false;
           return;
         }
 
@@ -88,19 +102,19 @@ export function useInterviewCall({
         console.log('✅ Successfully joined call');
       } catch (err) {
         console.error('Error initializing interview:', err);
+        // Reset on error so user can retry
         if (!cancelled) {
-          initializingRef.current = false;
+          mutationStartedRef.current = false;
         }
       }
     };
 
     initializeInterview();
 
-    // Cleanup - use a local reference to avoid TypeScript flow issues
+    // Cleanup - only set cancelled flag, don't reset refs
+    // This prevents double API calls in StrictMode
     return () => {
       cancelled = true;
-      // Don't reset joinedRef here - let it persist to prevent re-runs on StrictMode remount
-      initializingRef.current = false;
     };
   }, [enabled, client, call, interviewId, candidateId, candidateName]);
 
@@ -112,8 +126,8 @@ export function useInterviewCall({
     reset: () => {
       setCall(null);
       setCallEnded(false);
-      initializingRef.current = false;
-      joinedRef.current = false; // Reset on manual reset
+      mutationStartedRef.current = false;
+      joinedRef.current = false;
       startInterviewMutation.reset();
     },
   };
