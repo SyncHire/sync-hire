@@ -1,13 +1,43 @@
 "use client";
 
-import { mockJobs } from "@/lib/mock-data";
 import { getCompanyLogoUrl } from "@/lib/logo-utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Users, Clock, MapPin, ArrowRight, MoreHorizontal, Building2, Sparkles, Zap } from "lucide-react";
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import type { Job } from "@/lib/mock-data";
 
 export default function HRJDListings() {
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchJobs() {
+      try {
+        const response = await fetch("/api/jobs");
+        if (!response.ok) throw new Error("Failed to fetch jobs");
+        const result = await response.json();
+        setJobs(result.data || []);
+      } catch (error) {
+        console.error("Error fetching jobs:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchJobs();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Loading jobs...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between pb-6 border-b border-border/40">
@@ -28,7 +58,7 @@ export default function HRJDListings() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {mockJobs.map((job) => (
+        {jobs.map((job) => (
           <Link key={job.id} href={`/hr/jobs/${job.id}`}>
             <div className="group relative flex flex-col justify-between p-6 rounded-2xl border border-border bg-card hover:bg-card/80 hover:border-blue-500/30 transition-all cursor-pointer h-full overflow-hidden">
               {/* Hover Glow */}

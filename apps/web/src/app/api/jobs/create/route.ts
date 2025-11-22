@@ -10,6 +10,7 @@ import {
   createCustomQuestion,
   createJobDescriptionVersion,
 } from "@/lib/mock-data";
+import { getStorage } from "@/lib/storage/storage-factory";
 import type { Job, CustomQuestion, ExtractedJobData } from "@/lib/mock-data";
 
 interface CreateJobRequest {
@@ -97,6 +98,10 @@ export async function POST(request: NextRequest) {
         undefined
       );
     }
+
+    // Persist job to file storage
+    const storage = getStorage();
+    await storage.saveJob(job.id, job);
 
     return NextResponse.json(
       {
