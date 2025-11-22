@@ -10,6 +10,7 @@ import {
   Building2,
   Calendar,
   Clock,
+  Loader2,
   Trophy,
 } from "lucide-react";
 import Link from "next/link";
@@ -104,13 +105,11 @@ export default function InterviewHistory() {
     return "text-gray-600 dark:text-gray-400";
   };
 
-  const getScoreBadgeColor = (score: number) => {
-    if (score >= 90)
-      return "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
-    if (score >= 80) return "bg-blue-500/10 text-blue-500 border-blue-500/20";
-    if (score >= 70)
-      return "bg-amber-500/10 text-amber-500 border-amber-500/20";
-    return "bg-gray-500/10 text-gray-500 border-gray-500/20";
+  const getScoreLabel = (score: number) => {
+    if (score >= 90) return "Excellent";
+    if (score >= 80) return "Great";
+    if (score >= 70) return "Good";
+    return "Needs Work";
   };
 
   const getSortIcon = (field: SortField) => {
@@ -319,39 +318,59 @@ export default function InterviewHistory() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="relative h-10 w-10 flex items-center justify-center">
-                        <svg
-                          className="h-full w-full rotate-[-90deg]"
-                          viewBox="0 0 36 36"
-                        >
-                          <path
-                            className="text-secondary"
-                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="3"
-                          />
-                          <path
-                            className={getScoreColor(interview.score || 0)}
-                            strokeDasharray={`${interview.score || 0}, 100`}
-                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="3"
-                          />
-                        </svg>
-                        <span className="absolute text-[10px] font-bold">
-                          {interview.score || 0}
-                        </span>
+                    {interview.score !== undefined ? (
+                      <div className="flex items-center gap-3">
+                        <div className="relative h-10 w-10 flex items-center justify-center">
+                          <svg
+                            className="h-full w-full rotate-[-90deg]"
+                            viewBox="0 0 36 36"
+                          >
+                            <path
+                              className="text-secondary"
+                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="3"
+                            />
+                            <path
+                              className={getScoreColor(interview.score)}
+                              strokeDasharray={`${interview.score}, 100`}
+                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="3"
+                            />
+                          </svg>
+                          <span className="absolute text-[10px] font-bold">
+                            {interview.score}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className={`text-sm font-medium ${getScoreColor(interview.score)}`}>
+                            {getScoreLabel(interview.score)}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {interview.score}/100
+                          </span>
+                        </div>
                       </div>
-                      <Badge
-                        variant="outline"
-                        className={getScoreBadgeColor(interview.score || 0)}
-                      >
-                        {interview.score || 0}%
-                      </Badge>
-                    </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="relative h-10 w-10 flex items-center justify-center">
+                          <div className="h-10 w-10 rounded-full border-2 border-secondary flex items-center justify-center">
+                            <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                          </div>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-muted-foreground">
+                            Processing
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Generating results...
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="text-right pr-6">
                     <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground group-hover:text-foreground transition-colors">

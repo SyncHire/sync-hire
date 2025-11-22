@@ -112,9 +112,12 @@ export default function ResultsContent({
   job,
   companyLogo,
 }: ResultsContentProps) {
-  // Use react-query for polling when evaluation is not ready
+  // Only poll if interview is completed but has NO score yet (real-time interview just finished)
+  // Don't poll for mock interviews that have a score but no aiEvaluation
   const shouldPoll =
-    initialInterview.status === "COMPLETED" && !initialInterview.aiEvaluation;
+    initialInterview.status === "COMPLETED" &&
+    !initialInterview.aiEvaluation &&
+    initialInterview.score === undefined;
 
   const { data: polledData } = useInterviewDetails(
     shouldPoll ? initialInterview.id : null,
@@ -126,7 +129,8 @@ export default function ResultsContent({
       ? polledData.data.interview
       : initialInterview;
 
-  const isGenerating = shouldPoll && !interview.aiEvaluation;
+  // Only show "Generating" if we're actively polling (no score yet)
+  const isGenerating = shouldPoll && !interview.aiEvaluation && interview.score === undefined;
 
   const evaluation = buildEvaluation(interview.aiEvaluation, interview.score);
   const hasTranscript = Boolean(interview.transcript);
