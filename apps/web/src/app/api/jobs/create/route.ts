@@ -5,9 +5,8 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
-import type { CustomQuestion, ExtractedJobData, Job } from "@/lib/mock-data";
+import type { ExtractedJobData, Job } from "@/lib/mock-data";
 import {
-  createCustomQuestion,
   createJob,
   createJobDescriptionVersion,
 } from "@/lib/mock-data";
@@ -18,6 +17,7 @@ interface CreateJobRequest {
   description: string;
   location: string;
   employmentType: string;
+  workArrangement?: string;
   requirements: string[];
   responsibilities: string[];
   seniority: string;
@@ -25,12 +25,11 @@ interface CreateJobRequest {
   department?: string;
   salary?: string;
   customQuestions?: Array<{
-    type: "SHORT_ANSWER" | "LONG_ANSWER" | "MULTIPLE_CHOICE" | "SCORED";
-    content: string;
-    required: boolean;
+    text: string;
+    type: "text" | "video" | "code";
+    duration: number;
     order: number;
-    options?: string[];
-    scoringConfig?: { type: string; min: number; max: number };
+    source?: "ai" | "custom";
   }>;
   extractionHash?: string;
   originalJDText?: string;
@@ -52,36 +51,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the job
+    // Build questions array from customQuestions
+    const questions = (body.customQuestions || []).map((q, index) => ({
+      id: `q-${Date.now()}-${index}`,
+      text: q.text,
+      type: q.type || "text",
+      duration: q.duration || 2,
+    }));
+
+    // Create the job with questions
     const job = createJob({
       title: body.title,
       description: body.description,
       location: body.location,
-      type: body.employmentType || "Full-time",
+      type: body.employmentType || "Not specified",
+      workArrangement: body.workArrangement || "Not specified",
       requirements: body.requirements || [],
       company: body.company || "Company",
       department: body.department || "Engineering",
       salary: body.salary || "",
       employerId: body.employerId || "employer-1",
       status: "ACTIVE",
+      questions: questions,
     } as Partial<Job>);
-
-    // Create custom questions if provided
-    const questions: CustomQuestion[] = [];
-    if (body.customQuestions && body.customQuestions.length > 0) {
-      for (const q of body.customQuestions) {
-        const question = createCustomQuestion(
-          job.id,
-          q.type,
-          q.content,
-          q.order,
-          q.required,
-          q.options,
-          q.scoringConfig,
-        );
-        questions.push(question);
-      }
-    }
 
     // Create JD version with extraction data
     if (body.originalJDText) {
@@ -92,7 +84,8 @@ export async function POST(request: NextRequest) {
         requirements: body.requirements || [],
         seniority: body.seniority || "",
         location: body.location,
-        employmentType: body.employmentType || "Full-time",
+        employmentType: (body.employmentType || "Not specified") as ExtractedJobData["employmentType"],
+        workArrangement: (body.workArrangement || "Not specified") as ExtractedJobData["workArrangement"],
       };
 
       createJobDescriptionVersion(

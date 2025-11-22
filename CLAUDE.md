@@ -75,3 +75,23 @@ useEffect(() => {
   fetch('/api/data').then(res => res.json()).then(setData);
 }, []);
 ```
+
+### Styling (Tailwind CSS)
+- **Always use theme-aware colors** for dark/light mode compatibility
+- Use semantic color variables: `primary`, `secondary`, `muted`, `accent`, `destructive`, `foreground`, `background`
+- Avoid hardcoded colors like `bg-amber-50`, `text-blue-600` - use theme variables instead
+
+**Good patterns:**
+```tsx
+// Theme-aware colors that work in both modes
+<div className="bg-primary/10 text-primary border-primary/50">
+<div className="bg-muted text-muted-foreground">
+<div className="text-foreground bg-background">
+```
+
+**Bad patterns:**
+```tsx
+// Hardcoded colors break in dark mode
+<div className="bg-amber-50 text-amber-700">
+<div className="bg-blue-100 text-blue-600">
+```

@@ -8,11 +8,15 @@
 
 import { z } from "zod";
 import { geminiClient } from "@/lib/gemini-client";
-import type { ExtractedJobData } from "@/lib/mock-data";
+import {
+  EMPLOYMENT_TYPES,
+  WORK_ARRANGEMENTS,
+  type ExtractedJobData,
+} from "@/lib/mock-data";
 import type { StorageInterface } from "@/lib/storage/storage-interface";
 import { generateFileHash } from "@/lib/utils/hash-utils";
 
-// Define Zod schema for extracted job data
+// Define Zod schema for extracted job data with enum constraints
 const extractedJobDataSchema = z.object({
   title: z.string().describe("The job title or position name"),
   company: z.string().describe("The company or organization name"),
@@ -27,11 +31,16 @@ const extractedJobDataSchema = z.object({
     .describe(
       "Seniority level (e.g., Junior, Mid-level, Senior, Staff, Principal)",
     ),
-  location: z.string().describe("Job location or Remote if work-from-home"),
+  location: z.string().describe("Job location (city, state/country)"),
   employmentType: z
-    .string()
+    .enum(EMPLOYMENT_TYPES)
     .describe(
-      "Employment type (e.g., Full-time, Part-time, Contract, Temporary)",
+      "Employment type - must be one of: Full-time, Part-time, Contract, Temporary, Internship, Not specified",
+    ),
+  workArrangement: z
+    .enum(WORK_ARRANGEMENTS)
+    .describe(
+      "Work arrangement - must be one of: Remote, Hybrid, On-site, Flexible, Not specified",
     ),
 });
 
@@ -160,7 +169,17 @@ export class JobDescriptionProcessor {
         model: "gemini-2.5-flash",
         contents: [
           {
-            text: "Extract structured job information from the provided PDF job description. You MUST return a valid JSON object with these exact fields: title, company, responsibilities (array of strings), requirements (array of strings), seniority, location, and employmentType. All fields must be present even if empty.",
+            text: `Extract structured job information from the provided PDF job description. You MUST return a valid JSON object with these exact fields:
+- title: string
+- company: string
+- responsibilities: array of strings
+- requirements: array of strings
+- seniority: string (e.g., Junior, Mid-level, Senior, Staff, Principal)
+- location: string (city, state/country)
+- employmentType: MUST be one of: "Full-time", "Part-time", "Contract", "Temporary", "Internship", "Not specified"
+- workArrangement: MUST be one of: "Remote", "Hybrid", "On-site", "Flexible", "Not specified"
+
+All fields must be present. Use "Not specified" for employmentType and workArrangement if not clearly stated in the document.`,
           },
           {
             inlineData: {
@@ -207,7 +226,8 @@ export class JobDescriptionProcessor {
         requirements: [],
         seniority: "",
         location: "",
-        employmentType: "",
+        employmentType: "Not specified",
+        workArrangement: "Not specified",
       };
     }
   }
@@ -235,6 +255,7 @@ ${extractedData.requirements.map((r) => `- ${r}`).join("\n")}
 Seniority: ${extractedData.seniority}
 Location: ${extractedData.location}
 Employment Type: ${extractedData.employmentType}
+Work Arrangement: ${extractedData.workArrangement}
       `.trim();
 
       console.log("📝 Preparing AI content generation with job data:", {
