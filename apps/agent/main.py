@@ -239,7 +239,8 @@ async def join_interview(request: JoinInterviewRequest, background_tasks: Backgr
     return {
         "success": True,
         "message": "Agent will join interview shortly",
-        "callId": request.callId
+        "callId": request.callId,
+        "videoAvatarEnabled": bool(Config.HEYGEN_API_KEY)
     }
 
 

@@ -15,6 +15,7 @@ interface StartInterviewResponse {
   success: boolean;
   callId: string;
   interviewId: string;
+  videoAvatarEnabled?: boolean;
   message: string;
 }
 

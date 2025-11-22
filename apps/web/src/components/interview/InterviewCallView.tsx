@@ -3,6 +3,7 @@
 import {
   type Call,
   type CallClosedCaption,
+  hasVideo,
   ParticipantView,
   StreamCall,
   useCallStateHooks,
@@ -46,6 +47,7 @@ interface InterviewCallViewProps {
   jobTitle?: string;
   durationMinutes?: number;
   questions?: Question[];
+  videoAvatarEnabled?: boolean;
 }
 
 // All possible interview stages in order
@@ -75,6 +77,7 @@ function InterviewCallContent({
   jobTitle = "AI Interview",
   durationMinutes = 30,
   questions = [],
+  videoAvatarEnabled = false,
 }: InterviewCallViewProps) {
   const {
     useParticipants,
@@ -99,9 +102,11 @@ function InterviewCallContent({
 
   // Get current question and compute progress
   const currentQuestion = questions[currentQuestionIndex];
-  const completedStages = new Set(
-    questions.slice(0, currentQuestionIndex).map((q) => q.category),
-  );
+  const completedStages = new Set<InterviewStage>([
+    // Introduction is always done since AI starts with greeting
+    "Introduction",
+    ...questions.slice(0, currentQuestionIndex).map((q) => q.category),
+  ]);
   const progressPercentage =
     questions.length > 0
       ? Math.round((currentQuestionIndex / questions.length) * 100)
@@ -538,8 +543,8 @@ function InterviewCallContent({
                 )}
               </AnimatePresence>
 
-              {/* Show HeyGen video stream if remote participant has video, otherwise show avatar */}
-              {remoteParticipant?.videoStream ? (
+              {/* Show video avatar only if enabled and video is available, otherwise show static avatar */}
+              {videoAvatarEnabled && remoteParticipant && hasVideo(remoteParticipant) ? (
                 <div className="absolute inset-0 ai-video-container">
                   <ParticipantView
                     participant={remoteParticipant}
@@ -572,7 +577,7 @@ function InterviewCallContent({
             </div>
 
             {/* AI Visualization Overlay */}
-            <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-0 pointer-events-none z-10">
               <div className="absolute top-6 left-6 flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center">
                   <Cpu className="h-5 w-5 text-blue-400" />
@@ -631,7 +636,7 @@ function InterviewCallContent({
             </div>
 
             {/* User PIP (Picture-in-Picture) */}
-            <div className="pip-video-container absolute top-6 right-6 w-56 aspect-video rounded-xl bg-zinc-900 overflow-hidden border border-white/20 shadow-2xl">
+            <div className="pip-video-container absolute top-6 right-6 w-56 aspect-video rounded-xl bg-zinc-900 overflow-hidden border border-white/20 shadow-2xl z-20">
               {localParticipant ? (
                 <ParticipantView
                   participant={localParticipant}
@@ -694,7 +699,7 @@ function InterviewCallContent({
 
           {/* Current Question Panel */}
           {currentQuestion && (
-            <div className="mt-4 p-5 rounded-2xl bg-card/60 backdrop-blur-xl border border-border">
+            <div className="mt-4 p-5 rounded-2xl bg-card border border-border shadow-lg">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Badge
@@ -802,6 +807,7 @@ export function InterviewCallView({
   jobTitle,
   durationMinutes,
   questions,
+  videoAvatarEnabled,
 }: InterviewCallViewProps) {
   return (
     <StreamCall call={call}>
@@ -811,6 +817,7 @@ export function InterviewCallView({
         jobTitle={jobTitle}
         durationMinutes={durationMinutes}
         questions={questions}
+        videoAvatarEnabled={videoAvatarEnabled}
       />
     </StreamCall>
   );

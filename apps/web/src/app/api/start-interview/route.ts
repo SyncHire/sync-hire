@@ -15,12 +15,14 @@ import {
 import { getStorage } from "@/lib/storage/storage-factory";
 import { getStreamClient } from "@/lib/stream-token";
 import { generateStringHash } from "@/lib/utils/hash-utils";
+import { mergeInterviewQuestions } from "@/lib/utils/question-utils";
 
 const AGENT_API_URL = process.env.AGENT_API_URL || "http://localhost:8080";
 
 // Track which calls have had agents invited (in-memory cache)
 // This prevents duplicate invitations on page refreshes
-const invitedCalls = new Set<string>();
+// Also stores whether video avatar is enabled for that call
+const invitedCalls = new Map<string, { videoAvatarEnabled: boolean }>();
 
 export async function POST(request: Request) {
   try {
@@ -59,27 +61,8 @@ export async function POST(request: Request) {
               await storage.getInterviewQuestions(combinedHash);
 
             if (questionSet) {
-              // Merge both custom questions (kept job questions) and suggested questions (AI gap questions)
-              const customQs = (questionSet.customQuestions || []).map((q, index) => ({
-                id: q.id || `custom-q-${index}`,
-                text: q.content,
-                type: "video" as const,
-                duration: 3, // 3 minutes per question
-                category: "Technical Skills" as const,
-                keyPoints: [] as string[],
-              }));
-
-              const suggestedQs = (questionSet.suggestedQuestions || []).map((q, index) => ({
-                id: `suggested-q-${index}`,
-                text: q.content,
-                type: "video" as const,
-                duration: 3, // 3 minutes per question
-                category: "Technical Skills" as const,
-                keyPoints: q.reason ? [q.reason] : [],
-              }));
-
-              // Custom questions first (from job), then AI-personalized questions
-              questions = [...customQs, ...suggestedQs];
+              // Use utility to merge custom questions (from JD) and AI-personalized questions
+              questions = mergeInterviewQuestions(questionSet);
             }
           }
 
@@ -161,13 +144,14 @@ export async function POST(request: Request) {
     }
 
     // Check if we've already invited an agent to this call (prevents duplicates)
-    const alreadyInvited = invitedCalls.has(callId);
+    const existingCall = invitedCalls.get(callId);
+    const alreadyInvited = !!existingCall;
     console.log(`🤖 Agent already invited: ${alreadyInvited}`);
+
+    let videoAvatarEnabled = existingCall?.videoAvatarEnabled ?? false;
 
     // Invite agent if we haven't invited one yet (regardless of whether call is new or existing)
     if (!alreadyInvited) {
-      // Mark this call as having an invited agent
-      invitedCalls.add(callId);
       console.log(`🔗 Agent URL: ${AGENT_API_URL}/join-interview`);
       try {
         console.log("⏳ Sending request to agent...");
@@ -197,6 +181,12 @@ export async function POST(request: Request) {
 
         const agentData = await agentResponse.json();
         console.log("✅ Agent response:", agentData);
+
+        // Capture video avatar status from agent response
+        videoAvatarEnabled = agentData.videoAvatarEnabled ?? false;
+
+        // Mark this call as having an invited agent and store video avatar status
+        invitedCalls.set(callId, { videoAvatarEnabled });
       } catch (agentError) {
         console.error("❌ Error calling agent API:", agentError);
         return NextResponse.json(
@@ -214,6 +204,7 @@ export async function POST(request: Request) {
       success: true,
       callId,
       interviewId,
+      videoAvatarEnabled,
       message: "Interview started and AI agent invited",
     });
   } catch (error) {

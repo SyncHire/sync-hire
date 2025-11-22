@@ -25,6 +25,7 @@ export function useInterviewCall({
   const [call, setCall] = useState<Call | null>(null);
   const [callEnded, setCallEnded] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [videoAvatarEnabled, setVideoAvatarEnabled] = useState(false);
   const startInterviewMutation = useStartInterview();
 
   useEffect(() => {
@@ -47,6 +48,8 @@ export function useInterviewCall({
         });
 
         console.log("📞 Interview started, joining call:", data.callId);
+        console.log("🎭 Video avatar enabled:", data.videoAvatarEnabled);
+        setVideoAvatarEnabled(data.videoAvatarEnabled ?? false);
 
         // Create the call object
         const videoCall = client.call("default", data.callId);
@@ -105,12 +108,14 @@ export function useInterviewCall({
   return {
     call,
     callEnded,
+    videoAvatarEnabled,
     isLoading: isJoining || startInterviewMutation.isPending,
     error: startInterviewMutation.error,
     reset: () => {
       setCall(null);
       setCallEnded(false);
       setIsJoining(false);
+      setVideoAvatarEnabled(false);
       startInterviewMutation.reset();
     },
   };
