@@ -60,10 +60,6 @@ logging.getLogger("vision_agents.plugins.heygen").setLevel(webrtc_log_level)
 # Silence httpx INFO logs (Stream API requests)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-logger.info("=" * 80)
-logger.info("Agent started - logging to agent.log")
-logger.info("=" * 80)
-
 
 # Lifespan context manager for startup/shutdown
 @asynccontextmanager
