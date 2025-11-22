@@ -8,7 +8,7 @@
 import { promises as fs } from "fs";
 import { join } from "path";
 import type { ExtractedJobData, Job, ExtractedCVData } from "@/lib/mock-data";
-import type { StorageInterface } from "./storage-interface";
+import type { StorageInterface, InterviewQuestions } from "./storage-interface";
 
 const DATA_DIR = join(process.cwd(), "data");
 const JD_EXTRACTIONS_DIR = join(DATA_DIR, "jd-extractions");
@@ -16,6 +16,7 @@ const JD_UPLOADS_DIR = join(DATA_DIR, "jd-uploads");
 const CV_EXTRACTIONS_DIR = join(DATA_DIR, "cv-extractions");
 const CV_UPLOADS_DIR = join(DATA_DIR, "cv-uploads");
 const JOBS_DIR = join(DATA_DIR, "jobs");
+const QUESTIONS_SET_DIR = join(DATA_DIR, "questions-set");
 
 export class FileStorage implements StorageInterface {
   // Job Description methods
@@ -169,6 +170,41 @@ export class FileStorage implements StorageInterface {
   async hasJob(id: string): Promise<boolean> {
     try {
       const filePath = join(JOBS_DIR, `${id}.json`);
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Interview Questions methods
+  async getInterviewQuestions(hash: string): Promise<InterviewQuestions | null> {
+    try {
+      const filePath = join(QUESTIONS_SET_DIR, `${hash}.json`);
+      const data = await fs.readFile(filePath, "utf-8");
+      return JSON.parse(data) as InterviewQuestions;
+    } catch {
+      return null;
+    }
+  }
+
+  async saveInterviewQuestions(
+    hash: string,
+    data: InterviewQuestions
+  ): Promise<void> {
+    try {
+      await fs.mkdir(QUESTIONS_SET_DIR, { recursive: true });
+      const filePath = join(QUESTIONS_SET_DIR, `${hash}.json`);
+      await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+    } catch (error) {
+      console.error("Failed to save interview questions:", error);
+      throw error;
+    }
+  }
+
+  async hasInterviewQuestions(hash: string): Promise<boolean> {
+    try {
+      const filePath = join(QUESTIONS_SET_DIR, `${hash}.json`);
       await fs.access(filePath);
       return true;
     } catch {

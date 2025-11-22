@@ -11,9 +11,6 @@ import type { StorageInterface } from "@/lib/storage/storage-interface";
 import { generateFileHash } from "@/lib/utils/hash-utils";
 import { geminiClient } from "@/lib/gemini-client";
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
-import { inspect } from "node:util";
-import { log } from "node:console";
 
 // Define Zod schema for extracted CV data
 const extractedCVDataSchema = z.object({
@@ -67,7 +64,7 @@ const extractedCVDataSchema = z.object({
           startDate: (item.startDate || "").toString(),
           endDate: item.endDate ? item.endDate.toString() : undefined,
           current: Boolean(item.current),
-          description: Array.isArray(item.description) ? item.description.map(d => (d || "").toString()) : [],
+          description: Array.isArray(item.description) ? item.description.map((d: unknown) => (d || "").toString()) : [],
         };
       }
       return {
@@ -216,7 +213,7 @@ const extractedCVDataSchema = z.object({
           name: (item.name || "").toString(),
           description: (item.description || "").toString(),
           technologies: Array.isArray(item.technologies)
-            ? item.technologies.map(tech => (tech || "").toString()).filter(Boolean)
+            ? item.technologies.map((tech: unknown) => (tech || "").toString()).filter(Boolean)
             : [],
           url: item.url ? item.url.toString() : undefined,
           startDate: item.startDate ? item.startDate.toString() : undefined,
