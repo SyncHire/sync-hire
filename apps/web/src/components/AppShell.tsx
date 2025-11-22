@@ -72,12 +72,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     </Link>
                   </>
                 ) : (
-                  <Link
-                    href="/candidate/jobs"
-                    className={`hover:text-foreground transition-colors ${pathname.startsWith('/candidate/jobs') ? 'text-foreground' : ''}`}
-                  >
-                    Find Jobs
-                  </Link>
+                  <>
+                    <Link
+                      href="/candidate/jobs"
+                      className={`hover:text-foreground transition-colors ${pathname.startsWith('/candidate/jobs') ? 'text-foreground' : ''}`}
+                    >
+                      Find Jobs
+                    </Link>
+                    <Link
+                      href="/candidate/history"
+                      className={`hover:text-foreground transition-colors ${pathname.startsWith('/candidate/history') ? 'text-foreground' : ''}`}
+                    >
+                      Interview History
+                    </Link>
+                  </>
                 )}
               </nav>
             </div>

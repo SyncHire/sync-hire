@@ -13,6 +13,9 @@ const COMPANY_DOMAINS: Record<string, string> = {
   'Cloudflare': 'cloudflare.com',
   'OpenAI': 'openai.com',
   'Spotify': 'spotify.com',
+  'Meta': 'meta.com',
+  'GitHub': 'github.com',
+  'Notion': 'notion.com',
 };
 
 /**

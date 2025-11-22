@@ -23,14 +23,27 @@ export default function CandidateJobListings() {
   const demoUser = getDemoUser();
   const allInterviews = getAllInterviews();
 
-  // Get interviews with job details
-  const interviews = allInterviews.map((interview) => {
-    const job = getJobById(interview.jobId);
-    return {
-      ...interview,
-      job,
-    };
-  });
+  // Get interviews with job details, excluding completed ones for job matching
+  const interviews = allInterviews
+    .filter(interview => interview.status !== 'COMPLETED')
+    .map((interview) => {
+      const job = getJobById(interview.jobId);
+      return {
+        ...interview,
+        job,
+      };
+    });
+
+  // Get completed interviews for history section
+  const completedInterviews = allInterviews
+    .filter(interview => interview.status === 'COMPLETED')
+    .map((interview) => {
+      const job = getJobById(interview.jobId);
+      return {
+        ...interview,
+        job,
+      };
+    });
 
   // CV upload state
   const [workflowStage, setWorkflowStage] = useState<WorkflowStage>('upload');
