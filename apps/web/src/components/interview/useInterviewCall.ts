@@ -68,10 +68,11 @@ export function useInterviewCall({
 
         // Start transcription for closed captions
         try {
-          await videoCall.startTranscription();
-          console.log('🎤 Transcription started');
+          console.log('🎤 Attempting to start transcription...');
+          const transcriptionResult = await videoCall.startTranscription();
+          console.log('🎤 Transcription started:', transcriptionResult);
         } catch (transcriptionErr) {
-          console.warn('⚠️ Could not start transcription:', transcriptionErr);
+          console.error('❌ Could not start transcription:', transcriptionErr);
         }
 
         // Listen for call ended events

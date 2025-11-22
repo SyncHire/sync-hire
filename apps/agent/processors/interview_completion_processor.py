@@ -1,19 +1,30 @@
 """
 Interview Completion Processor
-Intelligently detects when the interview is complete based on conversation context
+Intelligently detects when the interview is complete based on conversation context.
+Broadcasts AI transcript via Stream.io custom events for accurate frontend display.
 """
 import asyncio
 import logging
 import time
-from typing import Optional, List
+from typing import Optional, List, Any
 from dataclasses import dataclass, field, asdict
 from vision_agents.core.processors import Processor
+from vision_agents.core.events.base import BaseEvent
 from vision_agents.core.llm.events import (
     RealtimeAgentSpeechTranscriptionEvent,
     RealtimeUserSpeechTranscriptionEvent,
 )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class CustomCallEvent(BaseEvent):
+    """Custom event class to handle Stream.io custom call events.
+    This prevents the framework from logging errors when receiving custom events.
+    """
+    type: str = "custom"
+    custom: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -37,22 +48,28 @@ class InterviewCompletionProcessor(Processor):
     3. Total questions asked >= expected questions
     4. Interview duration >= minimum time (8 minutes)
 
-    Also collects full transcript for webhook.
+    Also collects full transcript for webhook and sends progress events.
     """
 
     def __init__(
         self,
-        expected_questions: int,
+        questions: List[dict],
         minimum_duration_minutes: int = 8,
         completion_callback: Optional[callable] = None,
+        call: Any = None,
+        agent_user_id: str = "",
     ):
         super().__init__()
-        self.expected_questions = expected_questions
+        self.questions = questions  # List of {text, category} dicts
+        self.expected_questions = len(questions)
         self.minimum_duration_minutes = minimum_duration_minutes
         self.completion_callback = completion_callback
+        self.call = call  # Stream.io call for sending custom events
+        self.agent_user_id = agent_user_id
 
         # Track conversation state
         self.questions_asked = 0
+        self.current_question_index = 0
         self.agent_closing_phrases = []
         self.last_agent_speech_time = None
         self.interview_start_time = None
@@ -77,10 +94,72 @@ class InterviewCompletionProcessor(Processor):
             "walk me through", "what was your", "?",
         }
 
+    async def _send_transcript_event(self, speaker: str, text: str, timestamp: float):
+        """Send transcript to frontend via Stream.io custom event"""
+        if not self.call or not self.agent_user_id:
+            return
+
+        try:
+            await self.call.send_call_event(
+                user_id=self.agent_user_id,
+                custom={
+                    "type": "transcript",
+                    "speaker": speaker,
+                    "text": text,
+                    "timestamp": timestamp,
+                }
+            )
+            logger.debug(f"📤 Sent transcript event: {speaker}: {text[:50]}...")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to send transcript event: {e}")
+
+    async def _send_progress_event(self, question_index: int, category: str):
+        """Send progress update to frontend via Stream.io custom event"""
+        if not self.call or not self.agent_user_id:
+            return
+
+        try:
+            await self.call.send_call_event(
+                user_id=self.agent_user_id,
+                custom={
+                    "type": "progress",
+                    "questionIndex": question_index,
+                    "category": category,
+                    "totalQuestions": self.expected_questions,
+                }
+            )
+            logger.info(f"📊 Sent progress event: question {question_index + 1}/{self.expected_questions} ({category})")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to send progress event: {e}")
+
+    def _check_question_match(self, speech_text: str) -> bool:
+        """Check if agent speech matches the next question and update progress"""
+        if self.current_question_index >= len(self.questions):
+            return False
+
+        next_question = self.questions[self.current_question_index]
+        question_text = next_question["text"].lower()
+        speech_lower = speech_text.lower()
+
+        # Check if significant portion of the question text appears in the speech
+        # Use first 30 chars or key phrases from the question
+        key_phrase = question_text[:50] if len(question_text) > 50 else question_text
+        words = key_phrase.split()
+        # Match if at least 3 consecutive words from question appear in speech
+        for i in range(len(words) - 2):
+            phrase = " ".join(words[i:i+3])
+            if phrase in speech_lower:
+                return True
+
+        return False
+
     async def setup(self, agent):
         """Initialize processor when agent starts"""
         self.interview_start_time = time.time()
         logger.info("🎬 Interview completion processor initialized")
+
+        # Register custom event class to prevent framework errors when receiving our events
+        agent.events.register(CustomCallEvent)
 
         @agent.events.subscribe
         async def on_agent_speech(event: RealtimeAgentSpeechTranscriptionEvent):
@@ -89,7 +168,7 @@ class InterviewCompletionProcessor(Processor):
             text = event.text.strip()
             text_lower = text.lower()
 
-            # Add to transcript
+            # Add to transcript and broadcast to frontend
             if text:
                 elapsed = time.time() - self.interview_start_time
                 self.transcript.append(TranscriptEntry(
@@ -97,11 +176,22 @@ class InterviewCompletionProcessor(Processor):
                     text=text,
                     timestamp=round(elapsed, 2)
                 ))
+                # Send to frontend via custom event
+                await self._send_transcript_event("agent", text, round(elapsed, 2))
 
-            # Count questions
+            # Count questions and check for question transitions
             if any(indicator in text_lower for indicator in self.question_indicators):
                 self.questions_asked += 1
                 logger.debug(f"📊 Questions asked: {self.questions_asked}/{self.expected_questions}")
+
+                # Check if this matches a specific question and update progress
+                if self._check_question_match(text):
+                    current_q = self.questions[self.current_question_index]
+                    await self._send_progress_event(
+                        self.current_question_index,
+                        current_q["category"]
+                    )
+                    self.current_question_index += 1
 
             # Detect closing phrases
             if any(keyword in text_lower for keyword in self.closing_keywords):
@@ -117,14 +207,19 @@ class InterviewCompletionProcessor(Processor):
             text = event.text.strip()
             text_lower = text.lower()
 
-            # Add to transcript
-            if text:
+            # Add to transcript and broadcast to frontend
+            # Note: Gemini realtime often only provides punctuation for user speech
+            # The frontend also uses Stream.io closed captions as a backup
+            if text and len(text) > 1:  # Skip if only punctuation
                 elapsed = time.time() - self.interview_start_time
                 self.transcript.append(TranscriptEntry(
                     speaker="user",
                     text=text,
                     timestamp=round(elapsed, 2)
                 ))
+                # Send to frontend via custom event
+                await self._send_transcript_event("user", text, round(elapsed, 2))
+                logger.debug(f"📝 User transcript: {text[:50]}...")
 
             # If user also says goodbye, definitely time to end
             if "goodbye" in text_lower or "bye" in text_lower:

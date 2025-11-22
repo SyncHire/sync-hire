@@ -69,8 +69,6 @@ function InterviewCallContent({
   // Full transcript history built from caption events
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
 
-  const processedCaptionIds = useRef<Set<string>>(new Set());
-
   const scrollRef = useRef<HTMLDivElement>(null);
   const [agentConnected, setAgentConnected] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -111,55 +109,170 @@ function InterviewCallContent({
     setAgentConnected(hasAgent);
   }, [participants]);
 
+  // Listen for custom events from AI agent (transcript and progress)
+  useEffect(() => {
+    const handleCustomEvent = (event: { custom?: { type?: string; speaker?: string; text?: string; timestamp?: number; questionIndex?: number; category?: string } }) => {
+      const payload = event.custom;
+
+      // Handle transcript events (both AI and user from Gemini)
+      if (payload?.type === 'transcript' && payload.text) {
+        const text = payload.text;
+        const isAgent = payload.speaker === 'agent';
+        console.log(`📨 ${isAgent ? 'AI' : 'User'} transcript event:`, text.substring(0, 50) + '...');
+
+        setTranscript(prev => {
+          const lastMessage = prev[prev.length - 1];
+          const speakerId = isAgent ? 'agent' : 'user';
+          const now = Date.now();
+          const timeSinceLastMessage = lastMessage ? now - lastMessage.timestamp : Infinity;
+          const TIME_GAP_THRESHOLD = 1500; // 1.5 seconds
+
+          // If last message is from same speaker AND within time threshold, append to it
+          if (lastMessage && lastMessage.isAI === isAgent && timeSinceLastMessage < TIME_GAP_THRESHOLD) {
+            const updated = [...prev];
+            updated[updated.length - 1] = {
+              ...lastMessage,
+              text: lastMessage.text + ' ' + text,
+              timestamp: now, // Update timestamp to track last update
+            };
+            return updated;
+          }
+
+          // New message (different speaker OR time gap exceeded)
+          return [...prev, {
+            id: `${speakerId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            speakerId,
+            speakerName: isAgent ? 'AI Interviewer' : 'You',
+            text,
+            timestamp: Date.now(),
+            isAI: isAgent,
+          }];
+        });
+      }
+
+      // Handle progress events
+      if (payload?.type === 'progress' && typeof payload.questionIndex === 'number') {
+        console.log('📊 Progress event:', payload.questionIndex + 1, payload.category);
+        setCurrentQuestionIndex(payload.questionIndex);
+      }
+    };
+
+    call.on('custom', handleCustomEvent);
+    return () => {
+      call.off('custom', handleCustomEvent);
+    };
+  }, [call]);
+
+  // Track caption segments to handle Stream's segmented delivery
+  // Key: speakerId, Value: { startTime, lastText }
+  const captionSegmentsRef = useRef<Map<string, { startTime: string; lastText: string }>>(new Map());
+  // Track last logged speaker for batched logging
+  const lastLoggedSpeakerRef = useRef<string | null>(null);
+
   // Build transcript from closed captions - streaming updates
   useEffect(() => {
     if (closedCaptions.length === 0) {
       return;
     }
 
-    // Process each caption - update existing or add new
+    // Process each caption
     closedCaptions.forEach((caption: CallClosedCaption) => {
       const text = caption.text.trim();
       if (!text) {
         return;
       }
 
+      const speakerId = caption.user.id;
+      const startTime = caption.start_time || '';
       const isAI = caption.user.name?.toLowerCase().includes('interviewer') ||
                    caption.user.name?.toLowerCase().includes('ai') ||
-                   caption.user.id?.startsWith('agent-');
+                   speakerId?.startsWith('agent-');
 
-      const speakerId = caption.user.id;
-      const timestamp = caption.start_time ? new Date(caption.start_time).getTime() : Date.now();
+      // Skip AI captions - we get AI text from custom events instead
+      if (isAI) {
+        return;
+      }
+
+      // Get the last segment info for this speaker
+      const lastSegment = captionSegmentsRef.current.get(speakerId);
+      const isNewSegment = !lastSegment || lastSegment.startTime !== startTime;
+      const isSameText = lastSegment?.lastText === text;
+
+      // Skip if we've already processed this exact text
+      if (isSameText) {
+        return;
+      }
+
+      // Update segment tracking
+      captionSegmentsRef.current.set(speakerId, { startTime, lastText: text });
 
       setTranscript(prev => {
         const lastMessage = prev[prev.length - 1];
+        const speakerIcon = isAI ? '🤖' : '👤';
+        const speakerName = isAI ? 'AI' : caption.user.name || 'User';
+        const now = Date.now();
+        const timeSinceLastMessage = lastMessage ? now - lastMessage.timestamp : Infinity;
+        const TIME_GAP_THRESHOLD = 1500; // 1.5 seconds
 
-        // If same speaker and within 10 seconds, update the last message
-        if (lastMessage &&
-            lastMessage.speakerId === speakerId &&
-            timestamp - lastMessage.timestamp < 10000) {
-          // Update last message with new text
-          const updated = [...prev];
-          updated[updated.length - 1] = {
-            ...lastMessage,
-            text: text, // Caption text is cumulative from Stream
-          };
-          return updated;
+        // Same speaker
+        if (lastMessage && lastMessage.speakerId === speakerId) {
+          // If time gap exceeded, start new message even for same speaker
+          if (timeSinceLastMessage >= TIME_GAP_THRESHOLD) {
+            console.log(`📝 ${speakerIcon} ${speakerName} (new after ${Math.round(timeSinceLastMessage / 1000)}s gap): ${text}`);
+            lastLoggedSpeakerRef.current = speakerId;
+            const newId = `msg-${now}-${Math.random().toString(36).substr(2, 9)}`;
+            return [...prev, {
+              id: newId,
+              speakerId,
+              speakerName: caption.user.name || 'Unknown',
+              text,
+              timestamp: now,
+              isAI,
+            }];
+          }
+
+          if (isNewSegment) {
+            // New segment from same speaker - APPEND to existing message
+            const updated = [...prev];
+            const newText = lastMessage.text + ' ' + text;
+            updated[updated.length - 1] = {
+              ...lastMessage,
+              text: newText,
+              timestamp: now, // Update timestamp to track last update
+            };
+            // Log continuation
+            console.log(`📝 ${speakerIcon} ${speakerName}: ...${text}`);
+            return updated;
+          } else {
+            // Same segment - text is cumulative, check if it's an extension
+            // If new text is longer and contains similar content, replace
+            if (text.length >= lastMessage.text.length) {
+              const updated = [...prev];
+              updated[updated.length - 1] = {
+                ...lastMessage,
+                text: text,
+                timestamp: now, // Update timestamp to track last update
+              };
+              return updated;
+            }
+            return prev;
+          }
         }
 
-        // New speaker or gap - create new message
-        const captionId = `${speakerId}-${timestamp}`;
-        if (processedCaptionIds.current.has(captionId)) {
-          return prev;
+        // Different speaker - add new message
+        // Log speaker change
+        if (lastLoggedSpeakerRef.current !== speakerId) {
+          console.log(`📝 ${speakerIcon} ${speakerName}: ${text}`);
+          lastLoggedSpeakerRef.current = speakerId;
         }
-        processedCaptionIds.current.add(captionId);
 
+        const newId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         return [...prev, {
-          id: captionId,
+          id: newId,
           speakerId,
           speakerName: caption.user.name || 'Unknown',
           text,
-          timestamp,
+          timestamp: Date.now(),
           isAI,
         }];
       });
@@ -434,11 +547,10 @@ function InterviewCallContent({
             </div>
 
             {/* User PIP (Picture-in-Picture) */}
-            <div className="absolute top-6 right-6 w-56 aspect-video rounded-xl bg-zinc-900 overflow-hidden border border-white/20 shadow-2xl">
+            <div className="pip-video-container absolute top-6 right-6 w-56 aspect-video rounded-xl bg-zinc-900 overflow-hidden border border-white/20 shadow-2xl">
               {localParticipant ? (
                 <ParticipantView
                   participant={localParticipant}
-                  className="h-full w-full object-cover"
                   ParticipantViewUI={null}
                 />
               ) : (
@@ -458,31 +570,32 @@ function InterviewCallContent({
               )}
             </div>
 
-            {/* Floating Controls */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/20 shadow-2xl z-10">
+            {/* Floating Controls - bottom right */}
+            <div className="absolute bottom-4 right-4 flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-black/70 backdrop-blur-xl border border-white/10 shadow-xl z-10">
               <Button
-                variant={isMicMuted ? "destructive" : "secondary"}
+                variant={isMicMuted ? "destructive" : "ghost"}
                 size="icon"
-                className="h-12 w-12 rounded-xl transition-all border border-white/20"
+                className={`h-8 w-8 rounded-md transition-colors ${!isMicMuted && 'text-white/80 hover:text-white hover:bg-white/10'}`}
                 onClick={handleToggleMic}
               >
-                {isMicMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                {isMicMuted ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
               </Button>
               <Button
-                variant={isCameraMuted ? "destructive" : "secondary"}
+                variant={isCameraMuted ? "destructive" : "ghost"}
                 size="icon"
-                className="h-12 w-12 rounded-xl border border-white/20"
+                className={`h-8 w-8 rounded-md transition-colors ${!isCameraMuted && 'text-white/80 hover:text-white hover:bg-white/10'}`}
                 onClick={handleToggleCamera}
               >
-                {isCameraMuted ? <VideoOff className="h-5 w-5" /> : <VideoIcon className="h-5 w-5" />}
+                {isCameraMuted ? <VideoOff className="h-3.5 w-3.5" /> : <VideoIcon className="h-3.5 w-3.5" />}
               </Button>
-              <div className="w-px h-8 bg-white/20 mx-2" />
+              <div className="w-px h-5 bg-white/20" />
               <Button
-                variant="destructive"
-                className="h-12 px-6 rounded-xl font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-md text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-colors"
                 onClick={handleEndCall}
               >
-                <PhoneOff className="mr-2 h-4 w-4" /> End Session
+                <PhoneOff className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
@@ -589,34 +702,6 @@ function InterviewCallContent({
               ))
             )}
 
-            {/* Typing indicator when agent is processing */}
-            {agentConnected && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex gap-4"
-              >
-                <div className="h-8 w-8 rounded-lg shrink-0 overflow-hidden border border-border relative">
-                  <Image
-                    src={photorealistic_professional_woman_headshot}
-                    alt="AI"
-                    fill
-                    sizes="32px"
-                    className="object-cover"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-blue-400">
-                    AI Interviewer
-                  </div>
-                  <div className="p-4 rounded-2xl bg-secondary/50 border border-border w-24 rounded-tl-none flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" />
-                    <div className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '75ms' }} />
-                    <div className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  </div>
-                </div>
-              </motion.div>
-            )}
           </div>
 
         </div>

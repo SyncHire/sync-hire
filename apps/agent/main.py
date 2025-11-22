@@ -132,6 +132,7 @@ class Question(BaseModel):
     text: str
     type: str
     duration: int
+    category: str  # Interview stage: Introduction, Technical Skills, etc.
 
 
 class JoinInterviewRequest(BaseModel):
@@ -181,12 +182,12 @@ async def _run_interview_background(
     try:
         logger.info(f"🎯 Background task: Starting interview for {candidate_name}")
 
-        # Extract question text from Question objects
-        question_texts = [q.text for q in questions]
+        # Convert Question objects to dicts with text and category
+        question_data = [{"text": q.text, "category": q.category} for q in questions]
 
         await agent_manager.start_interview(
             call_id=call_id,
-            questions=question_texts,
+            questions=question_data,
             candidate_name=candidate_name,
             job_title=job_title
         )
