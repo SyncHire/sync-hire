@@ -88,12 +88,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     >
                       Jobs
                     </Link>
-                    <Link
-                      href="/hr/applicants"
-                      className={`hover:text-foreground transition-colors ${pathname.startsWith("/hr/applicants") ? "text-foreground" : ""}`}
-                    >
-                      Candidates
-                    </Link>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-help text-muted-foreground/70 hover:text-muted-foreground transition-colors">
+                            Candidates
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>View candidates from a specific job</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
