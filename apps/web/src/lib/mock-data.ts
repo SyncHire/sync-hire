@@ -767,7 +767,8 @@ export function getDemoUser(): User {
   return users[DEMO_USER_ID];
 }
 
-// Jobs
+// Jobs - these are now accessed through APIs that merge file and memory storage
+// For backward compatibility, provide synchronous access to memory storage only
 export function getJobById(id: string): Job | undefined {
   return jobs[id];
 }

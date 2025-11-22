@@ -1,6 +1,5 @@
 "use client";
 
-import { getJobById } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,11 +9,48 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ArrowLeft, Clock, MapPin, DollarSign, Video, Type, Code, Plus, Trash2, MoreHorizontal, Wand2, BrainCircuit } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import type { Job } from "@/lib/mock-data";
 
 export default function HRJDDetail() {
   const params = useParams();
-  const job = getJobById(params?.id as string);
+  const [job, setJob] = useState<Job | null | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
+  const [questions, setQuestions] = useState<Job["questions"]>([]);
+
+  useEffect(() => {
+    async function fetchJob() {
+      try {
+        const response = await fetch("/api/jobs");
+        if (!response.ok) throw new Error("Failed to fetch jobs");
+        const result = await response.json();
+        const jobs = result.data || [];
+        const foundJob = jobs.find((j: Job) => j.id === params?.id);
+        setJob(foundJob || null);
+        if (foundJob?.questions) {
+          setQuestions(foundJob.questions);
+        }
+      } catch (error) {
+        console.error("Error fetching job:", error);
+        setJob(null);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    if (params?.id) {
+      fetchJob();
+    }
+  }, [params?.id]);
+
+  if (isLoading) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-8 px-4 py-8">
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Loading job details...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!job) {
     return (
@@ -34,8 +70,6 @@ export default function HRJDDetail() {
       </div>
     );
   }
-
-  const [questions, setQuestions] = useState(job.questions);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500 px-4 py-8">

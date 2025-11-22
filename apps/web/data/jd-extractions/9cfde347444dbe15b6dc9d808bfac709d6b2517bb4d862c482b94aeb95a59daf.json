@@ -1,0 +1,33 @@
+{
+  "title": "Software Developer",
+  "responsibilities": [
+    "Develop and implement new software programs",
+    "Maintain and improve the performance of existing software and identify area for modification in existing programs and subsequently develop these modifications",
+    "Design and update software database",
+    "Test and maintain software products to ensure strong functionality and optimization",
+    "Build efficient, testable and reusable PHP code in CakePHP",
+    "Solve complex performance problems and architectural challenges",
+    "Manage code documentation and version control"
+  ],
+  "requirements": [
+    "A degree and a technical background",
+    "Degrees in Computer Science, Computer Software Engineering, or Software Programming and Development are advantageous",
+    "Knowledge and interest in computer systems and the latest technologies",
+    "Ability to learn new technologies quickly",
+    "Strong knowledge of the PHP web framework CakePHP",
+    "Basic knowledge of React Js",
+    "Understanding of MVC design patterns",
+    "Basic understanding of front-end technologies, such as JavaScript, HTML5, and CSS3",
+    "Knowledge of object-oriented PHP programming",
+    "REST API development",
+    "Familiarity with limitations of PHP as a platform and its workarounds",
+    "Creating database schemas that represent and support business processes",
+    "Familiarity with MySQL",
+    "Proficient understanding of code versioning tools, such as Git",
+    "Integration with third-party API",
+    "Minimum experience of 2 years"
+  ],
+  "seniority": "Mid-level",
+  "location": "Yavatmal, Maharashtra",
+  "employmentType": "Full-time"
+}
