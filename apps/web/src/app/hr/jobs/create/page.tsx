@@ -269,13 +269,17 @@ export default function JobCreationPage() {
       const result = await response.json();
 
       // Show toast based on AI matching status
+      console.log("📊 Create job response:", { aiMatchingStatus: result.data.aiMatchingStatus, data: result.data });
       if (result.data.aiMatchingStatus === "scanning") {
         toast.success("Job created! Scanning for matching candidates...", { duration: 3000 });
       } else {
         toast.success("Job created!", { duration: 2000 });
       }
 
-      router.push(`/hr/jobs/${result.data.id}`);
+      // Add scanning param to trigger polling on the job page
+      const scanParam = result.data.aiMatchingStatus === "scanning" ? "?scanning=true" : "";
+      console.log("🔗 Navigating to:", `/hr/jobs/${result.data.id}${scanParam}`);
+      router.push(`/hr/jobs/${result.data.id}${scanParam}`);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to create job";

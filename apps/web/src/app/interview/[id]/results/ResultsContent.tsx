@@ -21,8 +21,9 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import type { AIEvaluation, Interview, Job } from "@/lib/mock-data";
-import { useInterviewDetails } from "@/lib/hooks/use-interview";
+import { useAnalyzeInterview, useInterviewDetails } from "@/lib/hooks/use-interview";
 
 interface ResultsContentProps {
   interview: Interview;
@@ -112,16 +113,40 @@ export default function ResultsContent({
   job,
   companyLogo,
 }: ResultsContentProps) {
-  // Only poll if interview is completed but has NO score yet (real-time interview just finished)
-  // Don't poll for mock interviews that have a score but no aiEvaluation
-  const shouldPoll =
-    initialInterview.status === "COMPLETED" &&
-    !initialInterview.aiEvaluation &&
-    initialInterview.score === undefined;
+  // Track if we've already triggered analysis
+  const analysisTriggeredRef = useRef(false);
 
-  const { data: polledData } = useInterviewDetails(
+  // Mutation to trigger analysis
+  const analyzeInterview = useAnalyzeInterview();
+
+  // Check if interview needs analysis (completed but no aiEvaluation)
+  const needsAnalysis =
+    initialInterview.status === "COMPLETED" &&
+    !initialInterview.aiEvaluation;
+
+  // Poll while waiting for analysis
+  const shouldPoll = needsAnalysis;
+
+  const { data: polledData, refetch } = useInterviewDetails(
     shouldPoll ? initialInterview.id : null,
   );
+
+  // Auto-trigger analysis if needed
+  useEffect(() => {
+    if (needsAnalysis && !analysisTriggeredRef.current && !analyzeInterview.isPending) {
+      analysisTriggeredRef.current = true;
+      console.log("🔄 Auto-triggering interview analysis...");
+      analyzeInterview.mutate(initialInterview.id, {
+        onSuccess: () => {
+          console.log("✅ Analysis triggered, refreshing...");
+          refetch();
+        },
+        onError: (error) => {
+          console.error("❌ Analysis failed:", error);
+        },
+      });
+    }
+  }, [needsAnalysis, initialInterview.id, analyzeInterview, refetch]);
 
   // Use polled data if available and has evaluation, otherwise use initial
   const interview =
@@ -129,8 +154,8 @@ export default function ResultsContent({
       ? polledData.data.interview
       : initialInterview;
 
-  // Only show "Generating" if we're actively polling (no score yet)
-  const isGenerating = shouldPoll && !interview.aiEvaluation && interview.score === undefined;
+  // Show "Generating" while analysis is in progress
+  const isGenerating = needsAnalysis && !interview.aiEvaluation;
 
   const evaluation = buildEvaluation(interview.aiEvaluation, interview.score);
   const hasTranscript = Boolean(interview.transcript);

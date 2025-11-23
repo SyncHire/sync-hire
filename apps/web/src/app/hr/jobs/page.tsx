@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Building2,
   Clock,
+  Loader2,
   MapPin,
   MoreHorizontal,
   Plus,
@@ -12,31 +13,16 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useJobs } from "@/lib/hooks/use-job-questions";
 import { getCompanyLogoUrl } from "@/lib/logo-utils";
-import type { Job } from "@/lib/mock-data";
 
 export default function HRJDListings() {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: jobs = [], isLoading } = useJobs({ pollWhileScanning: true });
 
-  useEffect(() => {
-    async function fetchJobs() {
-      try {
-        const response = await fetch("/api/jobs");
-        if (!response.ok) throw new Error("Failed to fetch jobs");
-        const result = await response.json();
-        setJobs(result.data || []);
-      } catch (error) {
-        console.error("Error fetching jobs:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchJobs();
-  }, []);
+  // Check if any jobs are currently scanning
+  const hasScanning = jobs.some((job) => job.aiMatchingStatus === "scanning");
 
   if (isLoading) {
     return (
@@ -147,12 +133,19 @@ export default function HRJDListings() {
                       />
                     ))}
                   </div>
-                  <span className="text-xs font-medium text-muted-foreground">
-                    <strong className="text-foreground">
-                      {job.applicantsCount}
-                    </strong>{" "}
-                    Applicants
-                  </span>
+                  {job.aiMatchingStatus === "scanning" ? (
+                    <span className="text-xs font-medium text-blue-400 flex items-center gap-1.5 animate-pulse">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Scanning CVs...
+                    </span>
+                  ) : (
+                    <span className="text-xs font-medium text-muted-foreground">
+                      <strong className="text-foreground">
+                        {job.applicantsCount}
+                      </strong>{" "}
+                      Applicants
+                    </span>
+                  )}
                 </div>
 
                 <span className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-all duration-300">

@@ -25,6 +25,7 @@ export async function getJobData(id: string): Promise<Job | undefined> {
 
 /**
  * Get all jobs, merging file storage with memory
+ * Also computes accurate applicantsCount from actual applications
  */
 export async function getAllJobsData(): Promise<Job[]> {
   try {
@@ -43,11 +44,23 @@ export async function getAllJobsData(): Promise<Job[]> {
 
     // Sort by createdAt, newest first (real jobs will appear before mock jobs)
     const jobs = Array.from(jobMap.values());
-    return jobs.sort((a, b) => {
+    const sortedJobs = jobs.sort((a, b) => {
       const dateA = new Date(a.createdAt).getTime();
       const dateB = new Date(b.createdAt).getTime();
       return dateB - dateA; // Descending order (newest first)
     });
+
+    // Compute accurate applicant counts from interviews (interviews are the source of truth)
+    const allInterviews = await storage.getAllInterviews();
+    const jobsWithCounts = sortedJobs.map((job) => {
+      const jobInterviews = allInterviews.filter((i) => i.jobId === job.id);
+      return {
+        ...job,
+        applicantsCount: jobInterviews.length,
+      };
+    });
+
+    return jobsWithCounts;
   } catch (error) {
     console.error(
       new Error("Failed to fetch jobs from file storage", { cause: error }),

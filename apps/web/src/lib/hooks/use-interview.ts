@@ -133,4 +133,26 @@ export function useInterviewDetails(
   });
 }
 
+/**
+ * Hook to trigger AI analysis for an interview
+ */
+export function useAnalyzeInterview() {
+  return useMutation({
+    mutationFn: async (interviewId: string) => {
+      const response = await fetch(`/api/interviews/${interviewId}/analyze`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Failed to analyze interview" }));
+        throw new Error(errorData.error || "Failed to analyze interview");
+      }
+
+      return response.json();
+    },
+  });
+}
+
 export type { InterviewDetailsResponse };

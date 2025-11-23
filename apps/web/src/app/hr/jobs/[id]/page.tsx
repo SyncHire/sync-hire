@@ -16,7 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -44,13 +44,31 @@ interface Question {
 
 export default function HRJDDetail() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const jobId = params?.id as string | undefined;
+  const scanningParam = searchParams.get("scanning") === "true";
 
   // Track previous status for toast notification
   const [prevStatus, setPrevStatus] = useState<string | undefined>();
+  // Force polling for a few seconds after navigating from job creation
+  const [forcePolling, setForcePolling] = useState(scanningParam);
 
-  // Fetch job with react-query, poll while scanning
-  const { data: job, isLoading } = useJob(jobId, { pollWhileScanning: true });
+  // Fetch job with react-query, poll while scanning or force polling
+  const { data: job, isLoading } = useJob(jobId, { pollWhileScanning: true, forcePolling });
+
+  // Stop force polling after 10 seconds or when scanning completes
+  useEffect(() => {
+    if (forcePolling) {
+      // Stop if scanning completed
+      if (job?.aiMatchingStatus === "complete") {
+        setForcePolling(false);
+        return;
+      }
+      // Timeout after 10 seconds
+      const timeout = setTimeout(() => setForcePolling(false), 10000);
+      return () => clearTimeout(timeout);
+    }
+  }, [forcePolling, job?.aiMatchingStatus]);
 
   const [questions, setQuestions] = useState<Question[]>([]);
 
@@ -255,6 +273,15 @@ export default function HRJDDetail() {
               >
                 Active
               </Badge>
+              {job.aiMatchingStatus === "scanning" && (
+                <Badge
+                  variant="secondary"
+                  className="bg-blue-500/10 text-blue-400 border-blue-500/20 font-normal px-2.5 py-0.5 animate-pulse flex items-center gap-1.5"
+                >
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Scanning CVs...
+                </Badge>
+              )}
             </div>
             <p className="text-lg text-muted-foreground mb-3 flex items-center gap-2">
               <Building2 className="h-5 w-5 text-orange-600 dark:text-orange-400" />
