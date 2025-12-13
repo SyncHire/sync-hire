@@ -3,22 +3,21 @@
 ## Architecture
 
 ```
-Firebase Hosting (synchire-hackathon.web.app)
+Firebase App Hosting (synchire--synchire-hackathon.asia-southeast1.hosted.app)
     │
-    ├── Next.js SSR + API routes
-    │
-    └── /python-api/** → Cloud Run (sync-hire-agent)
+    └── Next.js SSR + API routes
+            │
+            └── calls → Cloud Run (sync-hire-agent)
 ```
 
-**Why this pattern?**
-- No CORS issues (same origin)
-- Unified domain for frontend + backend
-- Automatic SSL via Firebase
+**Stack:**
+- **Next.js** → Firebase App Hosting (auto-deploy on GitHub push)
+- **Python Agent** → Cloud Run (manual deploy via script)
+- **Secrets** → Google Secret Manager
 
 ## Prerequisites
 
 ```bash
-# Tools required
 gcloud --version    # Google Cloud CLI
 docker --version    # Docker
 pnpm --version      # Package manager
@@ -36,149 +35,115 @@ firebase login
 
 ```bash
 cd apps/agent
-cp .env.production.example .env.production
-# Edit .env.production with actual values
-
 ./deploy-cloud-run.sh production
 ```
 
-### 2. Next.js Web (Firebase Hosting)
+### 2. Next.js Web (App Hosting)
 
+**First time setup:**
 ```bash
 cd apps/web
-cp .env.production.example .env.production
-# Edit .env.production with actual values
+./setup-apphosting.sh                    # Set up secrets
+firebase apphosting:backends:create      # Connect GitHub repo
+```
 
-./deploy.sh production
+**Deploy:** Push to GitHub → auto-deploys
+```bash
+git push origin main
+```
+
+**Manual rollout:**
+```bash
+firebase apphosting:rollouts:create synchire --git-branch main
 ```
 
 ### 3. Verify
 
 ```bash
-# Health check
-curl https://synchire-hackathon.web.app/python-api/health
+# App Hosting
+curl https://synchire--synchire-hackathon.asia-southeast1.hosted.app
 
-# Test agent proxy
-curl https://synchire-hackathon.web.app/api/test-agent
+# Python Agent health
+curl https://sync-hire-agent-297349712190.asia-southeast1.run.app/health
 ```
 
-## Environment Variables
+## Configuration
+
+### Next.js (`apps/web/apphosting.yaml`)
+
+Environment variables and secrets are configured in `apphosting.yaml`:
+
+| Variable | Type | Availability |
+|----------|------|--------------|
+| `NEXT_PUBLIC_STREAM_API_KEY` | value | BUILD + RUNTIME |
+| `PYTHON_AGENT_URL` | value | RUNTIME |
+| `API_SECRET_KEY` | secret | RUNTIME |
+| `STREAM_API_SECRET` | secret | RUNTIME |
+| `GEMINI_API_KEY` | secret | RUNTIME |
 
 ### Python Agent (`apps/agent/.env.production`)
 
-| Variable | Source | Required |
-|----------|--------|----------|
-| `API_SECRET_KEY` | Secret Manager | Yes |
-| `STREAM_API_KEY` | Secret Manager | Yes |
-| `STREAM_API_SECRET` | Secret Manager | Yes |
-| `GEMINI_API_KEY` | Secret Manager | Yes |
-| `HEYGEN_API_KEY` | Secret Manager | Yes |
-| `NEXTJS_WEBHOOK_URL` | env | Yes |
-
-### Next.js Web (`apps/web/.env.production`)
-
-| Variable | Source | Required |
-|----------|--------|----------|
-| `GCP_PROJECT_ID` | env | Yes |
-| `API_SECRET_KEY` | env | Yes |
-| `NEXT_PUBLIC_STREAM_API_KEY` | env | Yes |
-| `STREAM_API_SECRET` | env | Yes |
-| `GEMINI_API_KEY` | env | Yes |
-
-## Secret Manager Commands
-
-```bash
-# Create a secret
-echo -n 'value' | gcloud secrets create SECRET_NAME --data-file=-
-
-# Update a secret
-echo -n 'new-value' | gcloud secrets versions add SECRET_NAME --data-file=-
-
-# Read a secret
-gcloud secrets versions access latest --secret=SECRET_NAME
-
-# Generate API key
-openssl rand -base64 32
-```
-
-## Cloud Run Configuration
-
-| Setting | Value | Reason |
-|---------|-------|--------|
-| Min instances | 1 | Avoid cold starts |
-| Max instances | 10 | Handle concurrent load |
-| Memory | 2Gi | WebRTC + LLM needs |
-| CPU | 2 | Real-time processing |
-| Timeout | 3600s | Long interviews |
-| Region | asia-southeast1 | Low latency |
-
-## IAM Permissions
-
-```bash
-# Grant public access to Cloud Run (required for Firebase proxy)
-gcloud run services add-iam-policy-binding sync-hire-agent \
-  --region=asia-southeast1 \
-  --member="allUsers" \
-  --role="roles/run.invoker"
-
-# Grant Secret Manager access to Cloud Run service account
-PROJECT_NUMBER=$(gcloud projects describe synchire-hackathon --format='value(projectNumber)')
-gcloud projects add-iam-policy-binding synchire-hackathon \
-  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
-  --role="roles/secretmanager.secretAccessor"
-```
+| Variable | Source |
+|----------|--------|
+| `API_SECRET_KEY` | Secret Manager |
+| `STREAM_API_KEY` | Secret Manager |
+| `STREAM_API_SECRET` | Secret Manager |
+| `GEMINI_API_KEY` | Secret Manager |
+| `HEYGEN_API_KEY` | Secret Manager |
 
 ## Useful Commands
 
+### App Hosting
 ```bash
-# View Cloud Run logs
+# List backends
+firebase apphosting:backends:list
+
+# View rollouts
+firebase apphosting:rollouts:list synchire
+
+# Trigger manual rollout
+firebase apphosting:rollouts:create synchire --git-branch main
+
+# Set secret
+firebase apphosting:secrets:set SECRET_NAME
+
+# Grant backend access to secret
+firebase apphosting:secrets:grantaccess SECRET_NAME --backend synchire
+```
+
+### Cloud Run
+```bash
+# View logs
 gcloud logs tail --service=sync-hire-agent
 
-# List Cloud Run revisions
+# List revisions
 gcloud run revisions list --service=sync-hire-agent --region=asia-southeast1
 
-# Rollback to previous revision
+# Rollback
 gcloud run services update-traffic sync-hire-agent \
   --region=asia-southeast1 \
   --to-revisions=REVISION_NAME=100
-
-# Firebase hosting status
-firebase hosting:sites:list
-
-# Re-authenticate Firebase
-firebase login --reauth
 ```
 
 ## Troubleshooting
 
-**403 Forbidden on API routes**
-- Cloud Run needs public IAM access (see IAM commands above)
-
-**502 Bad Gateway on /python-api/**
-- Check Cloud Run service is running: `gcloud run services describe sync-hire-agent --region=asia-southeast1`
-- Check logs: `gcloud logs tail --service=sync-hire-agent`
+**App Hosting build fails with secret error**
+```bash
+firebase apphosting:secrets:grantaccess SECRET_NAME --backend synchire
+```
 
 **"Invalid API key" errors**
 - Verify `API_SECRET_KEY` matches in both services
-- Check: `gcloud secrets versions access latest --secret=API_SECRET_KEY`
 
-**Cold start delays (10-20s)**
-- Set `--min-instances=1` to keep instance warm
-
-**Firebase auth expired**
-- Run: `firebase login --reauth`
+**Cold start delays**
+- Python agent: Set `--min-instances=1` in deploy script
+- App Hosting: Set `minInstances: 1` in apphosting.yaml
 
 ## Cost Estimate
 
 | Service | Monthly Cost |
 |---------|-------------|
-| Cloud Run (1 always-on instance) | ~$15-20 |
-| Firebase Hosting | ~$5-10 |
+| Cloud Run (Python agent) | ~$15-20 |
+| App Hosting (Next.js) | ~$5-15 |
 | Secret Manager | <$1 |
-| Cloud SQL (db-f1-micro) | ~$10 |
-| **Total** | **~$30-40** |
-
-**To reduce costs:**
-- Set `--min-instances=0` (adds cold start delay)
-- Use `db-f1-micro` for Cloud SQL
-- Monitor bandwidth usage
+| **Total** | **~$20-35** |
