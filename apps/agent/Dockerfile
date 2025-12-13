@@ -24,11 +24,14 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --no-install-project
 
 # Copy application code
-COPY . .
+COPY pyproject.toml uv.lock ./
+COPY *.py ./
+COPY agents/ ./agents/
+COPY processors/ ./processors/
+COPY *.sh *.md ./
 
 # Install project into virtual environment
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev --no-editable --compile-bytecode
+RUN uv sync --locked --no-dev --no-editable
 
 # Runtime stage
 FROM python:3.13-slim

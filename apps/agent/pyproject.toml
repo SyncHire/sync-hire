@@ -26,3 +26,7 @@ dev = [
     "ruff>=0.8.0",
     "mypy>=1.0.0",
 ]
+
+[tool.uv]
+# Use CPU-only PyTorch for Cloud Run (no GPU support)
+extra-index-url = ["https://download.pytorch.org/whl/cpu"]
