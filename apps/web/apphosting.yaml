@@ -1,0 +1,32 @@
+# Firebase App Hosting Configuration
+# https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  cpu: 1
+  memoryMiB: 512
+  minInstances: 0
+  maxInstances: 10
+  concurrency: 80
+
+env:
+  # Public environment variables (safe to commit)
+  - variable: NEXT_PUBLIC_STREAM_API_KEY
+    value: 98ftk7pxystq
+  - variable: NEXT_PUBLIC_DEMO_USER_NAME
+    value: Demo Candidate
+  - variable: NEXT_PUBLIC_DEMO_USER_EMAIL
+    value: demo@synchire.com
+  - variable: NEXT_PUBLIC_LOGO_DEV_KEY
+    value: pk_FgUgq-__SdOal0JNAYVqJQ
+
+  # Python Agent Cloud Run URL
+  - variable: PYTHON_AGENT_URL
+    value: https://sync-hire-agent-297349712190.asia-southeast1.run.app
+
+  # Secrets (stored in Secret Manager)
+  - variable: API_SECRET_KEY
+    secret: API_SECRET_KEY
+  - variable: STREAM_API_SECRET
+    secret: STREAM_API_SECRET
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY

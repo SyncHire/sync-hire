@@ -3,33 +3,24 @@
  *
  * Manages the Python agent API URL based on environment:
  * - Development: Direct connection to localhost:8080
- * - Production: Firebase proxy to Cloud Run via /python-api
+ * - Production: Direct connection to Cloud Run service
  */
 
 /**
  * Get the agent API base URL based on environment
  *
- * In production (Firebase Hosting), uses the /python-api proxy route
- * which Firebase Hosting rewrites to the Cloud Run service.
- *
- * In development, connects directly to localhost.
+ * Uses PYTHON_AGENT_URL environment variable which is set to:
+ * - Development: http://localhost:8080
+ * - Production: Cloud Run service URL (set in apphosting.yaml)
  */
 export function getAgentApiUrl(): string {
-  // If explicitly set in environment, use that
-  if (process.env.AGENT_API_URL) {
-    return process.env.AGENT_API_URL;
+  // Use PYTHON_AGENT_URL if set (production or custom dev setup)
+  if (process.env.PYTHON_AGENT_URL) {
+    return process.env.PYTHON_AGENT_URL;
   }
 
-  // Production: use absolute URL for server-side fetch
-  if (process.env.NODE_ENV === 'production') {
-    // Server-side needs absolute URL - use Firebase Hosting proxy
-    // VERCEL_URL is set by Firebase to the hosting domain
-    const host = process.env.VERCEL_URL || 'synchire-hackathon.web.app';
-    return `https://${host}/python-api`;
-  }
-
-  // Development: direct connection
-  return process.env.PYTHON_AGENT_URL || 'http://localhost:8080';
+  // Fallback for local development
+  return 'http://localhost:8080';
 }
 
 /**
@@ -42,13 +33,6 @@ export function getAgentEndpoint(endpoint: string): string {
   const baseUrl = getAgentApiUrl();
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   return `${baseUrl}${cleanEndpoint}`;
-}
-
-/**
- * Check if we're using the Firebase proxy
- */
-export function isUsingFirebaseProxy(): boolean {
-  return process.env.NODE_ENV === 'production' && !process.env.AGENT_API_URL;
 }
 
 /**
