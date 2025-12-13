@@ -28,5 +28,5 @@ dev = [
 ]
 
 [tool.uv]
-# Use CPU-only PyTorch for Cloud Run (no GPU support)
-extra-index-url = ["https://download.pytorch.org/whl/cpu"]
+# Note: CPU-only PyTorch is configured in Dockerfile for Cloud Run
+# Local development uses standard PyTorch

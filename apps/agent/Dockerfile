@@ -18,10 +18,12 @@ WORKDIR /app
 
 # Install dependencies first (cached separately from code changes)
 # Using cache mounts for faster rebuilds and bind mounts for dependency files
+# Use CPU-only PyTorch for Cloud Run (no GPU support)
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --locked --no-dev --no-install-project
+    uv sync --no-dev --no-install-project \
+    --extra-index-url https://download.pytorch.org/whl/cpu
 
 # Copy application code
 COPY pyproject.toml uv.lock ./
@@ -31,7 +33,8 @@ COPY processors/ ./processors/
 COPY *.sh *.md ./
 
 # Install project into virtual environment
-RUN uv sync --locked --no-dev --no-editable
+RUN uv sync --no-dev --no-editable \
+    --extra-index-url https://download.pytorch.org/whl/cpu
 
 # Runtime stage
 FROM python:3.13-slim
