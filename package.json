@@ -2,6 +2,10 @@
   "name": "sync-hire-monorepo",
   "version": "0.1.0",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:SyncHire/sync-hire.git"
+  },
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
