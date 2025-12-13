@@ -90,6 +90,17 @@ set_secret "STREAM_API_SECRET" "$STREAM_API_SECRET"
 set_secret "GEMINI_API_KEY" "$GEMINI_API_KEY"
 
 echo ""
+
+# Grant backend access to secrets (required for App Hosting)
+BACKEND_NAME="${BACKEND_NAME:-synchire}"
+echo "Granting backend '$BACKEND_NAME' access to secrets..."
+for secret in API_SECRET_KEY STREAM_API_SECRET GEMINI_API_KEY; do
+  firebase apphosting:secrets:grantaccess "$secret" \
+    --project "$PROJECT_ID" \
+    --backend "$BACKEND_NAME" 2>/dev/null && echo "  ✅ $secret access granted" || echo "  ⚠️  $secret (may already have access or backend not created)"
+done
+
+echo ""
 echo "✅ Secrets setup complete!"
 echo ""
 echo "Next steps:"

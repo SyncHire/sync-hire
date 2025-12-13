@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Inbox, Moon, Search, Sun, Video } from "lucide-react";
+import { Bell, CircleHelp, Inbox, Moon, Search, Sun, Video } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -19,11 +19,13 @@ import {
 } from "@/components/ui/tooltip";
 import { useCurrentUser } from "@/lib/hooks/use-current-user";
 import { useNotifications } from "@/lib/hooks/use-notifications";
+import { AboutDialog } from "./AboutDialog";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const { data: notificationsData, isLoading: notificationsLoading } =
     useNotifications();
   const notifications = notificationsData?.data ?? [];
@@ -133,6 +135,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                onClick={() => setShowAbout(true)}
+              >
+                <CircleHelp className="h-4 w-4" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               >
                 {theme === "dark" ? (
@@ -141,6 +152,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   <Moon className="h-4 w-4" />
                 )}
               </Button>
+
+              <AboutDialog open={showAbout} onOpenChange={setShowAbout} />
 
               <Popover>
                 <PopoverTrigger asChild>
