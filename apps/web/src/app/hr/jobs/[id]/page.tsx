@@ -269,14 +269,14 @@ export default function HRJDDetail() {
               </h1>
               <Badge
                 variant="secondary"
-                className="bg-green-500/10 text-green-500 border-green-500/20 font-normal px-2.5 py-0.5"
+                className="bg-primary/10 text-primary border-primary/20 font-normal px-2.5 py-0.5"
               >
                 Active
               </Badge>
               {job.aiMatchingStatus === "scanning" && (
                 <Badge
                   variant="secondary"
-                  className="bg-blue-500/10 text-blue-400 border-blue-500/20 font-normal px-2.5 py-0.5 animate-pulse flex items-center gap-1.5"
+                  className="bg-accent/10 text-accent-foreground border-accent/20 font-normal px-2.5 py-0.5 animate-pulse flex items-center gap-1.5"
                 >
                   <Loader2 className="h-3 w-3 animate-spin" />
                   Scanning CVs...

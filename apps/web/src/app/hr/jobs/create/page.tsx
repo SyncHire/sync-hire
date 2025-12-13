@@ -765,7 +765,7 @@ export default function JobCreationPage() {
                                 className={`text-[10px] px-1.5 py-0 h-5 shrink-0 font-medium ${
                                   isCustom
                                     ? "bg-primary/10 text-primary border-primary/30"
-                                    : "bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400"
+                                    : "bg-accent/10 text-accent-foreground border-accent/30"
                                 }`}
                               >
                                 {isCustom ? "Custom" : "AI"}
@@ -776,7 +776,7 @@ export default function JobCreationPage() {
                               <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 font-medium ${
                                 isExcluded
                                   ? "bg-muted text-muted-foreground"
-                                  : "bg-green-500/15 text-green-600 dark:text-green-400"
+                                  : "bg-primary/10 text-primary"
                               }`}>
                                 {isExcluded ? "Skip" : "Include"}
                               </span>

@@ -53,36 +53,22 @@ export async function POST(
     // Get the transcript
     const transcript = interview.transcript;
     if (!transcript || transcript.length === 0) {
-      console.log(`⚠️ No transcript available for analysis`);
-      // Generate placeholder evaluation if no transcript
-      const placeholderEvaluation: AIEvaluation = {
-        overallScore: 75,
-        categories: {
-          technicalKnowledge: 75,
-          problemSolving: 75,
-          communication: 75,
-          experienceRelevance: 75,
-        },
-        strengths: [
-          "Participated in AI interview",
-          "Demonstrated interest in the role",
-        ],
-        improvements: [
-          "Transcript not available for detailed analysis",
-        ],
-        summary: "Interview completed. Detailed analysis not available due to missing transcript.",
-      };
+      console.error(`❌ No transcript available for interview: ${interviewId}`);
 
-      interview.aiEvaluation = placeholderEvaluation;
-      interview.score = placeholderEvaluation.overallScore;
-      interview.status = "COMPLETED";
+      // Mark interview as failed, not completed
+      interview.status = "TRANSCRIPT_MISSING";
+      interview.aiEvaluation = null;
+      interview.score = null;
       await storage.saveInterview(interviewId, interview);
 
-      return NextResponse.json({
-        success: true,
-        message: "Placeholder evaluation created (no transcript)",
-        interview,
-      });
+      return NextResponse.json(
+        {
+          error: "Missing transcript",
+          message: "Cannot analyze interview without transcript. Please check if recording was successful.",
+          interview,
+        },
+        { status: 422 } // Unprocessable Entity
+      );
     }
 
     console.log(`📝 Analyzing transcript (${transcript.length} characters)...`);
@@ -140,35 +126,20 @@ Be fair but honest in your assessment. Base scores on what was actually discusse
     } catch (aiError) {
       console.error("❌ AI evaluation failed:", aiError);
 
-      // Fallback evaluation
-      const fallbackEvaluation: AIEvaluation = {
-        overallScore: 70,
-        categories: {
-          technicalKnowledge: 70,
-          problemSolving: 70,
-          communication: 70,
-          experienceRelevance: 70,
-        },
-        strengths: [
-          "Completed the interview process",
-          "Engaged with interview questions",
-        ],
-        improvements: [
-          "AI analysis temporarily unavailable",
-        ],
-        summary: "Interview completed successfully. Detailed AI analysis was not available at this time.",
-      };
-
-      interview.aiEvaluation = fallbackEvaluation;
-      interview.score = fallbackEvaluation.overallScore;
-      interview.status = "COMPLETED";
+      // Update interview status to indicate failure
+      interview.status = "ANALYSIS_FAILED";
+      interview.aiEvaluation = null;
+      interview.score = null;
       await storage.saveInterview(interviewId, interview);
 
-      return NextResponse.json({
-        success: true,
-        message: "Fallback evaluation applied",
-        interview,
-      });
+      return NextResponse.json(
+        {
+          error: "AI analysis failed",
+          message: "Could not analyze interview. The AI service may be temporarily unavailable. Please try again later.",
+          interview,
+        },
+        { status: 503 } // Service Unavailable
+      );
     }
   } catch (error) {
     console.error("Error analyzing interview:", error);

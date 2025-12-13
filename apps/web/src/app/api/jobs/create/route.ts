@@ -162,9 +162,8 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
         matchedCount++;
         matchedCandidates.push(candidateName);
 
-        // Update job applicant count
-        const updatedJob = { ...job, applicantsCount: (job.applicantsCount || 0) + 1 };
-        await storage.saveJob(jobId, updatedJob);
+        // Note: applicantsCount is calculated on read from actual applications
+        // No need to update counter here to avoid race conditions
 
         // Generate questions in background (don't await)
         generateSmartMergedQuestions(cvData, {
@@ -320,9 +319,21 @@ export async function POST(request: NextRequest) {
     // Trigger automatic candidate matching in background (don't wait)
     if (aiMatchingEnabled) {
       console.log(`🚀 [create-job] AI Matching enabled - triggering automatic candidate matching`);
-      triggerCandidateMatching(job.id).catch(err =>
-        console.error("[create-job] Auto-match error:", err)
-      );
+      triggerCandidateMatching(job.id).catch(async (err) => {
+        console.error("[create-job] Auto-match error:", err);
+
+        // Update job status to indicate failure
+        try {
+          const failedJob = await storage.getJob(job.id);
+          if (failedJob) {
+            failedJob.aiMatchingStatus = "failed";
+            failedJob.aiMatchingError = err.message || "Unknown error";
+            await storage.saveJob(job.id, failedJob);
+          }
+        } catch (updateErr) {
+          console.error("[create-job] Failed to update job status:", updateErr);
+        }
+      });
     }
 
     return NextResponse.json(
