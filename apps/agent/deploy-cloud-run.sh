@@ -58,6 +58,88 @@ print_header() {
     echo -e "${BLUE}==============================================================================${NC}"
 }
 
+load_env_production() {
+    print_step "Loading .env.production..."
+
+    if [ -f ".env.production" ]; then
+        # Export all variables from .env.production
+        set -a
+        source .env.production
+        set +a
+        echo "  ✓ Loaded .env.production"
+
+        # Override PROJECT_ID and REGION from .env.production if set
+        if [ -n "$GCP_PROJECT_ID" ]; then
+            PROJECT_ID="$GCP_PROJECT_ID"
+        fi
+        if [ -n "$GCP_REGION" ]; then
+            REGION="$GCP_REGION"
+        fi
+
+        # Update IMAGE_NAME with new PROJECT_ID
+        IMAGE_NAME="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_NAME}/${SERVICE_NAME}"
+    else
+        print_warning ".env.production not found. Please create it from .env.production.example"
+        print_warning "Run: cp .env.production.example .env.production"
+        read -p "Continue without .env.production? (y/N) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+}
+
+# Check for --override flag
+OVERRIDE_MODE=false
+for arg in "$@"; do
+    if [ "$arg" = "--override" ]; then
+        OVERRIDE_MODE=true
+    fi
+done
+
+create_or_update_secret() {
+    local SECRET_NAME=$1
+    local SECRET_VALUE=$2
+
+    if [ -z "$SECRET_VALUE" ]; then
+        print_warning "No value provided for $SECRET_NAME, skipping..."
+        return 1
+    fi
+
+    if gcloud secrets describe $SECRET_NAME --project=$PROJECT_ID &> /dev/null; then
+        if [ "$OVERRIDE_MODE" = true ]; then
+            echo "    ↳ Updating secret: $SECRET_NAME"
+            echo -n "$SECRET_VALUE" | gcloud secrets versions add $SECRET_NAME --data-file=- --project=$PROJECT_ID --quiet
+        else
+            echo "    ✓ Secret exists: $SECRET_NAME (use --override to update)"
+        fi
+    else
+        echo "    ↳ Creating secret: $SECRET_NAME"
+        echo -n "$SECRET_VALUE" | gcloud secrets create $SECRET_NAME --data-file=- --project=$PROJECT_ID --quiet
+    fi
+}
+
+setup_secrets_from_env() {
+    print_step "Setting up secrets in Secret Manager..."
+
+    # Grant Secret Manager access to Cloud Run service account
+    PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
+    echo "  ↳ Granting Secret Manager access to Cloud Run service account..."
+    gcloud projects add-iam-policy-binding $PROJECT_ID \
+        --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+        --role="roles/secretmanager.secretAccessor" \
+        --quiet 2>/dev/null || true
+
+    # Create/update secrets from .env.production
+    create_or_update_secret "API_SECRET_KEY" "${API_SECRET_KEY:-}"
+    create_or_update_secret "STREAM_API_KEY" "${STREAM_API_KEY:-}"
+    create_or_update_secret "STREAM_API_SECRET" "${STREAM_API_SECRET:-}"
+    create_or_update_secret "GEMINI_API_KEY" "${GEMINI_API_KEY:-}"
+    create_or_update_secret "HEYGEN_API_KEY" "${HEYGEN_API_KEY:-}"
+
+    echo "  ✓ Secrets configured"
+}
+
 print_step() {
     echo -e "${GREEN}➜ $1${NC}"
 }
@@ -269,12 +351,13 @@ print_next_steps() {
 main() {
     print_header "SyncHire FastAPI Agent - Cloud Run Deployment"
 
+    load_env_production
     check_prerequisites
     enable_apis
+    setup_secrets_from_env
     create_artifact_registry
     configure_docker
     build_and_push_image
-    check_secrets
     deploy_to_cloud_run
     get_service_url
     test_health_endpoint

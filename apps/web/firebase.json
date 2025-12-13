@@ -7,14 +7,14 @@
       "**/node_modules/**"
     ],
     "frameworksBackend": {
-      "region": "us-central1"
+      "region": "asia-southeast1"
     },
     "rewrites": [
       {
         "source": "/python-api/**",
         "run": {
           "serviceId": "sync-hire-agent",
-          "region": "us-central1"
+          "region": "asia-southeast1"
         }
       }
     ],

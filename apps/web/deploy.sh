@@ -4,8 +4,21 @@ set -e
 # Firebase Hosting Deployment Script for SyncHire Next.js Application
 # This script deploys the Next.js web application to Firebase Hosting
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 echo "🚀 SyncHire - Firebase Hosting Deployment"
 echo "=========================================="
+
+# Load .env.production if it exists
+ENV_FILE="${SCRIPT_DIR}/.env.production"
+if [ -f "$ENV_FILE" ]; then
+  echo "📂 Loading .env.production..."
+  set -a
+  source "$ENV_FILE"
+  set +a
+  echo "  ✅ Loaded .env.production"
+fi
 
 # Check if GCP_PROJECT_ID is set
 if [ -z "$GCP_PROJECT_ID" ]; then
