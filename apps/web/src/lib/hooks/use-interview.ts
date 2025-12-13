@@ -3,7 +3,8 @@
 /**
  * React Query hooks for interview API calls
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface StartInterviewParams {
   interviewId: string;
@@ -130,6 +131,40 @@ export function useInterviewDetails(
     enabled: !!interviewId,
     staleTime: 5 * 1000, // Consider data fresh for 5 seconds when polling
     refetchInterval: interviewId ? refetchInterval : false,
+  });
+}
+
+/**
+ * Hook to trigger AI analysis for an interview
+ */
+export function useAnalyzeInterview() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (interviewId: string) => {
+      const response = await fetch(`/api/interviews/${interviewId}/analyze`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Failed to analyze interview" }));
+        throw new Error(errorData.error || "Failed to analyze interview");
+      }
+
+      return response.json();
+    },
+    onSuccess: (data, interviewId) => {
+      // Invalidate interview details query to refresh UI
+      queryClient.invalidateQueries({
+        queryKey: ["/api/interviews", interviewId],
+      });
+      toast.success("Interview analysis complete!");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to analyze interview");
+    },
   });
 }
 

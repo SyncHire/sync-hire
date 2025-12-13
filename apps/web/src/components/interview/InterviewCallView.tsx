@@ -543,6 +543,17 @@ function InterviewCallContent({
                 )}
               </AnimatePresence>
 
+              {/* Always render audio for remote participant (even without video) */}
+              {remoteParticipant && !hasVideo(remoteParticipant) && (
+                <div className="hidden">
+                  <ParticipantView
+                    participant={remoteParticipant}
+                    muteAudio={false}
+                    ParticipantViewUI={null}
+                  />
+                </div>
+              )}
+
               {/* Show video avatar only if enabled and video is available, otherwise show static avatar */}
               {videoAvatarEnabled && remoteParticipant && hasVideo(remoteParticipant) ? (
                 <div className="absolute inset-0 ai-video-container">
