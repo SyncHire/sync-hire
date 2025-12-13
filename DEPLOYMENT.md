@@ -43,7 +43,7 @@ cd apps/agent
 **First time setup:**
 ```bash
 cd apps/web
-./setup-apphosting.sh                    # Set up secrets
+./scripts/setup-apphosting.sh            # Set up secrets
 firebase apphosting:backends:create      # Connect GitHub repo
 ```
 
