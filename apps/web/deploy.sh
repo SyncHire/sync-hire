@@ -27,6 +27,13 @@ if [ -z "$GCP_PROJECT_ID" ]; then
   exit 1
 fi
 
+# Check for API_SECRET_KEY (required for Python agent calls)
+if [ -z "$API_SECRET_KEY" ]; then
+  echo "⚠️  Warning: API_SECRET_KEY is not set"
+  echo "   Python agent calls will fail without this key."
+  echo "   Get it from Secret Manager: gcloud secrets versions access latest --secret=API_SECRET_KEY --project=$GCP_PROJECT_ID"
+fi
+
 # Update .firebaserc with project ID
 echo "📝 Updating .firebaserc with project ID: $GCP_PROJECT_ID"
 cat > .firebaserc <<EOF
@@ -77,6 +84,25 @@ fi
 if [ $? -ne 0 ]; then
   echo "❌ Deployment failed!"
   exit 1
+fi
+
+# Grant public access to the Cloud Run service (required for Firebase Hosting)
+echo ""
+echo "🔐 Configuring IAM for public access..."
+REGION="${GCP_REGION:-asia-southeast1}"
+SERVICE_NAME="ssrsynchirehackathon"
+
+# Check if the service exists before granting access
+if gcloud run services describe $SERVICE_NAME --region=$REGION --project=$GCP_PROJECT_ID &> /dev/null; then
+  gcloud run services add-iam-policy-binding $SERVICE_NAME \
+    --region=$REGION \
+    --project=$GCP_PROJECT_ID \
+    --member="allUsers" \
+    --role="roles/run.invoker" \
+    --quiet 2>/dev/null || true
+  echo "  ✅ Public access granted to Cloud Run service"
+else
+  echo "  ⚠️  Cloud Run service not found yet (first deploy may need manual IAM setup)"
 fi
 
 echo ""

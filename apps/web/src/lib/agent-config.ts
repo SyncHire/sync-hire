@@ -20,11 +20,12 @@ export function getAgentApiUrl(): string {
     return process.env.AGENT_API_URL;
   }
 
-  // Production: use Firebase proxy
+  // Production: use absolute URL for server-side fetch
   if (process.env.NODE_ENV === 'production') {
-    // Firebase Hosting will proxy /python-api/** to Cloud Run
-    // This eliminates CORS and keeps the Cloud Run URL private
-    return '/python-api';
+    // Server-side needs absolute URL - use Firebase Hosting proxy
+    // VERCEL_URL is set by Firebase to the hosting domain
+    const host = process.env.VERCEL_URL || 'synchire-hackathon.web.app';
+    return `https://${host}/python-api`;
   }
 
   // Development: direct connection
@@ -48,4 +49,22 @@ export function getAgentEndpoint(endpoint: string): string {
  */
 export function isUsingFirebaseProxy(): boolean {
   return process.env.NODE_ENV === 'production' && !process.env.AGENT_API_URL;
+}
+
+/**
+ * Get headers for Python agent API calls
+ * Includes X-API-Key for authentication in production
+ */
+export function getAgentHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  // Add API key if configured (required for Python agent auth)
+  const apiKey = process.env.API_SECRET_KEY;
+  if (apiKey) {
+    headers['X-API-Key'] = apiKey;
+  }
+
+  return headers;
 }

@@ -15,7 +15,7 @@ import {
 import { getStorage } from "@/lib/storage/storage-factory";
 import { getStreamClient } from "@/lib/stream-token";
 import { generateStringHash } from "@/lib/utils/hash-utils";
-import { getAgentEndpoint } from "@/lib/agent-config";
+import { getAgentEndpoint, getAgentHeaders } from "@/lib/agent-config";
 
 // Track which calls have had agents invited (in-memory cache)
 // This prevents duplicate invitations on page refreshes
@@ -173,9 +173,7 @@ export async function POST(request: Request) {
         console.log("⏳ Sending request to agent...");
         const agentResponse = await fetch(agentUrl, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: getAgentHeaders(),
           body: JSON.stringify({
             callId,
             questions: interviewQuestions,

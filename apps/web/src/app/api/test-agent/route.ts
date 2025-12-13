@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAgentEndpoint } from "@/lib/agent-config";
+import { getAgentEndpoint, getAgentHeaders } from "@/lib/agent-config";
 
 export async function GET() {
   try {
@@ -9,9 +9,7 @@ export async function GET() {
 
     const response = await fetch(agentUrl, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: getAgentHeaders(),
     });
 
     if (!response.ok) {
@@ -50,9 +48,7 @@ export async function POST(request: Request) {
 
     const response = await fetch(agentUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: getAgentHeaders(),
       body: JSON.stringify(body),
     });
 
