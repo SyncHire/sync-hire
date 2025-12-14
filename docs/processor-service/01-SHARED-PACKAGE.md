@@ -298,7 +298,7 @@ export interface NodeCalibration {
   lastUpdated: string;
 }
 
-// Abstract storage interface for calibration (allows future DB migration)
+// Abstract storage interface for calibration (implemented via PostgreSQL/Prisma)
 export interface CalibrationStorageInterface {
   saveFeedback(feedback: UserFeedback): Promise<void>;
   getFeedback(processingId: string): Promise<UserFeedback[]>;

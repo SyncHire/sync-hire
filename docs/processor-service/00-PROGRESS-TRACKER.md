@@ -112,7 +112,7 @@ These files can be archived or removed once the implementation is complete.
 |------|--------|-------|
 | POST /api/documents/process | [ ] | |
 | GET /api/documents/:id/status | [ ] | |
-| Create in-memory status store | [ ] | |
+| Implement ProcessingJob Prisma model | [ ] | PostgreSQL storage via Prisma |
 | Implement webhook.service.ts | [ ] | |
 | Add retry logic for webhooks | [ ] | |
 | Add request validation | [ ] | |
@@ -125,7 +125,7 @@ These files can be archived or removed once the implementation is complete.
 | POST /api/documents/:id/nodes/:nodeId/evaluate | [ ] | Accept user feedback |
 | GET /api/documents/:id/review-queue | [ ] | List nodes needing review |
 | Create CalibrationService | [ ] | Handle feedback + calibration |
-| Implement FileCalibrationStorage | [ ] | File-based storage for calibration |
+| Implement PrismaCalibrationStorage | [ ] | PostgreSQL via `@sync-hire/database` |
 | Add calibration factory | [ ] | Allow future DB migration |
 | Test evaluation endpoints | [ ] | Verify feedback storage |
 
@@ -138,8 +138,8 @@ These files can be archived or removed once the implementation is complete.
 | Task | Status | Notes |
 |------|--------|-------|
 | Create /api/webhooks/document-processed | [ ] | |
-| Add processing status to StorageInterface | [ ] | |
-| Implement in FileStorage | [ ] | |
+| Add processing status Prisma queries | [ ] | Use existing `Job.jdExtraction` |
+| Implement via @sync-hire/database | [ ] | Prisma client integration |
 | Modify /api/jobs/extract-jd | [ ] | |
 | Modify /api/cv/extract | [ ] | |
 | Add frontend polling logic | [ ] | |
@@ -149,9 +149,9 @@ These files can be archived or removed once the implementation is complete.
 | Task | Status | Notes |
 |------|--------|-------|
 | Update webhook payload | [ ] | Include nodeEvaluations + reviewRequired |
-| Add feedback storage methods | [ ] | StorageInterface updates |
+| Add feedback storage via Prisma | [ ] | UserFeedback model |
 | Create review-queue endpoint | [ ] | Dashboard data source |
-| Update webhook handler | [ ] | Store node evaluations + status |
+| Update webhook handler | [ ] | Store evaluations in PostgreSQL |
 | Add getNodeFeedback method | [ ] | Retrieve user feedback |
 | Add updateNodeCalibration method | [ ] | Store calibration data |
 | Create review dashboard component | [ ] | Frontend UI |

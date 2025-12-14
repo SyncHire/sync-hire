@@ -20,8 +20,8 @@ apps/processor/src/
 │   └── processing.service.ts       # Orchestrates extraction
 ├── middleware/
 │   └── upload.ts                   # Multer configuration
-└── store/
-    └── processing-store.ts         # In-memory status tracking
+└── repositories/
+    └── processing.repository.ts    # Prisma-backed job storage
 ```
 
 ---
@@ -57,14 +57,18 @@ export const upload = multer({
 });
 ```
 
-### 2. Create processing store
+### 2. Create Prisma-backed processing repository
 ```typescript
-// src/store/processing-store.ts
-import { ProcessingStatus, ProcessingStep } from "@sync-hire/shared";
+// src/repositories/processing.repository.ts
+import { prisma } from "@sync-hire/database";
+import type { ProcessingStatus, ProcessingStep } from "@sync-hire/shared";
+
+// Note: This assumes a ProcessingJob model is added to the Prisma schema.
+// Alternatively, leverage the existing Job model with `jdExtraction` field.
 
 interface ProcessingJob {
   id: string;
-  type: "jd";  // Extensible: add "cv" when CV pipeline is implemented
+  type: "jd";
   status: ProcessingStatus;
   webhookUrl: string;
   correlationId?: string;
@@ -85,89 +89,83 @@ interface ProcessingJob {
   processingSteps: ProcessingStep[];
 }
 
-class ProcessingStore {
-  private jobs = new Map<string, ProcessingJob>();
-
-  create(id: string, type: "jd", webhookUrl: string, correlationId?: string): ProcessingJob {
-    const job: ProcessingJob = {
+export async function createJob(
+  id: string,
+  type: "jd",
+  webhookUrl: string,
+  correlationId?: string
+): Promise<ProcessingJob> {
+  // Option 1: Use a dedicated ProcessingJob table (recommended)
+  // Option 2: Store in Job.jdExtraction with status metadata
+  
+  const job = await prisma.processingJob.create({
+    data: {
       id,
       type,
       status: "queued",
       webhookUrl,
       correlationId,
-      createdAt: new Date(),
       processingSteps: [],
-    };
-    this.jobs.set(id, job);
-    return job;
-  }
-
-  get(id: string): ProcessingJob | undefined {
-    return this.jobs.get(id);
-  }
-
-  update(id: string, updates: Partial<ProcessingJob>): ProcessingJob | undefined {
-    const job = this.jobs.get(id);
-    if (job) {
-      Object.assign(job, updates);
-      return job;
-    }
-    return undefined;
-  }
-
-  updateStatus(id: string, status: ProcessingStatus): void {
-    const job = this.jobs.get(id);
-    if (job) {
-      job.status = status;
-      if (status === "processing" && !job.startedAt) {
-        job.startedAt = new Date();
-      }
-      if (status === "completed" || status === "failed") {
-        job.completedAt = new Date();
-      }
-    }
-  }
-
-  updateProgress(id: string, currentNode: string, completedNodes: string[], totalNodes: number): void {
-    const job = this.jobs.get(id);
-    if (job) {
-      job.progress = { currentNode, completedNodes, totalNodes };
-    }
-  }
-
-  addStep(id: string, step: ProcessingStep): void {
-    const job = this.jobs.get(id);
-    if (job) {
-      job.processingSteps.push(step);
-    }
-  }
-
-  setResult(id: string, result: unknown): void {
-    const job = this.jobs.get(id);
-    if (job) {
-      job.result = result;
-    }
-  }
-
-  setError(id: string, code: string, message: string, retryable: boolean): void {
-    const job = this.jobs.get(id);
-    if (job) {
-      job.error = { code, message, retryable };
-    }
-  }
-
-  // Cleanup old jobs (call periodically)
-  cleanup(maxAgeMs: number = 24 * 60 * 60 * 1000): void {
-    const now = Date.now();
-    for (const [id, job] of this.jobs) {
-      if (now - job.createdAt.getTime() > maxAgeMs) {
-        this.jobs.delete(id);
-      }
-    }
-  }
+    },
+  });
+  return job as ProcessingJob;
 }
 
-export const processingStore = new ProcessingStore();
+export async function getJob(id: string): Promise<ProcessingJob | null> {
+  const job = await prisma.processingJob.findUnique({ where: { id } });
+  return job as ProcessingJob | null;
+}
+
+export async function updateJobStatus(
+  id: string,
+  status: ProcessingStatus
+): Promise<void> {
+  const updates: any = { status };
+  if (status === "processing") {
+    updates.startedAt = new Date();
+  }
+  if (status === "completed" || status === "failed") {
+    updates.completedAt = new Date();
+  }
+  await prisma.processingJob.update({ where: { id }, data: updates });
+}
+
+export async function updateJobProgress(
+  id: string,
+  currentNode: string,
+  completedNodes: string[],
+  totalNodes: number
+): Promise<void> {
+  await prisma.processingJob.update({
+    where: { id },
+    data: { progress: { currentNode, completedNodes, totalNodes } },
+  });
+}
+
+export async function setJobResult(id: string, result: unknown): Promise<void> {
+  await prisma.processingJob.update({ where: { id }, data: { result } });
+}
+
+export async function setJobError(
+  id: string,
+  code: string,
+  message: string,
+  retryable: boolean
+): Promise<void> {
+  await prisma.processingJob.update({
+    where: { id },
+    data: { error: { code, message, retryable } },
+  });
+}
+
+// Cleanup old jobs (run via cron or scheduled task)
+export async function cleanupOldJobs(maxAgeMs: number = 24 * 60 * 60 * 1000): Promise<number> {
+  const cutoff = new Date(Date.now() - maxAgeMs);
+  const result = await prisma.processingJob.deleteMany({
+    where: { createdAt: { lt: cutoff } },
+  });
+  return result.count;
+}
 ```
 
 ### 3. Create webhook service
@@ -263,10 +261,134 @@ export async function sendWebhook(
 import { randomUUID } from "crypto";
 import { generateFileHash, DocumentProcessedWebhook, ExtractedJobData } from "@sync-hire/shared";
 import { extractJobDescription } from "../langgraph";
-// Future: import { extractCV } from "../langgraph/cv-index";
-import { processingStore } from "../store/processing-store";
+import * as processingRepo from "../repositories/processing.repository";
 import { sendWebhook } from "./webhook.service";
 import { logger } from "../utils/logger";
+
+interface ProcessRequest {
+  file: Buffer;
+  fileName: string;
+  mimeType: string;
+  type: "jd";
+  webhookUrl: string;
+  correlationId?: string;
+  config?: {
+    disabledNodes?: string[];
+    confidenceThreshold?: number;
+  };
+}
+
+export async function processDocument(request: ProcessRequest): Promise<string> {
+  const processingId = randomUUID();
+  const startTime = Date.now();
+
+  // Create job in PostgreSQL via Prisma
+  await processingRepo.createJob(
+    processingId,
+    request.type,
+    request.webhookUrl,
+    request.correlationId
+  );
+
+  // Process asynchronously
+  processAsync(processingId, request, startTime).catch((error) => {
+    logger.error("Async processing failed", error, { processingId });
+  });
+
+  return processingId;
+}
+
+async function processAsync(
+  processingId: string,
+  request: ProcessRequest,
+  startTime: number
+): Promise<void> {
+  await processingRepo.updateJobStatus(processingId, "processing");
+
+  try {
+    let result: {
+      status: string;
+      data: ExtractedJobData;
+      validation: {
+        isValid: boolean;
+        overallConfidence: number;
+        issues: string[];
+        warnings: string[];
+      };
+    };
+
+    result = await extractJobDescription(
+      request.file,
+      request.fileName,
+      request.mimeType,
+      request.config
+    );
+
+    const hash = generateFileHash(request.file);
+    const processingDurationMs = Date.now() - startTime;
+
+    const status = result.status === "needs_review" ? "needs_review" : "completed";
+    await processingRepo.updateJobStatus(processingId, status);
+    await processingRepo.setJobResult(processingId, result.data);
+
+    const job = await processingRepo.getJob(processingId);
+
+    const webhookPayload: DocumentProcessedWebhook = {
+      processingId,
+      correlationId: request.correlationId,
+      type: request.type,
+      status,
+      processedAt: new Date().toISOString(),
+      processingDurationMs,
+      result: {
+        hash,
+        extractedData: result.data,
+      },
+      validation: {
+        isValid: result.validation.isValid,
+        overallConfidence: result.validation.overallConfidence,
+        fieldScores: {},
+        issues: result.validation.issues,
+        warnings: result.validation.warnings,
+      },
+      processingSteps: job?.processingSteps || [],
+    };
+
+    await sendWebhook(request.webhookUrl, webhookPayload);
+
+    logger.info("Document processing completed", {
+      processingId,
+      type: request.type,
+      status,
+      durationMs: processingDurationMs,
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+    await processingRepo.updateJobStatus(processingId, "failed");
+    await processingRepo.setJobError(processingId, "EXTRACTION_FAILED", errorMessage, true);
+
+    const failurePayload: DocumentProcessedWebhook = {
+      processingId,
+      correlationId: request.correlationId,
+      type: request.type,
+      status: "failed",
+      processedAt: new Date().toISOString(),
+      processingDurationMs: Date.now() - startTime,
+      error: {
+        code: "EXTRACTION_FAILED",
+        message: errorMessage,
+        retryable: true,
+      },
+      processingSteps: [],
+    };
+
+    await sendWebhook(request.webhookUrl, failurePayload);
+
+    logger.error("Document processing failed", error, { processingId });
+  }
+}
+```
 
 interface ProcessRequest {
   file: Buffer;
@@ -399,11 +521,10 @@ async function processAsync(
 
 ### 5. Create document controller
 ```typescript
-// src/controllers/document.controller.ts
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { processDocument } from "../services/processing.service";
-import { processingStore } from "../store/processing-store";
+import * as processingRepo from "../repositories/processing.repository";
 import { logger } from "../utils/logger";
 
 const ProcessRequestSchema = z.object({
@@ -482,7 +603,7 @@ export async function getStatusHandler(req: Request, res: Response) {
   try {
     const { id } = req.params;
 
-    const job = processingStore.get(id);
+    const job = await processingRepo.getJob(id);
     if (!job) {
       return res.status(404).json({
         error: {

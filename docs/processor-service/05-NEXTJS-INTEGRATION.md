@@ -32,13 +32,11 @@ apps/web/src/
 │       └── extract-jd/
 │           └── route.ts            # Forward to processor
 └── lib/
-    └── storage/
-        ├── storage-interface.ts    # Add processing status methods
-        └── file-storage.ts         # Implement new methods
+    └── processor-client.ts         # Client for processor service
 ```
 
 > [!NOTE]
-> **CV Extraction Route (Future)**: When CV pipeline is implemented, add a similar forwarding route at `app/api/cv/extract/route.ts`.
+> **Storage:** All processing state and extraction results are stored in PostgreSQL via the `@sync-hire/database` Prisma package, eliminating file-based storage.
 
 ---
 
@@ -132,107 +130,50 @@ export async function getProcessingStatus(processingId: string): Promise<{
 }
 ```
 
-### 3. Update storage interface
-```typescript
-// apps/web/src/lib/storage/storage-interface.ts
-// Add these methods to StorageInterface:
+### 3. Use existing Prisma models for storage
 
-export interface ProcessingStatusRecord {
-  processingId: string;
-  type: "jd" | "cv";
-  status: "queued" | "processing" | "completed" | "failed" | "needs_review";
-  result?: unknown;
-  error?: {
-    code: string;
-    message: string;
-  };
-  createdAt: string;
-  completedAt?: string;
+The existing Prisma schema already supports storing extraction data:
+- **Job model:** `jdExtraction Json?` field for JD extraction results
+- **CVUpload model:** `extraction Json?` field for CV extraction results
+
+No additional models needed for basic extraction storage. For processing job tracking, use the `ProcessingJob` model added in Phase 4.
+
+```typescript
+// apps/web/src/lib/db/processing.ts
+import { prisma } from "@sync-hire/database";
+
+export async function getProcessingStatus(id: string) {
+  return prisma.processingJob.findUnique({ where: { id } });
 }
 
-export interface StorageInterface {
-  // ... existing methods ...
-
-  /**
-   * Get processing status by ID
-   */
-  getProcessingStatus(id: string): Promise<ProcessingStatusRecord | null>;
-
-  /**
-   * Save processing status
-   */
-  saveProcessingStatus(id: string, status: ProcessingStatusRecord): Promise<void>;
-
-  /**
-   * Get all processing jobs (for cleanup)
-   */
-  getAllProcessingStatuses(): Promise<ProcessingStatusRecord[]>;
+export async function saveProcessingStatus(id: string, status: any) {
+  return prisma.processingJob.upsert({
+    where: { id },
+    update: status,
+    create: { id, ...status },
+  });
 }
 ```
 
-### 4. Implement in FileStorage
-```typescript
-// apps/web/src/lib/storage/file-storage.ts
-// Add to FileStorage class:
 
-private readonly PROCESSING_DIR = path.join(DATA_DIR, "processing");
 
-// In constructor, add:
-await fs.mkdir(this.PROCESSING_DIR, { recursive: true });
-
-async getProcessingStatus(id: string): Promise<ProcessingStatusRecord | null> {
-  const filePath = path.join(this.PROCESSING_DIR, `${id}.json`);
-  try {
-    const content = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
-}
-
-async saveProcessingStatus(id: string, status: ProcessingStatusRecord): Promise<void> {
-  const filePath = path.join(this.PROCESSING_DIR, `${id}.json`);
-  await fs.writeFile(filePath, JSON.stringify(status, null, 2));
-}
-
-async getAllProcessingStatuses(): Promise<ProcessingStatusRecord[]> {
-  try {
-    const files = await fs.readdir(this.PROCESSING_DIR);
-    const statuses: ProcessingStatusRecord[] = [];
-
-    for (const file of files) {
-      if (file.endsWith(".json")) {
-        const content = await fs.readFile(path.join(this.PROCESSING_DIR, file), "utf-8");
-        statuses.push(JSON.parse(content));
-      }
-    }
-
-    return statuses;
-  } catch {
-    return [];
-  }
-}
-```
-
-### 5. Create webhook handler
+### 4. Create webhook handler
 ```typescript
 // apps/web/src/app/api/webhooks/document-processed/route.ts
 import { NextResponse } from "next/server";
-import { getStorage } from "@/lib/storage/storage-factory";
+import { prisma } from "@sync-hire/database";
 import type { ExtractedJobData } from "@sync-hire/shared";
-// Future: import type { ExtractedCVData } from "@sync-hire/shared";
 
 interface WebhookPayload {
   processingId: string;
   correlationId?: string;
-  type: "jd";  // Extensible: add "cv" when CV pipeline is implemented
+  type: "jd";
   status: "completed" | "failed" | "needs_review";
   processedAt: string;
   processingDurationMs: number;
   result?: {
     hash: string;
     extractedData: ExtractedJobData;
-    // Future: ExtractedJobData | ExtractedCVData when CV is added
     aiSuggestions?: Array<{ original: string; improved: string }>;
     aiQuestions?: Array<{ content: string; reason: string }>;
   };
@@ -260,31 +201,29 @@ export async function POST(request: Request) {
       durationMs: payload.processingDurationMs,
     });
 
-    const storage = getStorage();
-
-    // Save processing status for polling
-    await storage.saveProcessingStatus(payload.processingId, {
-      processingId: payload.processingId,
-      type: payload.type,
-      status: payload.status,
-      result: payload.result,
-      error: payload.error,
-      createdAt: new Date().toISOString(),
-      completedAt: payload.processedAt,
+    // Update processing job status in PostgreSQL
+    await prisma.processingJob.update({
+      where: { id: payload.processingId },
+      data: {
+        status: payload.status,
+        result: payload.result,
+        error: payload.error,
+        completedAt: payload.processedAt,
+      },
     });
 
-    // If completed successfully, save extraction to main storage
+    // If completed successfully, update the Job with extraction data
     if (payload.status === "completed" && payload.result) {
       const { hash, extractedData } = payload.result;
 
-      if (payload.type === "jd") {
-        await storage.saveExtraction(hash, extractedData as ExtractedJobData);
-        console.log("✅ JD extraction saved:", hash);
+      if (payload.type === "jd" && payload.correlationId) {
+        // Find job by correlationId (file hash) and update jdExtraction
+        await prisma.job.updateMany({
+          where: { jdFileHash: hash },
+          data: { jdExtraction: extractedData as any },
+        });
+        console.log("✅ JD extraction saved to Job:", hash);
       }
-      // Future: Add CV handling when CV pipeline is implemented
-      // else if (payload.type === "cv") {
-      //   await storage.saveCVExtraction(hash, extractedData as ExtractedCVData);
-      // }
     }
 
     return NextResponse.json({
@@ -301,11 +240,11 @@ export async function POST(request: Request) {
 }
 ```
 
-### 6. Create status polling endpoint
+### 5. Create status polling endpoint
 ```typescript
 // apps/web/src/app/api/documents/[id]/status/route.ts
 import { NextResponse } from "next/server";
-import { getStorage } from "@/lib/storage/storage-factory";
+import { prisma } from "@sync-hire/database";
 
 export async function GET(
   request: Request,
@@ -313,9 +252,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const storage = getStorage();
 
-    const status = await storage.getProcessingStatus(id);
+    const status = await prisma.processingJob.findUnique({
+      where: { id },
+    });
 
     if (!status) {
       return NextResponse.json(
@@ -335,12 +275,12 @@ export async function GET(
 }
 ```
 
-### 7. Modify JD extraction route
+### 6. Modify JD extraction route
 ```typescript
 // apps/web/src/app/api/jobs/extract-jd/route.ts
 import { NextResponse } from "next/server";
 import { submitDocumentForProcessing } from "@/lib/processor-client";
-import { getStorage } from "@/lib/storage/storage-factory";
+import { prisma } from "@sync-hire/database";
 import { generateFileHash } from "@sync-hire/shared";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -377,15 +317,16 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const hash = generateFileHash(buffer);
 
-    // Check cache first
-    const storage = getStorage();
-    const cached = await storage.getExtraction(hash);
+    // Check cache in database first
+    const cachedJob = await prisma.job.findFirst({
+      where: { jdFileHash: hash, jdExtraction: { not: null } },
+    });
 
-    if (cached) {
+    if (cachedJob && cachedJob.jdExtraction) {
       console.log("📦 Returning cached JD extraction:", hash);
       return NextResponse.json({
         id: hash,
-        extractedData: cached,
+        extractedData: cachedJob.jdExtraction,
         cached: true,
         status: "completed",
       });
@@ -400,12 +341,15 @@ export async function POST(request: Request) {
       correlationId: hash,
     });
 
-    // Save initial status for polling
-    await storage.saveProcessingStatus(result.processingId, {
-      processingId: result.processingId,
-      type: "jd",
-      status: "processing",
-      createdAt: new Date().toISOString(),
+    // Save initial processing status to PostgreSQL
+    await prisma.processingJob.create({
+      data: {
+        id: result.processingId,
+        type: "jd",
+        status: "processing",
+        webhookUrl: "", // Set by processor
+        correlationId: hash,
+      },
     });
 
     // Return processing info for frontend to poll
