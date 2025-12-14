@@ -42,55 +42,46 @@ model User {
   jobsCreated         Job[]               @relation("JobCreator") // Jobs this user created
   invitations         Invitation[]        // Invitations sent by this user
 
-  @@map("users")
+  @@map("user")
 }
 
 model Account {
-  id                String   @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?  @db.Text
-  access_token      String?  @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?  @db.Text
-  session_state     String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String    // Account ID from provider (or equal to userId for email/password)
+  providerId            String    // Provider identifier (e.g., "google", "credential")
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?   @db.Text
+  password              String?   // For credential provider (email/password)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([provider, providerAccountId])
+  @@unique([providerId, accountId])
   @@index([userId])
-  @@map("accounts")
+  @@map("account")
 }
 
 model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  // Better Auth fields
+  id                   String   @id @default(cuid())
+  userId               String
+  token                String   @unique // Better Auth session token
+  expiresAt            DateTime
   ipAddress            String?
   userAgent            String?
-  activeOrganizationId String?
+  activeOrganizationId String? // Organization plugin: currently active org
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@map("sessions")
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-  @@map("verification_tokens")
+  @@map("session")
 }
 
 // Better Auth: Verification tokens for email verification, password reset, etc.
@@ -126,7 +117,7 @@ model Organization {
   jobs        Job[]
   invitations Invitation[]
 
-  @@map("organizations")
+  @@map("organization")
 }
 
 model Invitation {
@@ -144,7 +135,7 @@ model Invitation {
 
   @@index([email])
   @@index([organizationId])
-  @@map("invitations")
+  @@map("invitation")
 }
 
 model OrganizationMember {
@@ -161,7 +152,7 @@ model OrganizationMember {
 
   @@unique([organizationId, userId])
   @@index([userId])
-  @@map("organization_members")
+  @@map("member")
 }
 
 enum OrgMemberRole {
@@ -193,7 +184,7 @@ model CVUpload {
 
   @@index([userId])
   @@index([fileHash])
-  @@map("cv_uploads")
+  @@map("cv_upload")
 }
 
 // =============================================================================
@@ -239,7 +230,7 @@ model Job {
   @@index([createdById])
   @@index([status])
   @@index([aiMatchingStatus])
-  @@map("jobs")
+  @@map("job")
 }
 
 enum JobStatus {
@@ -271,7 +262,7 @@ model JobQuestion {
   job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@index([jobId])
-  @@map("job_questions")
+  @@map("job_question")
 }
 
 enum QuestionType {
@@ -316,7 +307,7 @@ model CandidateApplication {
   @@index([jobId])
   @@index([userId])
   @@index([status])
-  @@map("candidate_applications")
+  @@map("candidate_application")
 }
 
 enum ApplicationStatus {
@@ -362,7 +353,7 @@ model Interview {
   @@index([jobId])
   @@index([candidateId])
   @@index([callId])
-  @@map("interviews")
+  @@map("interview")
 }
 
 enum InterviewStatus {
@@ -390,7 +381,7 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
-  @@map("notifications")
+  @@map("notification")
 }
 
 enum NotificationType {
@@ -417,5 +408,5 @@ model InterviewCall {
   interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
 
   @@index([callId])
-  @@map("interview_calls")
+  @@map("interview_call")
 }

@@ -74,12 +74,7 @@ export const auth = betterAuth({
   plugins: [
     nextCookies(), // Required for server actions
     organization({
-      // Map to existing schema
-      schema: {
-        organization: { modelName: "organizations" },
-        member: { modelName: "organization_members" },
-        invitation: { modelName: "invitations" },
-      },
+      // Schema now matches Better Auth defaults
       allowSetActive: true,
       // Invitation settings
       invitationExpiresIn: 60 * 60 * 48, // 48 hours
@@ -99,23 +94,6 @@ export const auth = betterAuth({
       },
     }),
   ],
-
-  // Map to existing table names
-  user: {
-    modelName: "users",
-  },
-  account: {
-    modelName: "accounts",
-    fields: {
-      providerId: "provider",
-      accountId: "providerAccountId",
-      accessToken: "access_token",
-      refreshToken: "refresh_token",
-      idToken: "id_token",
-      accessTokenExpiresAt: "expires_at",
-      tokenType: "token_type",
-    },
-  },
 });
 
 // Export session type for use throughout the app
