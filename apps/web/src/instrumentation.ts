@@ -1,5 +1,3 @@
-import * as Sentry from '@sentry/nextjs';
-
 /**
  * Next.js Instrumentation
  *
@@ -9,9 +7,13 @@ import * as Sentry from '@sentry/nextjs';
  * @see https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation
  */
 
+import { isSentryEnabled } from './lib/sentry.config';
+
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    await import('../sentry.server.config');
+    if (isSentryEnabled) {
+      await import('../sentry.server.config');
+    }
 
     // Validate database connection when database mode is enabled
     if (process.env.USE_DATABASE === 'true') {
@@ -20,7 +22,10 @@ export async function register() {
       try {
         await validateDatabaseConnection();
       } catch (error) {
-        Sentry.captureException(error);
+        if (isSentryEnabled) {
+          const Sentry = await import('@sentry/nextjs');
+          Sentry.captureException(error);
+        }
         console.error('FATAL: Database connection failed');
 
         if (process.env.NODE_ENV === 'production') {
@@ -34,8 +39,15 @@ export async function register() {
   }
 
   if (process.env.NEXT_RUNTIME === 'edge') {
-    await import('../sentry.edge.config');
+    if (isSentryEnabled) {
+      await import('../sentry.edge.config');
+    }
   }
 }
 
-export const onRequestError = Sentry.captureRequestError;
+export async function onRequestError(...args: Parameters<typeof import('@sentry/nextjs').captureRequestError>) {
+  if (isSentryEnabled) {
+    const Sentry = await import('@sentry/nextjs');
+    return Sentry.captureRequestError(...args);
+  }
+}
