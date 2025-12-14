@@ -66,6 +66,36 @@ Always use pnpm workspace commands targeting specific apps or packages.
 - Good: Import directly from the specific module file
 - Example: `import { GCSStorageProvider } from './cloud/gcs-storage-provider';` not `import { GCSStorageProvider } from './cloud';`
 
+### Dependency Injection
+- **Always use constructor injection for dependencies** - enables testability and loose coupling
+- Pass dependencies (database clients, storage clients, external services) as constructor parameters
+- Use `typeof` for singleton instances to get the correct type
+
+**Good patterns:**
+```typescript
+// Inject dependencies via constructor
+export class DatabaseStorage {
+  constructor(private readonly db: typeof prisma) {}
+}
+
+export class GCSStorageProvider {
+  constructor(private readonly client: Storage) {}
+}
+
+// Factory creates instances with dependencies
+function createProvider(): Provider {
+  return new GCSStorageProvider(gcsClient);
+}
+```
+
+**Bad patterns:**
+```typescript
+// Don't import and use singletons directly in class body
+export class GCSStorageProvider {
+  private client = gcsClient; // Hard to test, tightly coupled
+}
+```
+
 ### Data Fetching (Frontend)
 - **Always use react-query (`@tanstack/react-query`) for data fetching in React components** - not raw `fetch` in useEffect
 - Use `useQuery` for GET requests with automatic caching and refetching

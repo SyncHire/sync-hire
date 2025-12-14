@@ -7,17 +7,12 @@
  */
 
 import type { Storage } from "@google-cloud/storage";
-import { gcsClient } from "../gcs-client";
 import type { CloudStorageProvider } from "./cloud-storage-provider";
 
 const BUCKET = process.env.GCS_BUCKET ?? "synchire-uploads";
 
 export class GCSStorageProvider implements CloudStorageProvider {
-  private client: Storage;
-
-  constructor() {
-    this.client = gcsClient;
-  }
+  constructor(private readonly client: Storage) {}
 
   async uploadCV(hash: string, buffer: Buffer): Promise<string> {
     const path = `cv/${hash}`;
