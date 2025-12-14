@@ -7,6 +7,11 @@ runConfig:
   minInstances: 0
   maxInstances: 10
   concurrency: 80
+  vpcAccess:
+    egress: PRIVATE_RANGES_ONLY
+    networkInterfaces:
+      - network: synchire-network
+        subnetwork: synchire-subnet
 
 env:
   # Public environment variables (needed at build time for Next.js)
