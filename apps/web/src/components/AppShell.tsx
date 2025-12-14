@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CircleHelp, Inbox, Moon, Search, Sun, Video } from "lucide-react";
+import { Bell, CircleHelp, Inbox, Moon, Search, Sun } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -20,6 +20,7 @@ import {
 import { useCurrentUser } from "@/lib/hooks/use-current-user";
 import { useNotifications } from "@/lib/hooks/use-notifications";
 import { AboutDialog } from "./AboutDialog";
+import { Logo } from "./Logo";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -71,15 +72,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md transition-colors duration-300">
           <div className="container mx-auto flex h-14 items-center justify-between px-4">
             <div className="flex items-center gap-8">
-              <Link
-                href="/"
-                className="flex items-center gap-2 font-medium tracking-tight group"
-              >
-                <div className="h-6 w-6 rounded bg-foreground flex items-center justify-center text-background group-hover:scale-105 transition-transform">
-                  <Video className="h-3 w-3" />
-                </div>
-                <span className="font-semibold">SyncHire</span>
-              </Link>
+              <Logo size="sm" />
 
               <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
                 {!isCandidate ? (
