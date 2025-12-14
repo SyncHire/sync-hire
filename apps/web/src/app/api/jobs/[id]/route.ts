@@ -16,8 +16,19 @@ export async function GET(
     const storage = getStorage();
 
     const job = await storage.getJob(jobId);
+    if (!job) {
+      return NextResponse.json({ success: true, data: null });
+    }
 
-    return NextResponse.json({ success: true, data: job });
+    // Compute accurate applicant count from interviews
+    const allInterviews = await storage.getAllInterviews();
+    const jobInterviews = allInterviews.filter((i) => i.jobId === jobId);
+    const jobWithCount = {
+      ...job,
+      applicantsCount: jobInterviews.length,
+    };
+
+    return NextResponse.json({ success: true, data: jobWithCount });
   } catch (error) {
     console.error("Get job error:", error);
     return NextResponse.json(

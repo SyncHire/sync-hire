@@ -16,7 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { useSaveJobQuestions, useGenerateJobQuestions, useUpdateJobSettings, useMatchCandidates } from "@/lib/hooks/use-job-questions";
+import { useSaveJobQuestions, useGenerateJobQuestions, useUpdateJobSettings, useMatchCandidates, useJob } from "@/lib/hooks/use-job-questions";
 import type { Job } from "@/lib/mock-data";
 
 interface Question {
@@ -44,8 +44,32 @@ interface Question {
 
 export default function HRJDDetail() {
   const params = useParams();
-  const [job, setJob] = useState<Job | null | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const jobId = params?.id as string | undefined;
+  const scanningParam = searchParams.get("scanning") === "true";
+
+  // Track previous status for toast notification
+  const [prevStatus, setPrevStatus] = useState<string | undefined>();
+  // Force polling for a few seconds after navigating from job creation
+  const [forcePolling, setForcePolling] = useState(scanningParam);
+
+  // Fetch job with react-query, poll while scanning or force polling
+  const { data: job, isLoading } = useJob(jobId, { pollWhileScanning: true, forcePolling });
+
+  // Stop force polling after 10 seconds or when scanning completes
+  useEffect(() => {
+    if (forcePolling) {
+      // Stop if scanning completed
+      if (job?.aiMatchingStatus === "complete") {
+        setForcePolling(false);
+        return;
+      }
+      // Timeout after 10 seconds
+      const timeout = setTimeout(() => setForcePolling(false), 10000);
+      return () => clearTimeout(timeout);
+    }
+  }, [forcePolling, job?.aiMatchingStatus]);
+
   const [questions, setQuestions] = useState<Question[]>([]);
 
   // Question management state
@@ -54,7 +78,7 @@ export default function HRJDDetail() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [newQuestion, setNewQuestion] = useState<{ text: string; type: "text" | "video" | "code"; duration: number }>({ text: "", type: "text", duration: 2 });
 
-  // AI Matching settings state
+  // AI Matching settings state - derived from job data
   const [aiMatchingEnabled, setAiMatchingEnabled] = useState(true);
 
   // React Query mutations
@@ -63,32 +87,21 @@ export default function HRJDDetail() {
   const updateSettingsMutation = useUpdateJobSettings();
   const matchCandidatesMutation = useMatchCandidates();
 
+  // Sync local state with job data
   useEffect(() => {
-    async function fetchJob() {
-      try {
-        const response = await fetch("/api/jobs");
-        if (!response.ok) throw new Error("Failed to fetch jobs");
-        const result = await response.json();
-        const jobs = result.data || [];
-        const foundJob = jobs.find((j: Job) => j.id === params?.id);
-        setJob(foundJob || null);
-        if (foundJob?.questions) {
-          setQuestions(foundJob.questions);
-        }
-        if (foundJob) {
-          setAiMatchingEnabled(foundJob.aiMatchingEnabled ?? true);
-        }
-      } catch (error) {
-        console.error("Error fetching job:", error);
-        setJob(null);
-      } finally {
-        setIsLoading(false);
+    if (job) {
+      if (job.questions) {
+        setQuestions(job.questions);
       }
+      setAiMatchingEnabled(job.aiMatchingEnabled ?? true);
+
+      // Show toast when scanning completes
+      if (prevStatus === "scanning" && job.aiMatchingStatus === "complete") {
+        toast.success(`Scanning complete! Found ${job.applicantsCount || 0} matching candidates.`, { duration: 4000 });
+      }
+      setPrevStatus(job.aiMatchingStatus);
     }
-    if (params?.id) {
-      fetchJob();
-    }
-  }, [params?.id]);
+  }, [job, prevStatus]);
 
   // Add a new question
   const handleAddQuestion = () => {
@@ -256,10 +269,19 @@ export default function HRJDDetail() {
               </h1>
               <Badge
                 variant="secondary"
-                className="bg-green-500/10 text-green-500 border-green-500/20 font-normal px-2.5 py-0.5"
+                className="bg-primary/10 text-primary border-primary/20 font-normal px-2.5 py-0.5"
               >
                 Active
               </Badge>
+              {job.aiMatchingStatus === "scanning" && (
+                <Badge
+                  variant="secondary"
+                  className="bg-accent/10 text-accent-foreground border-accent/20 font-normal px-2.5 py-0.5 animate-pulse flex items-center gap-1.5"
+                >
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Scanning CVs...
+                </Badge>
+              )}
             </div>
             <p className="text-lg text-muted-foreground mb-3 flex items-center gap-2">
               <Building2 className="h-5 w-5 text-orange-600 dark:text-orange-400" />
@@ -289,7 +311,14 @@ export default function HRJDDetail() {
             </Button>
             <Link href={`/hr/applicants/${job.id}`}>
               <Button className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 border-0">
-                View Applicants ({job.applicantsCount})
+                {job.aiMatchingStatus === "scanning" ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Scanning...
+                  </>
+                ) : (
+                  `View Applicants (${job.applicantsCount || 0})`
+                )}
               </Button>
             </Link>
           </div>
@@ -531,6 +560,7 @@ export default function HRJDDetail() {
                   checked={aiMatchingEnabled}
                   onCheckedChange={handleToggleAiMatching}
                   disabled={updateSettingsMutation.isPending || matchCandidatesMutation.isPending}
+                  className="data-[state=checked]:bg-blue-500"
                 />
               </div>
             </div>

@@ -15,6 +15,7 @@ import {
 } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { generateStringHash } from "@/lib/utils/hash-utils";
+import { mergeInterviewQuestions } from "@/lib/utils/question-utils";
 
 interface InterviewPageProps {
   params: Promise<{
@@ -68,16 +69,9 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
       const combinedHash = generateStringHash(userCvId + jobId);
       const questionSet = await storage.getInterviewQuestions(combinedHash);
 
-      if (questionSet && questionSet.suggestedQuestions.length > 0) {
-        // Convert suggested questions to Question format
-        generatedQuestions = questionSet.suggestedQuestions.map((q, index) => ({
-          id: `gen-q-${index}`,
-          text: q.content,
-          type: "video" as const,
-          duration: 3, // 3 minutes per question
-          category: mapCategoryToStage(q.category),
-          keyPoints: [q.reason],
-        }));
+      if (questionSet) {
+        // Use utility to merge custom questions (from JD) and AI-personalized questions
+        generatedQuestions = mergeInterviewQuestions(questionSet);
       }
     }
   }
@@ -102,20 +96,4 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
       />
     </StreamVideoProvider>
   );
-}
-
-// Helper to map question category to interview stage
-function mapCategoryToStage(category?: string): Question["category"] {
-  switch (category) {
-    case "technical":
-      return "Technical Skills";
-    case "behavioral":
-      return "Behavioral";
-    case "problem-solving":
-      return "Problem Solving";
-    case "experience":
-      return "Introduction";
-    default:
-      return "Technical Skills";
-  }
 }

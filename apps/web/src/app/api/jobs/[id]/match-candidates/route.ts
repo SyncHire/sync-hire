@@ -51,30 +51,20 @@ Be realistic with scoring:
 - 60-69: Partial match, some requirements met
 - Below 60: Weak match`;
 
-  try {
-    const jsonSchema = z.toJSONSchema(matchResultSchema);
+  const jsonSchema = z.toJSONSchema(matchResultSchema);
 
-    const response = await geminiClient.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [{ text: prompt }],
-      config: {
-        responseMimeType: "application/json",
-        responseJsonSchema: jsonSchema as unknown as Record<string, unknown>,
-      },
-    });
+  const response = await geminiClient.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: [{ text: prompt }],
+    config: {
+      responseMimeType: "application/json",
+      responseJsonSchema: jsonSchema as unknown as Record<string, unknown>,
+    },
+  });
 
-    const content = response.text || "";
-    const parsed = JSON.parse(content);
-    return matchResultSchema.parse(parsed);
-  } catch (error) {
-    console.error("Match calculation error:", error);
-    // Fallback to simulated score
-    return {
-      matchScore: Math.floor(Math.random() * 30) + 60,
-      matchReasons: ["Skills alignment", "Experience level"],
-      skillGaps: [],
-    };
-  }
+  const content = response.text || "";
+  const parsed = JSON.parse(content);
+  return matchResultSchema.parse(parsed);
 }
 
 /**
@@ -163,18 +153,26 @@ export async function POST(
     const { id: jobId } = await params;
     const storage = getStorage();
 
+    console.log(`\n🔍 [match-candidates] Starting match for job: ${jobId}`);
+
     // Get job
     const job = await storage.getJob(jobId);
     if (!job) {
+      console.log(`❌ [match-candidates] Job not found: ${jobId}`);
       return NextResponse.json({
         success: true,
         data: { matchedCount: 0, applications: [], message: "Job not found" },
       });
     }
 
+    console.log(`📋 [match-candidates] Job: "${job.title}" at ${job.company}`);
+
     // Get all CVs
     const cvExtractions = await storage.getAllCVExtractions();
+    console.log(`📁 [match-candidates] Found ${cvExtractions.length} CV(s) in system`);
+
     if (cvExtractions.length === 0) {
+      console.log(`⚠️ [match-candidates] No CVs to match against`);
       return NextResponse.json({
         success: true,
         data: {
@@ -186,28 +184,59 @@ export async function POST(
     }
 
     const matchThreshold = job.aiMatchingThreshold || 80;
+    console.log(`🎯 [match-candidates] Match threshold: ${matchThreshold}%`);
+
     const applications: CandidateApplication[] = [];
+    let skippedCount = 0;
+    let belowThresholdCount = 0;
+    let failedCount = 0;
 
     // Process each CV
     for (const { cvId, data: cvData } of cvExtractions) {
+      const candidateName = cvData.personalInfo?.fullName || "Unknown";
+      console.log(`\n👤 [match-candidates] Processing: ${candidateName} (cvId: ${cvId})`);
+
       // Check if application already exists
       const existingApplications = await storage.getApplicationsForJob(jobId);
       const alreadyApplied = existingApplications.some(app => app.cvId === cvId);
 
       if (alreadyApplied) {
+        console.log(`   ⏭️  Skipped: Already applied to this job`);
+        skippedCount++;
         continue;
       }
 
       // Calculate match score
-      const { matchScore, matchReasons, skillGaps } = await calculateMatchScore(
-        cvData,
-        job.title,
-        job.requirements,
-        job.description
-      );
+      console.log(`   🤖 Calculating match score...`);
+      let matchScore: number;
+      let matchReasons: string[];
+      let skillGaps: string[];
+
+      try {
+        const result = await calculateMatchScore(
+          cvData,
+          job.title,
+          job.requirements,
+          job.description
+        );
+        matchScore = result.matchScore;
+        matchReasons = result.matchReasons;
+        skillGaps = result.skillGaps;
+      } catch (error) {
+        console.error(`   ❌ Match calculation failed for ${candidateName}:`, error);
+        failedCount++;
+        continue;
+      }
+
+      console.log(`   📊 Match score: ${matchScore}% (threshold: ${matchThreshold}%)`);
+      console.log(`   ✅ Reasons: ${matchReasons.join(", ")}`);
+      if (skillGaps.length > 0) {
+        console.log(`   ⚠️  Gaps: ${skillGaps.join(", ")}`);
+      }
 
       // Only create application if above threshold
       if (matchScore >= matchThreshold) {
+        console.log(`   🎉 MATCHED! Creating application...`);
         const applicationId = `app-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         const questionsHash = generateStringHash(cvId + jobId);
 
@@ -231,12 +260,8 @@ export async function POST(
         await storage.saveApplication(application);
         applications.push(application);
 
-        // Update application count on job
-        const updatedJob = {
-          ...job,
-          applicantsCount: (job.applicantsCount || 0) + 1,
-        };
-        await storage.saveJob(jobId, updatedJob);
+        // Note: applicantsCount is calculated on read from actual applications
+        // No need to update counter here to avoid race conditions
 
         // Generate smart merged questions in background
         generateAndSaveQuestions(
@@ -248,8 +273,20 @@ export async function POST(
           jobId,
           application.id
         ).catch(err => console.error("Question generation failed:", err));
+      } else {
+        console.log(`   ❌ Below threshold (${matchScore}% < ${matchThreshold}%) - not matched`);
+        belowThresholdCount++;
       }
     }
+
+    // Summary
+    console.log(`\n📊 [match-candidates] === SUMMARY ===`);
+    console.log(`   Total CVs: ${cvExtractions.length}`);
+    console.log(`   Skipped (already applied): ${skippedCount}`);
+    console.log(`   Below threshold: ${belowThresholdCount}`);
+    console.log(`   Failed (match calculation error): ${failedCount}`);
+    console.log(`   Matched: ${applications.length}`);
+    console.log(`==============================\n`);
 
     return NextResponse.json({
       success: true,

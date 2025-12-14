@@ -3,8 +3,79 @@
  * Handles saving and generating questions with react-query
  */
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { Job } from "@/lib/mock-data";
 import { toast } from "sonner";
+
+// =============================================================================
+// Job Query Hooks
+// =============================================================================
+
+interface UseJobsOptions {
+  pollWhileScanning?: boolean;
+}
+
+/**
+ * Hook for fetching all jobs with optional polling while any are scanning
+ */
+export function useJobs(options?: UseJobsOptions) {
+  return useQuery({
+    queryKey: ["/api/jobs"],
+    queryFn: async () => {
+      const response = await fetch("/api/jobs");
+      if (!response.ok) {
+        throw new Error("Failed to fetch jobs");
+      }
+      const result = await response.json();
+      return (result.data || []) as Job[];
+    },
+    refetchInterval: (query) => {
+      // Poll while any job is scanning
+      if (options?.pollWhileScanning) {
+        const jobs = query.state.data || [];
+        const hasScanning = jobs.some((job: Job) => job.aiMatchingStatus === "scanning");
+        if (hasScanning) {
+          return 2000;
+        }
+      }
+      return false;
+    },
+  });
+}
+
+interface UseJobOptions {
+  pollWhileScanning?: boolean;
+  forcePolling?: boolean; // Force polling regardless of status (e.g., after job creation)
+}
+
+/**
+ * Hook for fetching a single job with optional polling while scanning
+ */
+export function useJob(jobId: string | undefined, options?: UseJobOptions) {
+  return useQuery({
+    queryKey: [`/api/jobs/${jobId}`],
+    queryFn: async () => {
+      const response = await fetch(`/api/jobs/${jobId}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch job");
+      }
+      const result = await response.json();
+      return result.data as Job | null;
+    },
+    enabled: !!jobId,
+    refetchInterval: (query) => {
+      // Force polling (e.g., just after job creation)
+      if (options?.forcePolling) {
+        return 2000;
+      }
+      // Poll while scanning
+      if (options?.pollWhileScanning && query.state.data?.aiMatchingStatus === "scanning") {
+        return 2000;
+      }
+      return false;
+    },
+  });
+}
 
 interface Question {
   id: string;

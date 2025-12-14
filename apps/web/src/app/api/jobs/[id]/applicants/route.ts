@@ -3,12 +3,35 @@
  *
  * Returns all interviews/applicants for a specific job
  * Combines interview data with user/CV data to provide applicant details
- * Falls back to demo applicants if no real interviews exist (for demo purposes)
+ * Also includes AI-matched applications that haven't started interviews yet
+ * Falls back to demo applicants only for demo jobs (job-1, job-2, job-3)
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDemoApplicants } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
+
+// Common applicant type for the response
+interface ApplicantResponse {
+  id: string;
+  interviewId: string | null;
+  candidateId: string;
+  cvId: string | null;
+  name: string;
+  email: string;
+  status: "PENDING" | "IN_PROGRESS" | "COMPLETED";
+  score?: number;
+  durationMinutes: number;
+  createdAt: string;
+  completedAt?: string | null;
+  aiEvaluation?: unknown;
+  skills: string[];
+  experience: unknown[];
+  source: "interview" | "ai_match" | "demo";
+  matchReasons?: string[];
+  skillGaps?: string[];
+  questionsHash?: string;
+}
 
 export async function GET(
   request: NextRequest,
@@ -27,27 +50,38 @@ export async function GET(
       );
     }
 
+    // Check if this is a demo job (legacy hardcoded jobs)
+    const isDemoJob = ["job-1", "job-2", "job-3"].includes(jobId);
+
     // Get all interviews and filter by jobId
     const allInterviews = await storage.getAllInterviews();
     const jobInterviews = allInterviews.filter(
       (interview) => interview.jobId === jobId,
     );
 
+    // Get AI-matched applications for this job
+    const aiApplications = await storage.getApplicationsForJob(jobId);
+
+    // Track CVIds that have interviews already
+    const interviewCvIds = new Set<string>();
+
     // Track if we're using demo data
     let usingDemoData = false;
 
     // Enrich interview data with user/CV information
-    const realApplicants = await Promise.all(
+    const interviewApplicants = await Promise.all(
       jobInterviews.map(async (interview) => {
         // Try to get user data
         const user = await storage.getUser(interview.candidateId);
 
         // Try to get CV data if user has one
         let cvData = null;
+        let cvId: string | null = null;
         if (user) {
-          const cvId = await storage.getUserCVId(user.id);
+          cvId = await storage.getUserCVId(user.id);
           if (cvId) {
             cvData = await storage.getCVExtraction(cvId);
+            interviewCvIds.add(cvId);
           }
         }
 
@@ -55,42 +89,86 @@ export async function GET(
           id: interview.id,
           interviewId: interview.id,
           candidateId: interview.candidateId,
+          cvId: cvId,
           name: cvData?.personalInfo?.fullName ?? user?.name ?? "Unknown Candidate",
           email: cvData?.personalInfo?.email ?? user?.email ?? "",
           status: interview.status,
           score: interview.score,
           durationMinutes: interview.durationMinutes,
-          createdAt: interview.createdAt,
-          completedAt: interview.completedAt,
+          createdAt: interview.createdAt instanceof Date
+            ? interview.createdAt.toISOString()
+            : String(interview.createdAt),
+          completedAt: interview.completedAt instanceof Date
+            ? interview.completedAt.toISOString()
+            : interview.completedAt ? String(interview.completedAt) : null,
           aiEvaluation: interview.aiEvaluation,
-          // CV-based data for richer display
           skills: cvData?.skills ?? [],
           experience: cvData?.experience ?? [],
+          source: "interview" as const,
         };
       }),
     );
 
-    // If no real applicants, use demo applicants for demo purposes
-    let applicants = realApplicants;
-    if (realApplicants.length === 0) {
+    // Convert AI applications to applicant format (only those without interviews)
+    const aiApplicants = await Promise.all(
+      aiApplications
+        .filter(app => !interviewCvIds.has(app.cvId))
+        .map(async (app) => {
+          // Get CV data for skills
+          const cvData = await storage.getCVExtraction(app.cvId);
+
+          return {
+            id: app.id,
+            interviewId: null,
+            candidateId: app.cvId,
+            cvId: app.cvId,
+            name: app.candidateName,
+            email: app.candidateEmail,
+            status: app.status === "ready" ? "PENDING" as const : "PENDING" as const,
+            score: app.matchScore,
+            durationMinutes: 0,
+            createdAt: app.createdAt?.toISOString?.() ?? new Date().toISOString(),
+            completedAt: null,
+            aiEvaluation: null,
+            skills: cvData?.skills ?? [],
+            experience: cvData?.experience ?? [],
+            source: "ai_match" as const,
+            matchReasons: app.matchReasons,
+            skillGaps: app.skillGaps,
+            questionsHash: app.questionsHash,
+          };
+        }),
+    );
+
+    // Combine interview applicants and AI-matched applicants
+    let applicants: ApplicantResponse[] = [...interviewApplicants, ...aiApplicants];
+
+    // Only use demo data for demo jobs when there are no real applicants
+    if (applicants.length === 0 && isDemoJob) {
       usingDemoData = true;
       const demoApplicants = getDemoApplicants();
       applicants = demoApplicants.map((demo) => ({
         id: demo.id,
         interviewId: demo.id,
         candidateId: demo.id,
+        cvId: null,
         name: demo.name,
         email: demo.email,
         status: "COMPLETED" as const,
         score: demo.score,
         durationMinutes: demo.durationMinutes,
-        createdAt: demo.completedAt,
-        completedAt: demo.completedAt,
+        createdAt: demo.completedAt instanceof Date
+          ? demo.completedAt.toISOString()
+          : String(demo.completedAt),
+        completedAt: demo.completedAt instanceof Date
+          ? demo.completedAt.toISOString()
+          : String(demo.completedAt),
         aiEvaluation: demo.aiEvaluation,
         skills: [],
         experience: [],
+        source: "demo" as const,
       }));
-      console.log(`📋 Using demo applicants for job ${jobId} (no real interviews found)`);
+      console.log(`📋 Using demo applicants for demo job ${jobId}`);
     }
 
     // Sort by score (completed first, then by score descending)

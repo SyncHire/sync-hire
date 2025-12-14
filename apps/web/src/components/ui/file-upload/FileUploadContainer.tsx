@@ -93,8 +93,16 @@ export function FileUploadContainer({
     return <UploadProgress isProcessing />;
   }
 
+  // Map mime types to file extensions
+  const mimeToExtension: Record<string, string> = {
+    "application/pdf": ".pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "text/plain": ".txt",
+    "text/markdown": ".md",
+  };
+
   const fileTypeExtensions = config.allowedTypes
-    .map((t) => "." + t.split("/")[1])
+    .map((t) => mimeToExtension[t] || "." + t.split("/")[1])
     .join(",");
 
   return (

@@ -68,7 +68,7 @@ export class JobDescriptionProcessor {
   constructor(private storage: StorageInterface) {}
 
   /**
-   * Process a PDF file and extract structured job data
+   * Process a file (PDF, Markdown, or Text) and extract structured job data
    */
   async processFile(
     buffer: Buffer,
@@ -86,11 +86,12 @@ export class JobDescriptionProcessor {
     }>;
     cached: boolean;
   }> {
-    // Validate PDF file type
+    // Validate file type
     const ext = fileName.toLowerCase().split(".").pop();
-    if (ext !== "pdf") {
+    const supportedTypes = ["pdf", "md", "txt"];
+    if (!ext || !supportedTypes.includes(ext)) {
       throw new Error(
-        `Unsupported file type: ${ext}. Only PDF files are supported.`,
+        `Unsupported file type: ${ext}. Supported: PDF, Markdown (.md), Text (.txt)`,
       );
     }
 
@@ -122,9 +123,12 @@ export class JobDescriptionProcessor {
       }
     }
 
-    // Extract structured data from PDF
-    console.log("📄 Starting structured data extraction from PDF...");
-    const extractedData = await this.extractStructuredData(buffer);
+    // Extract structured data based on file type
+    const isTextBased = ext === "md" || ext === "txt";
+    console.log(`📄 Starting structured data extraction from ${ext?.toUpperCase()}...`);
+    const extractedData = isTextBased
+      ? await this.extractStructuredDataFromText(buffer.toString("utf-8"))
+      : await this.extractStructuredData(buffer);
     console.log("✅ Structured data extraction completed:", {
       title: extractedData.title,
       responsibilitiesCount: extractedData.responsibilities.length,
@@ -219,6 +223,73 @@ All fields must be present. Use "Not specified" for employmentType and workArran
       });
       // Return empty data on failure
       console.log("🔄 Returning empty structured data as fallback");
+      return {
+        title: "",
+        company: "",
+        responsibilities: [],
+        requirements: [],
+        seniority: "",
+        location: "",
+        employmentType: "Not specified",
+        workArrangement: "Not specified",
+      };
+    }
+  }
+
+  /**
+   * Extract structured data from text/markdown content using Gemini
+   */
+  private async extractStructuredDataFromText(
+    textContent: string,
+  ): Promise<ExtractedJobData> {
+    try {
+      console.log("📖 Sending text content to Gemini for structured data extraction...");
+
+      const jsonSchema = z.toJSONSchema(extractedJobDataSchema);
+      const structuredResponse = await geminiClient.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [
+          {
+            text: `Extract structured job information from the following job description text. You MUST return a valid JSON object with these exact fields:
+- title: string
+- company: string
+- responsibilities: array of strings
+- requirements: array of strings
+- seniority: string (e.g., Junior, Mid-level, Senior, Staff, Principal)
+- location: string (city, state/country)
+- employmentType: MUST be one of: "Full-time", "Part-time", "Contract", "Temporary", "Internship", "Not specified"
+- workArrangement: MUST be one of: "Remote", "Hybrid", "On-site", "Flexible", "Not specified"
+
+All fields must be present. Use "Not specified" for employmentType and workArrangement if not clearly stated.
+
+JOB DESCRIPTION:
+${textContent}`,
+          },
+        ],
+        config: {
+          responseMimeType: "application/json",
+          responseJsonSchema: jsonSchema as any,
+        },
+      });
+
+      const structuredContent = structuredResponse.text || "";
+      console.log(
+        "📥 Gemini structured data response length:",
+        structuredContent.length,
+      );
+
+      const structuredParsed = JSON.parse(structuredContent);
+      console.log(
+        "📋 Structured data parsed successfully:",
+        Object.keys(structuredParsed),
+      );
+
+      const extractedData = extractedJobDataSchema.parse(structuredParsed);
+      console.log("✅ Structured data validation passed");
+
+      return extractedData;
+    } catch (error) {
+      console.error("❌ Text extraction error:", error);
       return {
         title: "",
         company: "",

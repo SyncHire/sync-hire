@@ -183,6 +183,26 @@ export async function POST(request: Request) {
     await storage.saveInterview(payload.interviewId, interview);
     console.log("✅ Interview saved to storage:", payload.interviewId);
 
+    // Also update the CandidateApplication status if this is an application-based interview
+    if (payload.interviewId.startsWith("application-")) {
+      try {
+        // Find and update the application
+        const allApps = await storage.getAllApplications();
+        for (const app of allApps) {
+          if (app.interviewId === payload.interviewId ||
+              payload.interviewId.includes(app.jobId)) {
+            app.status = "completed";
+            app.updatedAt = new Date();
+            await storage.saveApplication(app);
+            console.log(`✅ Updated application ${app.id} status to completed`);
+            break;
+          }
+        }
+      } catch (appError) {
+        console.error("⚠️ Could not update application status:", appError);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: "Interview completion saved",

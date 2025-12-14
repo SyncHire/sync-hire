@@ -22,12 +22,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file type - only PDF is supported
-    if (file.type !== "application/pdf" && !file.name.endsWith(".pdf")) {
+    // Validate file type - PDF and Markdown are supported
+    const isPdf = file.type === "application/pdf" || file.name.endsWith(".pdf");
+    const isMarkdown = file.type === "text/markdown" || file.name.endsWith(".md");
+    const isText = file.type === "text/plain" || file.name.endsWith(".txt");
+
+    if (!isPdf && !isMarkdown && !isText) {
       return NextResponse.json(
         {
           success: false,
-          error: "Unsupported file type. Only PDF files are accepted",
+          error: "Unsupported file type. PDF, Markdown, and TXT files are accepted",
         },
         { status: 400 },
       );

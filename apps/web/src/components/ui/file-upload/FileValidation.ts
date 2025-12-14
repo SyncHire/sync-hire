@@ -12,6 +12,14 @@ export interface ValidationResult {
   error?: string;
 }
 
+// Map mime types to file extensions for validation
+const mimeToExtension: Record<string, string> = {
+  "application/pdf": ".pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+  "text/plain": ".txt",
+  "text/markdown": ".md",
+};
+
 export function validateFiles(
   files: File[],
   config: FileValidationConfig,
@@ -22,14 +30,24 @@ export function validateFiles(
 
   const file = files[0];
 
-  // Check file type
-  const typeValid = config.allowedTypes.some(
-    (type) => file.type === type || file.name.endsWith(type.split("/")[1]),
-  );
+  // Check file type - match by mime type or file extension
+  const typeValid = config.allowedTypes.some((type) => {
+    if (file.type === type) {
+      return true;
+    }
+    const ext = mimeToExtension[type];
+    if (ext && file.name.toLowerCase().endsWith(ext)) {
+      return true;
+    }
+    return false;
+  });
 
   if (!typeValid) {
     const formats = config.allowedTypes
-      .map((t) => t.split("/")[1].toUpperCase())
+      .map((t) => {
+        const ext = mimeToExtension[t];
+        return ext ? ext.slice(1).toUpperCase() : t.split("/")[1].toUpperCase();
+      })
       .join(", ");
     return {
       valid: false,

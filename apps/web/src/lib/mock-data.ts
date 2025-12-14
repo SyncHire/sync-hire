@@ -56,6 +56,7 @@ export interface Job {
   // AI Matching settings
   aiMatchingEnabled?: boolean; // Auto-match candidates when enabled
   aiMatchingThreshold?: number; // Minimum match % to auto-apply (default 80)
+  aiMatchingStatus?: "scanning" | "complete" | "disabled"; // Current scan status
 }
 
 export interface AIEvaluation {
@@ -1139,6 +1140,7 @@ export function createJob(jobData: Partial<Job>): Job {
     department: jobData.department || "",
     location: jobData.location || "",
     type: jobData.type || "Full-time",
+    workArrangement: jobData.workArrangement,
     salary: jobData.salary || "",
     postedAt: jobData.postedAt || "Just now",
     applicantsCount: jobData.applicantsCount || 0,
@@ -1150,6 +1152,10 @@ export function createJob(jobData: Partial<Job>): Job {
     status: jobData.status || "DRAFT",
     customQuestions: jobData.customQuestions || [],
     jdVersion: jobData.jdVersion,
+    // AI Matching settings
+    aiMatchingEnabled: jobData.aiMatchingEnabled,
+    aiMatchingThreshold: jobData.aiMatchingThreshold,
+    aiMatchingStatus: jobData.aiMatchingStatus,
   };
   jobs[id] = job;
   return job;

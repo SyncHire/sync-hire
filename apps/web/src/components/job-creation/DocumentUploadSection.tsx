@@ -20,12 +20,13 @@ export function DocumentUploadSection({
           "application/pdf",
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
           "text/plain",
+          "text/markdown",
         ],
         maxSize: 10 * 1024 * 1024, // 10MB
       }}
       title="Upload Job Description"
       description="Share the role you're hiring for"
-      acceptedFormatsText="PDF, DOCX, or TXT, Max 10MB"
+      acceptedFormatsText="PDF, DOCX, TXT, or Markdown, Max 10MB"
       onFileSelect={onFileSelect}
       isProcessing={isProcessing}
       error={error}
