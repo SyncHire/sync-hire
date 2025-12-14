@@ -7,7 +7,7 @@
  * Handles redirect after successful login.
  */
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "@/lib/auth-client";
@@ -26,6 +26,28 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginSkeleton />}>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl">Welcome back</CardTitle>
+        <CardDescription>Sign in to your account to continue</CardDescription>
+      </CardHeader>
+      <CardContent className="flex justify-center py-8">
+        <Spinner className="h-6 w-6" />
+      </CardContent>
+    </Card>
+  );
+}
+
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
