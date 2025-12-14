@@ -8,6 +8,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { CVProcessor } from "@/lib/backend/cv-processor";
 import { getStorage } from "@/lib/storage/storage-factory";
+import { getCloudStorageProvider } from "@/lib/storage/cloud/storage-provider-factory";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -47,7 +48,8 @@ export async function POST(request: NextRequest) {
 
     // Process file with extraction and caching
     const storage = getStorage();
-    const processor = new CVProcessor(storage);
+    const cloudStorage = getCloudStorageProvider();
+    const processor = new CVProcessor(storage, cloudStorage);
 
     const { hash, extractedData, cached } = await processor.processFile(
       buffer,

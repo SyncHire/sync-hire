@@ -28,9 +28,7 @@ import { mockUserToUser, mockInterviewToInterview } from "@/lib/utils/type-adapt
 
 const DATA_DIR = join(process.cwd(), "data");
 const JD_EXTRACTIONS_DIR = join(DATA_DIR, "jd-extractions");
-const JD_UPLOADS_DIR = join(DATA_DIR, "jd-uploads");
 const CV_EXTRACTIONS_DIR = join(DATA_DIR, "cv-extractions");
-const CV_UPLOADS_DIR = join(DATA_DIR, "cv-uploads");
 const JOBS_DIR = join(DATA_DIR, "jobs");
 const QUESTIONS_SET_DIR = join(DATA_DIR, "questions-set");
 const INTERVIEWS_DIR = join(DATA_DIR, "interviews");
@@ -60,22 +58,6 @@ export class FileStorage implements StorageInterface {
       console.error("Failed to save job extraction:", error);
       throw error;
     }
-  }
-
-  async uploadJobDescription(hash: string, buffer: Buffer): Promise<string> {
-    try {
-      await fs.mkdir(JD_UPLOADS_DIR, { recursive: true });
-      const filePath = join(JD_UPLOADS_DIR, hash);
-      await fs.writeFile(filePath, buffer);
-      return filePath;
-    } catch (error) {
-      console.error("Failed to upload job description:", error);
-      throw error;
-    }
-  }
-
-  getJobDescriptionPath(hash: string): string {
-    return join(JD_UPLOADS_DIR, hash);
   }
 
   async hasExtraction(hash: string): Promise<boolean> {
@@ -108,22 +90,6 @@ export class FileStorage implements StorageInterface {
       console.error("Failed to save CV extraction:", error);
       throw error;
     }
-  }
-
-  async uploadCV(hash: string, buffer: Buffer): Promise<string> {
-    try {
-      await fs.mkdir(CV_UPLOADS_DIR, { recursive: true });
-      const filePath = join(CV_UPLOADS_DIR, hash);
-      await fs.writeFile(filePath, buffer);
-      return filePath;
-    } catch (error) {
-      console.error("Failed to upload CV:", error);
-      throw error;
-    }
-  }
-
-  getCVPath(hash: string): string {
-    return join(CV_UPLOADS_DIR, hash);
   }
 
   async hasCVExtraction(hash: string): Promise<boolean> {

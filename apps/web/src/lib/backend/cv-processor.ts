@@ -10,6 +10,7 @@ import { z } from "zod";
 import { geminiClient } from "@/lib/gemini-client";
 import type { ExtractedCVData } from "@sync-hire/database";
 import type { StorageInterface } from "@/lib/storage/storage-interface";
+import type { CloudStorageProvider } from "@/lib/storage/cloud/cloud-storage-provider";
 import { generateFileHash } from "@/lib/utils/hash-utils";
 
 // Define Zod schema for extracted CV data
@@ -270,7 +271,10 @@ const extractedCVDataSchema = z.object({
 });
 
 export class CVProcessor {
-  constructor(private storage: StorageInterface) {}
+  constructor(
+    private storage: StorageInterface,
+    private cloudStorage: CloudStorageProvider,
+  ) {}
 
   /**
    * Process a PDF file and extract structured CV data
@@ -309,8 +313,8 @@ export class CVProcessor {
     // Save to cache
     await this.storage.saveCVExtraction(hash, extractedData);
 
-    // Save original file
-    await this.storage.uploadCV(hash, buffer);
+    // Upload original file to cloud storage
+    await this.cloudStorage.uploadCV(hash, buffer);
 
     return { hash, extractedData, cached: false };
   }

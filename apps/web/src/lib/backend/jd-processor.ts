@@ -14,6 +14,7 @@ import type {
   WorkArrangement,
 } from "@sync-hire/database";
 import type { StorageInterface } from "@/lib/storage/storage-interface";
+import type { CloudStorageProvider } from "@/lib/storage/cloud/cloud-storage-provider";
 import { generateFileHash } from "@/lib/utils/hash-utils";
 
 // Valid employment types for the database
@@ -70,7 +71,10 @@ const aiContentSchema = z.object({
 });
 
 export class JobDescriptionProcessor {
-  constructor(private storage: StorageInterface) {}
+  constructor(
+    private storage: StorageInterface,
+    private cloudStorage: CloudStorageProvider,
+  ) {}
 
   /**
    * Process a file (PDF, Markdown, or Text) and extract structured job data
@@ -156,8 +160,8 @@ export class JobDescriptionProcessor {
     // Save to cache
     await this.storage.saveExtraction(hash, extractedData);
 
-    // Save original file
-    await this.storage.uploadJobDescription(hash, buffer);
+    // Upload original file to cloud storage
+    await this.cloudStorage.uploadJobDescription(hash, buffer);
 
     return { hash, extractedData, aiSuggestions, aiQuestions, cached: false };
   }

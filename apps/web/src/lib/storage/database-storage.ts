@@ -2,12 +2,11 @@
  * Database Storage Implementation using Prisma
  *
  * Stores all data in PostgreSQL database.
- * File uploads are stored in GCP Cloud Storage (production) or local filesystem (development).
+ * File uploads are handled separately by CloudStorageProvider.
  */
 
 import { prisma } from '@sync-hire/database';
 import { Prisma } from '@prisma/client';
-import type { CloudStorageProvider } from './cloud/cloud-storage-provider';
 import type {
   CandidateApplication,
   ExtractedCVData,
@@ -21,7 +20,6 @@ import type {
 import type { StorageInterface, Job } from './storage-interface';
 
 export class DatabaseStorage implements StorageInterface {
-  constructor(private readonly cloudStorage: CloudStorageProvider) {}
 
   // =============================================================================
   // Job Description Extraction Methods
@@ -52,23 +50,6 @@ export class DatabaseStorage implements StorageInterface {
         status: 'DRAFT',
       },
     });
-  }
-
-  async uploadJobDescription(hash: string, buffer: Buffer): Promise<string> {
-    // Upload file to cloud storage
-    const fileUrl = await this.cloudStorage.uploadJobDescription(hash, buffer);
-
-    // Update database with file URL
-    await prisma.job.update({
-      where: { id: hash },
-      data: { jdFileUrl: fileUrl },
-    });
-
-    return fileUrl;
-  }
-
-  getJobDescriptionPath(hash: string): string {
-    return `/uploads/jd/${hash}`;
   }
 
   async hasExtraction(hash: string): Promise<boolean> {
@@ -200,28 +181,6 @@ export class DatabaseStorage implements StorageInterface {
         userId: 'demo-user', // TODO: Get from auth
       },
     });
-  }
-
-  async uploadCV(hash: string, buffer: Buffer): Promise<string> {
-    const fileSize = buffer.length;
-
-    // Upload file to cloud storage
-    const fileUrl = await this.cloudStorage.uploadCV(hash, buffer);
-
-    // Update database with file URL and size
-    await prisma.cVUpload.update({
-      where: { fileHash: hash },
-      data: {
-        fileUrl,
-        fileSize,
-      },
-    });
-
-    return fileUrl;
-  }
-
-  getCVPath(hash: string): string {
-    return `/uploads/cv/${hash}`;
   }
 
   async hasCVExtraction(hash: string): Promise<boolean> {
