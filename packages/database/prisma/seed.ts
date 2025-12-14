@@ -3,9 +3,15 @@
  *
  * Populates the database with initial demo data for development and testing.
  * Run with: pnpm db:seed
+ *
+ * Note: Uses Better Auth's hashPassword for password hashing.
  */
 
 import { prisma, disconnectPrisma } from '../src';
+import { hashPassword } from 'better-auth/crypto';
+
+// Default test password for all seed users
+const TEST_PASSWORD = 'password123';
 
 async function main() {
   // Production guard: prevent accidental seeding in production
@@ -17,6 +23,8 @@ async function main() {
   }
 
   console.log('🌱 Starting database seed...');
+  console.log('🔐 Hashing passwords...');
+  const hashedPassword = await hashPassword(TEST_PASSWORD);
 
   // =============================================================================
   // USERS
@@ -26,31 +34,46 @@ async function main() {
 
   const demoCandidate = await prisma.user.upsert({
     where: { email: 'demo@synchire.com' },
-    update: {},
+    update: {
+      password: hashedPassword,
+      emailVerified: new Date(),
+    },
     create: {
       id: 'demo-user',
       name: 'Demo Candidate',
       email: 'demo@synchire.com',
+      password: hashedPassword,
+      emailVerified: new Date(),
     },
   });
 
   const employer1 = await prisma.user.upsert({
     where: { email: 'hr@techcorp.com' },
-    update: {},
+    update: {
+      password: hashedPassword,
+      emailVerified: new Date(),
+    },
     create: {
       id: 'employer-1',
       name: 'Sarah Johnson',
       email: 'hr@techcorp.com',
+      password: hashedPassword,
+      emailVerified: new Date(),
     },
   });
 
   const employer2 = await prisma.user.upsert({
     where: { email: 'talent@startup.io' },
-    update: {},
+    update: {
+      password: hashedPassword,
+      emailVerified: new Date(),
+    },
     create: {
       id: 'employer-2',
       name: 'Mike Chen',
       email: 'talent@startup.io',
+      password: hashedPassword,
+      emailVerified: new Date(),
     },
   });
 
@@ -548,10 +571,10 @@ John: I believe in hands-on mentoring. I conduct regular code reviews with detai
   console.log('- Applications: 1');
   console.log('- Interviews: 1 (completed)');
   console.log('- Notifications: 3');
-  console.log('\nDemo accounts:');
-  console.log('- Candidate: demo@synchire.com (demo-user)');
-  console.log('- Employer 1: hr@techcorp.com (employer-1) - Owner of TechCorp');
-  console.log('- Employer 2: talent@startup.io (employer-2) - Owner of Startup.io');
+  console.log('\n🔑 Login credentials (password for all: password123):');
+  console.log('- Candidate: demo@synchire.com');
+  console.log('- Employer 1: hr@techcorp.com (Owner of TechCorp)');
+  console.log('- Employer 2: talent@startup.io (Owner of Startup.io)');
 }
 
 main()

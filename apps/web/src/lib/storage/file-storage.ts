@@ -296,6 +296,7 @@ export class FileStorage implements StorageInterface {
         email: mockUser.email,
         emailVerified: null,
         image: null,
+        password: null,
         createdAt: mockUser.createdAt,
         updatedAt: mockUser.createdAt,
       };
@@ -312,6 +313,7 @@ export class FileStorage implements StorageInterface {
       email: mockUser.email,
       emailVerified: null,
       image: null,
+      password: null,
       createdAt: mockUser.createdAt,
       updatedAt: mockUser.createdAt,
     };

@@ -1,8 +1,8 @@
 "use client";
 
-import { Bell, CircleHelp, Inbox, Moon, Search, Sun } from "lucide-react";
+import { Bell, CircleHelp, Inbox, LogOut, Moon, Search, Sun } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -19,19 +19,28 @@ import {
 } from "@/components/ui/tooltip";
 import { useCurrentUser } from "@/lib/hooks/use-current-user";
 import { useNotifications } from "@/lib/hooks/use-notifications";
+import { signOut } from "@/lib/auth-client";
 import { AboutDialog } from "./AboutDialog";
 import { Logo } from "./Logo";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const { data: notificationsData, isLoading: notificationsLoading } =
     useNotifications();
   const notifications = notificationsData?.data ?? [];
   const { data: userData } = useCurrentUser();
   const user = userData?.data;
+
+  async function handleSignOut() {
+    setIsSigningOut(true);
+    await signOut();
+    router.push("/login");
+  }
 
   // Get user initials from name
   const userInitials = user?.name
@@ -225,6 +234,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       <p className="px-2 py-1.5 text-xs text-muted-foreground">
                         View: {isHRView ? "Employer" : "Candidate"}
                       </p>
+                      <button
+                        onClick={handleSignOut}
+                        disabled={isSigningOut}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 rounded transition-colors disabled:opacity-50"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        {isSigningOut ? "Signing out..." : "Sign out"}
+                      </button>
                     </div>
                   </PopoverContent>
                 </Popover>

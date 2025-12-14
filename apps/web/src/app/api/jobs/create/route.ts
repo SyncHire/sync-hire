@@ -15,6 +15,7 @@ import { generateStringHash } from "@/lib/utils/hash-utils";
 import { jobToExtractedJobData } from "@/lib/utils/type-adapters";
 import { geminiClient } from "@/lib/gemini-client";
 import { z } from "zod";
+import { requireOrgMembership } from "@/lib/auth-server";
 
 interface CreateJobRequest {
   title: string;
@@ -255,6 +256,20 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authenticated user with active organization
+    let session;
+    try {
+      session = await requireOrgMembership();
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Authentication required with active organization",
+        },
+        { status: 401 },
+      );
+    }
+
     const body = (await request.json()) as CreateJobRequest;
 
     // Validate required fields
@@ -275,10 +290,20 @@ export async function POST(request: NextRequest) {
     // Generate job ID
     const jobId = `job-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
-    // Use default organization for demo purposes
-    // In production, this should be fetched from the user's organization membership
-    const organizationId = body.organizationId || "demo-org";
-    const createdById = body.createdById || "demo-user";
+    // Get organization and user from authenticated session
+    const organizationId = session.session.activeOrganizationId;
+    const createdById = session.user.id;
+
+    // This should not happen due to requireOrgMembership, but TypeScript needs the check
+    if (!organizationId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "No active organization selected",
+        },
+        { status: 400 },
+      );
+    }
 
     // Fetch or create placeholder organization for the job response
     const storage = getStorage();
