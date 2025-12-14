@@ -1,0 +1,60 @@
+<svg width="80" height="100" viewBox="0 0 80 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad" x1="40" y1="0" x2="40" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#22D3EE"/>
+      <stop offset="50%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#6366F1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- S-shape: top arc (left side going up and around) -->
+  <path
+    d="M40 56
+       C18 56 10 38 10 30
+       C10 14 24 4 40 4
+       C52 4 62 10 68 20"
+    stroke="url(#grad)"
+    stroke-width="8"
+    fill="none"
+    stroke-linecap="round"
+  />
+
+  <!-- S-shape: bottom arc (right side going down and around) -->
+  <path
+    d="M40 44
+       C62 44 70 62 70 70
+       C70 86 56 96 40 96
+       C28 96 18 90 12 80"
+    stroke="url(#grad)"
+    stroke-width="8"
+    fill="none"
+    stroke-linecap="round"
+  />
+
+  <!-- Upper arrow pointing up-left -->
+  <path d="M26 44 L18 36 L26 28 L26 36 L34 36 L34 44 Z" fill="url(#grad)"/>
+
+  <!-- Lower arrow pointing down-right -->
+  <path d="M54 56 L62 64 L54 72 L54 64 L46 64 L46 56 Z" fill="url(#grad)"/>
+
+  <!-- Head profile silhouette on right side of top loop -->
+  <path
+    d="M64 16
+       C68 20 72 28 72 36
+       C72 40 70 44 68 46
+       L64 42
+       C66 40 68 38 68 34
+       C68 28 64 22 62 20
+       L58 26
+       C60 28 62 32 62 36
+       C62 38 60 40 58 42
+       L54 38
+       C56 36 58 34 58 32
+       C58 28 54 26 52 28
+       L50 32
+       L46 28
+       C50 22 58 18 64 16
+       Z"
+    fill="url(#grad)"
+  />
+</svg>
