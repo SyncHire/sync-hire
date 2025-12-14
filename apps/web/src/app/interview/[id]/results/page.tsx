@@ -10,11 +10,12 @@ import { notFound } from "next/navigation";
 import { getCompanyLogoUrl } from "@/lib/logo-utils";
 import {
   getDemoUser,
-  getJobById,
   mockInterviews,
-  type Interview,
 } from "@/lib/mock-data";
+import type { Interview, Job } from "@/lib/storage/storage-interface";
 import { getStorage } from "@/lib/storage/storage-factory";
+import { mockInterviewToInterview } from "@/lib/utils/type-adapters";
+import { InterviewStatus } from "@sync-hire/database";
 import ResultsContent from "./ResultsContent";
 
 interface ResultsPageProps {
@@ -30,13 +31,14 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
 
   // Try to get interview from file storage first (real completed interviews)
   let interview: Interview | null = await storage.getInterview(id);
-  let job = interview ? await storage.getJob(interview.jobId) : null;
+  let job: Job | null = interview ? await storage.getJob(interview.jobId) : null;
 
-  // If not found in storage, try mock data
+  // If not found in storage, try mock data and convert to database type
   if (!interview) {
-    interview = mockInterviews[id] || null;
-    if (interview) {
-      job = getJobById(interview.jobId) || null;
+    const mockInterview = mockInterviews[id];
+    if (mockInterview) {
+      interview = mockInterviewToInterview(mockInterview);
+      job = await storage.getJob(interview.jobId);
     }
   }
 
@@ -53,10 +55,14 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
           id,
           jobId,
           candidateId: demoUser.id,
-          status: "COMPLETED" as const,
-          durationMinutes: 30,
+          status: InterviewStatus.COMPLETED,
+          callId: null,
+          transcript: null,
           score: 87,
+          durationMinutes: 30,
+          aiEvaluation: null,
           createdAt: new Date(),
+          completedAt: new Date(),
         };
       }
     }
@@ -67,7 +73,7 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
   }
 
   // For non-completed interviews, redirect (unless it's a synthetic one)
-  if (interview.status !== "COMPLETED" && !id.startsWith("application-")) {
+  if (interview.status !== InterviewStatus.COMPLETED && !id.startsWith("application-")) {
     notFound();
   }
 

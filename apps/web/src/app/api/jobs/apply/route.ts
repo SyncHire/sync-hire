@@ -8,11 +8,12 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { generateInterviewQuestions } from "@/lib/backend/question-generator";
-import type { ExtractedJobData } from "@/lib/mock-data";
+import type { ExtractedJobData } from "@sync-hire/database";
 import { getStorage } from "@/lib/storage/storage-factory";
 import type { InterviewQuestions } from "@/lib/storage/storage-interface";
 import { generateStringHash } from "@/lib/utils/hash-utils";
 import { getQuestionCounts } from "@sync-hire/database";
+import { toEmploymentType, toWorkArrangement } from "@/lib/utils/type-adapters";
 
 export async function POST(request: NextRequest) {
   try {
@@ -79,8 +80,8 @@ export async function POST(request: NextRequest) {
         title: job.title,
         company: job.company,
         location: job.location,
-        employmentType: job.employmentType,
-        workArrangement: job.workArrangement ?? "On-site",
+        employmentType: toEmploymentType(job.employmentType),
+        workArrangement: toWorkArrangement(job.workArrangement),
         seniority: job.department || "Mid-level",
         requirements: job.requirements,
         responsibilities: job.description ? [job.description] : [],

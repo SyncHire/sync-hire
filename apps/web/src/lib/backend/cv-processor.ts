@@ -8,7 +8,7 @@
 
 import { z } from "zod";
 import { geminiClient } from "@/lib/gemini-client";
-import type { ExtractedCVData } from "@/lib/mock-data";
+import type { ExtractedCVData } from "@sync-hire/database";
 import type { StorageInterface } from "@/lib/storage/storage-interface";
 import { generateFileHash } from "@/lib/utils/hash-utils";
 
@@ -161,31 +161,26 @@ const extractedCVDataSchema = z.object({
         if (typeof item === "string" || item === null) {
           return {
             name: item || "",
-            issuer: undefined,
+            issuer: "",
             issueDate: undefined,
             expiryDate: undefined,
-            credentialId: undefined,
           };
         }
         if (typeof item === "object" && item !== null) {
           return {
             name: (item.name || "").toString(),
-            issuer: item.issuer ? item.issuer.toString() : undefined,
+            issuer: item.issuer ? item.issuer.toString() : "",
             issueDate: item.issueDate ? item.issueDate.toString() : undefined,
             expiryDate: item.expiryDate
               ? item.expiryDate.toString()
-              : undefined,
-            credentialId: item.credentialId
-              ? item.credentialId.toString()
               : undefined,
           };
         }
         return {
           name: "",
-          issuer: undefined,
+          issuer: "",
           issueDate: undefined,
           expiryDate: undefined,
-          credentialId: undefined,
         };
       });
     })
@@ -211,6 +206,7 @@ const extractedCVDataSchema = z.object({
             "Basic",
             "Intermediate",
             "Advanced",
+            "Fluent",
             "Native",
           ].includes(item.proficiency)
             ? item.proficiency
@@ -221,6 +217,7 @@ const extractedCVDataSchema = z.object({
               | "Basic"
               | "Intermediate"
               | "Advanced"
+              | "Fluent"
               | "Native",
           };
         }
@@ -247,8 +244,6 @@ const extractedCVDataSchema = z.object({
             description: "",
             technologies: [],
             url: undefined,
-            startDate: undefined,
-            endDate: undefined,
           };
         }
         if (typeof item === "object" && item !== null) {
@@ -261,8 +256,6 @@ const extractedCVDataSchema = z.object({
                   .filter(Boolean)
               : [],
             url: item.url ? item.url.toString() : undefined,
-            startDate: item.startDate ? item.startDate.toString() : undefined,
-            endDate: item.endDate ? item.endDate.toString() : undefined,
           };
         }
         return {
@@ -270,8 +263,6 @@ const extractedCVDataSchema = z.object({
           description: "",
           technologies: [],
           url: undefined,
-          startDate: undefined,
-          endDate: undefined,
         };
       });
     })
@@ -744,10 +735,9 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
         return [
           {
             name: this.cleanStringField(certifications),
-            issuer: undefined,
+            issuer: "",
             issueDate: undefined,
             expiryDate: undefined,
-            credentialId: undefined,
           },
         ];
       }
@@ -760,22 +750,18 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
         if (typeof cert === "string") {
           fixed.push({
             name: this.cleanStringField(cert),
-            issuer: undefined,
+            issuer: "",
             issueDate: undefined,
             expiryDate: undefined,
-            credentialId: undefined,
           });
         } else if (typeof cert === "object") {
           fixed.push({
             name: this.cleanStringField(cert.name),
             issuer: cert.issuer
               ? this.cleanStringField(cert.issuer)
-              : undefined,
-            issueDate: this.normalizeDate(cert.issueDate),
-            expiryDate: this.normalizeDate(cert.expiryDate),
-            credentialId: cert.credentialId
-              ? this.cleanStringField(cert.credentialId)
-              : undefined,
+              : "",
+            issueDate: this.normalizeDate(cert.issueDate) || undefined,
+            expiryDate: this.normalizeDate(cert.expiryDate) || undefined,
           });
         }
       }
@@ -819,6 +805,8 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
             const prof = proficiency.toLowerCase();
             if (prof.includes("native") || prof.includes("c2")) {
               proficiency = "Native";
+            } else if (prof.includes("fluent")) {
+              proficiency = "Fluent";
             } else if (prof.includes("advanced") || prof.includes("c1")) {
               proficiency = "Advanced";
             } else if (
@@ -840,6 +828,7 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
               | "Basic"
               | "Intermediate"
               | "Advanced"
+              | "Fluent"
               | "Native",
           });
         }
@@ -876,8 +865,6 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
             description: "",
             technologies: [],
             url: undefined,
-            startDate: undefined,
-            endDate: undefined,
           });
         } else if (typeof project === "object") {
           const name = this.cleanStringField(project.name);
@@ -891,8 +878,6 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
             description: description || "",
             technologies: this.parseTechnologiesArray(project.technologies),
             url: project.url ? this.cleanStringField(project.url) : undefined,
-            startDate: this.normalizeDate(project.startDate),
-            endDate: this.normalizeDate(project.endDate),
           });
         }
       }

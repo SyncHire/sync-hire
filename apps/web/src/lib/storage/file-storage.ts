@@ -13,18 +13,18 @@ import type {
   ExtractedJobData,
   Interview,
   Job,
+  InterviewQuestions,
   Notification,
   User,
-} from "@/lib/mock-data";
+  StorageInterface,
+} from "./storage-interface";
 import {
   getDemoUser,
   getInterviewById as getMockInterviewById,
   getAllInterviews as getMockInterviews,
-  getInterviewsForUser as getMockInterviewsForUser,
-  getJobById as getMockJobById,
   getUserById,
 } from "@/lib/mock-data";
-import type { InterviewQuestions, StorageInterface } from "./storage-interface";
+import { mockUserToUser, mockInterviewToInterview } from "@/lib/utils/type-adapters";
 
 const DATA_DIR = join(process.cwd(), "data");
 const JD_EXTRACTIONS_DIR = join(DATA_DIR, "jd-extractions");
@@ -148,14 +148,14 @@ export class FileStorage implements StorageInterface {
   }
 
   async getJob(id: string): Promise<Job | null> {
-    // Try file storage first
+    // File storage only returns jobs stored in files, no mock fallback
+    // Mock jobs have incompatible structure (different field names)
     try {
       const filePath = join(JOBS_DIR, `${id}.json`);
       const data = await fs.readFile(filePath, "utf-8");
       return JSON.parse(data) as Job;
     } catch {
-      // Fall back to mock data
-      return getMockJobById(id) || null;
+      return null;
     }
   }
 
@@ -242,8 +242,9 @@ export class FileStorage implements StorageInterface {
       const data = await fs.readFile(filePath, "utf-8");
       return JSON.parse(data) as Interview;
     } catch {
-      // Fall back to mock data
-      return getMockInterviewById(id) || null;
+      // Fall back to mock data and convert to database Interview type
+      const mockInterview = getMockInterviewById(id);
+      return mockInterview ? mockInterviewToInterview(mockInterview) : null;
     }
   }
 
@@ -268,8 +269,8 @@ export class FileStorage implements StorageInterface {
         // Directory doesn't exist yet, that's fine
       }
 
-      // Get mock interviews
-      const mockInterviews = getMockInterviews();
+      // Get mock interviews and convert to database Interview type
+      const mockInterviews = getMockInterviews().map(mockInterviewToInterview);
 
       // Merge: stored interviews override mock interviews with same ID
       const interviewMap = new Map<string, Interview>();
@@ -283,7 +284,7 @@ export class FileStorage implements StorageInterface {
       return Array.from(interviewMap.values());
     } catch (error) {
       console.error("Failed to fetch interviews:", error);
-      return getMockInterviews();
+      return getMockInterviews().map(mockInterviewToInterview);
     }
   }
 
@@ -316,15 +317,16 @@ export class FileStorage implements StorageInterface {
       const data = await fs.readFile(filePath, "utf-8");
       return JSON.parse(data) as User;
     } catch {
-      // Fall back to mock data
-      return getUserById(id) || null;
+      // Fall back to mock data and convert to database User type
+      const mockUser = getUserById(id);
+      return mockUser ? mockUserToUser(mockUser) : null;
     }
   }
 
   async getCurrentUser(): Promise<User> {
-    // For now, always return demo user
+    // For now, always return demo user converted to database User type
     // In future: integrate with auth system
-    return getDemoUser();
+    return mockUserToUser(getDemoUser());
   }
 
   // =============================================================================
@@ -488,10 +490,10 @@ export class FileStorage implements StorageInterface {
     }
   }
 
-  async getAllCVExtractions(): Promise<Array<{ cvId: string; data: ExtractedCVData }>> {
+  async getAllCVExtractions(): Promise<Array<{ cvId: string; userId: string; data: ExtractedCVData }>> {
     try {
       const files = await fs.readdir(CV_EXTRACTIONS_DIR);
-      const extractions: Array<{ cvId: string; data: ExtractedCVData }> = [];
+      const extractions: Array<{ cvId: string; userId: string; data: ExtractedCVData }> = [];
 
       for (const file of files) {
         if (file.endsWith(".json")) {
@@ -501,6 +503,7 @@ export class FileStorage implements StorageInterface {
             const cvId = file.replace(".json", "");
             extractions.push({
               cvId,
+              userId: "demo-user", // File storage doesn't track userId, use default
               data: JSON.parse(data) as ExtractedCVData,
             });
           } catch (error) {

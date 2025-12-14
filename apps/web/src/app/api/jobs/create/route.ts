@@ -6,12 +6,13 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { ApplicationStatus, ApplicationSource, MatchingStatus, JobStatus } from "@sync-hire/database";
-import type { ExtractedJobData, ExtractedCVData } from "@sync-hire/database";
+import type { ExtractedCVData, ExtractedJobData } from "@sync-hire/database";
 import type { Question } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
 import type { Job } from "@/lib/storage/storage-interface";
 import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
 import { generateStringHash } from "@/lib/utils/hash-utils";
+import { jobToExtractedJobData } from "@/lib/utils/type-adapters";
 import { geminiClient } from "@/lib/gemini-client";
 import { z } from "zod";
 
@@ -174,16 +175,7 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
           duration: q.duration,
           category: (q.category ?? "Technical Skills") as Question["category"],
         }));
-        const jdData: ExtractedJobData = {
-          title: job.title,
-          company: job.company,
-          location: job.location,
-          employmentType: job.employmentType,
-          workArrangement: job.workArrangement ?? "On-site",
-          seniority: "",
-          requirements: job.requirements,
-          responsibilities: [job.description],
-        };
+        const jdData = jobToExtractedJobData(job);
         generateSmartMergedQuestions(cvData as ExtractedCVData, jdData, questionsWithCategory).then(async (mergedQuestions) => {
           const interviewQuestions = {
             metadata: {
@@ -311,14 +303,15 @@ export async function POST(request: NextRequest) {
     }));
 
     // Create job object matching the Prisma Job type with questions
+    const now = new Date();
     const job: Job = {
       id: jobId,
       title: body.title,
       company: body.company || "Company",
       department: body.department || null,
       location: body.location,
-      employmentType: (body.employmentType || "Full-time") as Job["employmentType"],
-      workArrangement: (body.workArrangement || "On-site") as Job["workArrangement"],
+      employmentType: body.employmentType || "Full-time",
+      workArrangement: body.workArrangement || null,
       salary: body.salary || null,
       description: body.description,
       requirements: body.requirements || [],
@@ -330,9 +323,10 @@ export async function POST(request: NextRequest) {
       jdFileUrl: null,
       jdFileHash: null,
       jdExtraction,
-      jdVersion: 1,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      jdVersion: null,
+      postedAt: now,
+      createdAt: now,
+      updatedAt: now,
       questions: dbQuestions,
     };
 

@@ -7,11 +7,10 @@
 import { NextResponse } from "next/server";
 import {
   getDemoUser,
-  getJobById,
-  type Job,
   mockInterviews,
   type Question,
 } from "@/lib/mock-data";
+import type { Job } from "@/lib/storage/storage-interface";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { getStreamClient } from "@/lib/stream-token";
 import { generateStringHash } from "@/lib/utils/hash-utils";
@@ -43,7 +42,8 @@ export async function POST(request: Request) {
     let interview = mockInterviews[interviewId];
 
     if (interview) {
-      job = getJobById(interview.jobId) || null;
+      // For mock interviews, get job from storage (no more mock job fallback)
+      job = await storage.getJob(interview.jobId);
     } else if (interviewId.startsWith("application-")) {
       // Parse application ID: application-job-5-demo-user -> jobId = job-5
       const jobIdMatch = interviewId.match(/^application-(job-\d+)-/);
@@ -85,8 +85,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Use generated questions if available, otherwise use job's default questions
-    const interviewQuestions = questions.length > 0 ? questions : job.questions;
+    // Use generated questions if available, otherwise map job's questions to agent format
+    let interviewQuestions: Question[] = questions;
+    if (interviewQuestions.length === 0 && job.questions) {
+      // Map database JobQuestion to agent Question format
+      interviewQuestions = job.questions.map((q) => ({
+        id: q.id,
+        text: q.content,
+        type: "video" as const, // Default to video for agent
+        duration: q.duration,
+        category: (q.category ?? "Technical Skills") as Question["category"],
+      }));
+    }
 
     // Use interview ID directly as call ID (already formatted as "interview-1", etc.)
     const callId = interviewId;

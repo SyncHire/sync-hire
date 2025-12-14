@@ -488,7 +488,7 @@ export class DatabaseStorage implements StorageInterface {
 
   async getAllCVExtractions(): Promise<Array<{ cvId: string; userId: string; data: ExtractedCVData }>> {
     const cvs = await prisma.cVUpload.findMany({
-      where: { extraction: { not: null } },
+      where: { extraction: { not: Prisma.JsonNull } },
     });
 
     return cvs
