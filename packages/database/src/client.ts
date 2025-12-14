@@ -27,6 +27,10 @@ if (!connectionString) {
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+// Check if using VPC private IP connection (no SSL needed - VPC traffic is encrypted)
+// Private IP connections use format: postgresql://user:pass@10.x.x.x:5432/db
+const isPrivateIpConnection = connectionString.match(/@10\.\d+\.\d+\.\d+:/);
+
 // Create connection pool for PostgreSQL with production-ready settings
 const pool = new Pool({
   connectionString,
@@ -34,7 +38,9 @@ const pool = new Pool({
   min: parseInt(process.env.DB_POOL_MIN || '2', 10),
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
-  ssl: isProduction ? { rejectUnauthorized: true } : false,
+  // VPC private IP connections don't need SSL (traffic is already encrypted at network level)
+  // Public connections in production should use SSL
+  ssl: isProduction && !isPrivateIpConnection ? { rejectUnauthorized: true } : false,
 });
 
 // Create Prisma adapter
