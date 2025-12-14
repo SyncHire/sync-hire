@@ -25,9 +25,16 @@ if (!connectionString) {
   );
 }
 
-// Create connection pool for PostgreSQL
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Create connection pool for PostgreSQL with production-ready settings
 const pool = new Pool({
   connectionString,
+  max: parseInt(process.env.DB_POOL_MAX || '20', 10),
+  min: parseInt(process.env.DB_POOL_MIN || '2', 10),
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+  ssl: isProduction ? { rejectUnauthorized: true } : false,
 });
 
 // Create Prisma adapter

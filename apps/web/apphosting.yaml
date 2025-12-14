@@ -37,7 +37,18 @@ env:
     availability:
       - RUNTIME
 
-  # Secrets (runtime only - don't expose at build time)
+  # Database configuration
+  - variable: USE_DATABASE
+    value: "true"
+    availability:
+      - RUNTIME
+
+  # Database connection (needed at build time for Prisma generate)
+  - variable: DATABASE_URL
+    secret: DATABASE_URL
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: API_SECRET_KEY
     secret: API_SECRET_KEY
     availability:

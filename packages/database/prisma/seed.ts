@@ -8,6 +8,14 @@
 import { prisma, disconnectPrisma } from '../src';
 
 async function main() {
+  // Production guard: prevent accidental seeding in production
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SEED !== 'true') {
+    throw new Error(
+      'Seeding is not allowed in production. ' +
+      'Set ALLOW_SEED=true to override this protection.'
+    );
+  }
+
   console.log('🌱 Starting database seed...');
 
   // =============================================================================
