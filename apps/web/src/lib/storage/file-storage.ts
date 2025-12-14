@@ -15,6 +15,7 @@ import type {
   Job,
   InterviewQuestions,
   Notification,
+  Organization,
   User,
   StorageInterface,
 } from "./storage-interface";
@@ -22,9 +23,10 @@ import {
   getDemoUser,
   getInterviewById as getMockInterviewById,
   getAllInterviews as getMockInterviews,
+  getOrganizationById,
   getUserById,
 } from "@/lib/mock-data";
-import { mockUserToUser, mockInterviewToInterview } from "@/lib/utils/type-adapters";
+import { mockInterviewToInterview } from "@/lib/utils/type-adapters";
 
 const DATA_DIR = join(process.cwd(), "data");
 const JD_EXTRACTIONS_DIR = join(DATA_DIR, "jd-extractions");
@@ -283,16 +285,61 @@ export class FileStorage implements StorageInterface {
       const data = await fs.readFile(filePath, "utf-8");
       return JSON.parse(data) as User;
     } catch {
-      // Fall back to mock data and convert to database User type
+      // Fall back to mock data
       const mockUser = getUserById(id);
-      return mockUser ? mockUserToUser(mockUser) : null;
+      if (!mockUser) {
+        return null;
+      }
+      return {
+        id: mockUser.id,
+        name: mockUser.name,
+        email: mockUser.email,
+        emailVerified: null,
+        image: null,
+        createdAt: mockUser.createdAt,
+        updatedAt: mockUser.createdAt,
+      };
     }
   }
 
   async getCurrentUser(): Promise<User> {
-    // For now, always return demo user converted to database User type
+    // For now, always return demo user
     // In future: integrate with auth system
-    return mockUserToUser(getDemoUser());
+    const mockUser = getDemoUser();
+    return {
+      id: mockUser.id,
+      name: mockUser.name,
+      email: mockUser.email,
+      emailVerified: null,
+      image: null,
+      createdAt: mockUser.createdAt,
+      updatedAt: mockUser.createdAt,
+    };
+  }
+
+  // =============================================================================
+  // Organization Methods
+  // =============================================================================
+
+  async getOrganization(id: string): Promise<Organization | null> {
+    // File storage uses mock organizations
+    const mockOrg = getOrganizationById(id);
+    if (!mockOrg) {
+      return null;
+    }
+    const now = new Date();
+    return {
+      id: mockOrg.id,
+      name: mockOrg.name,
+      slug: mockOrg.slug,
+      logo: null,
+      website: null,
+      description: null,
+      industry: null,
+      size: null,
+      createdAt: now,
+      updatedAt: now,
+    };
   }
 
   // =============================================================================

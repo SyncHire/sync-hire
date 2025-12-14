@@ -74,7 +74,7 @@ Be realistic with scoring:
 async function generateAndSaveQuestions(
   storage: Awaited<ReturnType<typeof getStorage>>,
   cvData: ExtractedCVData,
-  job: { title: string; company: string; requirements: string[]; description: string; questions?: Array<{ id: string; content: string; type: string; duration: number; category: string | null }> },
+  job: { title: string; organization: { name: string }; requirements: string[]; description: string; questions?: Array<{ id: string; content: string; type: string; duration: number; category: string | null }> },
   questionsHash: string,
   cvId: string,
   jobId: string,

@@ -51,6 +51,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // Compute these values but only use them after mount to avoid hydration mismatch
   const isCandidate =
     pathname.startsWith("/candidate") || pathname.startsWith("/interview");
+  const isHRView = pathname.startsWith("/hr");
   // Only match /interview/[id], not deeper paths like /interview/[id]/results
   const pathParts = pathname.split("/").filter(Boolean);
   const isInterview = pathParts[0] === "interview" && pathParts.length === 2;
@@ -222,7 +223,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     </div>
                     <div className="p-2">
                       <p className="px-2 py-1.5 text-xs text-muted-foreground">
-                        Role: {user?.role === "CANDIDATE" ? "Candidate" : "Employer"}
+                        View: {isHRView ? "Employer" : "Candidate"}
                       </p>
                     </div>
                   </PopoverContent>

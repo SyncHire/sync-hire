@@ -33,7 +33,7 @@ export function useJobs(options?: UseJobsOptions) {
       // Poll while any job is scanning
       if (options?.pollWhileScanning) {
         const jobs = query.state.data || [];
-        const hasScanning = jobs.some((job: Job) => job.aiMatchingStatus === "scanning");
+        const hasScanning = jobs.some((job: Job) => job.aiMatchingStatus === "SCANNING");
         if (hasScanning) {
           return 2000;
         }
@@ -69,7 +69,7 @@ export function useJob(jobId: string | undefined, options?: UseJobOptions) {
         return 2000;
       }
       // Poll while scanning
-      if (options?.pollWhileScanning && query.state.data?.aiMatchingStatus === "scanning") {
+      if (options?.pollWhileScanning && query.state.data?.aiMatchingStatus === "SCANNING") {
         return 2000;
       }
       return false;

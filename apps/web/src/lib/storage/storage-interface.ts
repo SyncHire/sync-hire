@@ -13,6 +13,7 @@ import type {
   InterviewQuestions,
   JobWithQuestionsAndOrg,
   Notification,
+  Organization,
   User,
 } from "@sync-hire/database";
 
@@ -24,6 +25,7 @@ export type {
   Interview,
   InterviewQuestions,
   Notification,
+  Organization,
   User,
 };
 
@@ -135,6 +137,15 @@ export interface StorageInterface {
    * Get current/demo user
    */
   getCurrentUser(): Promise<User>;
+
+  // =============================================================================
+  // Organization Methods
+  // =============================================================================
+
+  /**
+   * Get organization by ID
+   */
+  getOrganization(id: string): Promise<Organization | null>;
 
   // =============================================================================
   // User CV Methods

@@ -479,17 +479,17 @@ export default function CandidateJobListings() {
                                   <div className="flex justify-between items-start mb-6">
                                     <div className="flex items-center gap-3">
                                       <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center border border-border transition-colors overflow-hidden">
-                                        {application.job?.company &&
+                                        {application.job?.organization?.name &&
                                         getCompanyLogoUrl(
-                                          application.job.company,
+                                          application.job.organization.name,
                                         ) ? (
                                           <img
                                             src={
                                               getCompanyLogoUrl(
-                                                application.job.company,
+                                                application.job.organization.name,
                                               )!
                                             }
-                                            alt={`${application.job.company} logo`}
+                                            alt={`${application.job.organization.name} logo`}
                                             className="h-8 w-8 object-contain"
                                           />
                                         ) : (
@@ -497,7 +497,7 @@ export default function CandidateJobListings() {
                                         )}
                                       </div>
                                       <span className="text-lg font-bold text-foreground">
-                                        {application.job?.company}
+                                        {application.job?.organization?.name}
                                       </span>
                                     </div>
                                     <Badge

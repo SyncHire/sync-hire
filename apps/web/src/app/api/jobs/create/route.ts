@@ -25,7 +25,7 @@ interface CreateJobRequest {
   requirements: string[];
   responsibilities: string[];
   seniority: string;
-  company?: string;
+  organizationId?: string; // ID of the organization posting the job
   department?: string;
   salary?: string;
   customQuestions?: Array<{
@@ -37,7 +37,7 @@ interface CreateJobRequest {
   }>;
   extractionHash?: string;
   originalJDText?: string;
-  employerId?: string;
+  createdById?: string; // ID of the user creating the job
   aiMatchingEnabled?: boolean;
   aiMatchingThreshold?: number;
 }
@@ -275,10 +275,31 @@ export async function POST(request: NextRequest) {
     // Generate job ID
     const jobId = `job-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+    // Use default organization for demo purposes
+    // In production, this should be fetched from the user's organization membership
+    const organizationId = body.organizationId || "demo-org";
+    const createdById = body.createdById || "demo-user";
+
+    // Fetch or create placeholder organization for the job response
+    const storage = getStorage();
+    const existingOrg = await storage.getOrganization(organizationId);
+    const organization = existingOrg || {
+      id: organizationId,
+      name: "Demo Company",
+      slug: "demo-company",
+      logo: null,
+      website: null,
+      description: null,
+      industry: null,
+      size: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
     // Build extracted data if original JD text provided
     const jdExtraction: ExtractedJobData | null = body.originalJDText ? {
       title: body.title,
-      company: body.company || "Company",
+      company: organization.name,
       responsibilities: body.responsibilities || [],
       requirements: body.requirements || [],
       seniority: body.seniority || "",
@@ -307,7 +328,9 @@ export async function POST(request: NextRequest) {
     const job: Job = {
       id: jobId,
       title: body.title,
-      company: body.company || "Company",
+      organizationId,
+      createdById,
+      organization, // Include organization relation
       department: body.department || null,
       location: body.location,
       employmentType: body.employmentType || "Full-time",
@@ -319,7 +342,6 @@ export async function POST(request: NextRequest) {
       aiMatchingEnabled,
       aiMatchingThreshold,
       aiMatchingStatus: aiMatchingEnabled ? MatchingStatus.SCANNING : MatchingStatus.DISABLED,
-      employerId: body.employerId || "demo-user",
       jdFileUrl: null,
       jdFileHash: null,
       jdExtraction,
@@ -330,8 +352,7 @@ export async function POST(request: NextRequest) {
       questions: dbQuestions,
     };
 
-    // Persist job to storage
-    const storage = getStorage();
+    // Persist job to storage (storage already initialized above)
     await storage.saveJob(job.id, job);
 
     // Trigger automatic candidate matching in background (don't wait)

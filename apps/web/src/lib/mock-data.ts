@@ -33,11 +33,19 @@ export interface Question {
   keyPoints?: string[];
 }
 
+// Organization type for mock data (matches database relation)
+export interface MockOrganization {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export interface Job {
   id: string;
   title: string;
   organizationId: string; // Which organization owns this job
   createdById: string; // Who created this job
+  organization: MockOrganization; // Organization relation (for UI compatibility)
   department?: string;
   location: string;
   employmentType: string; // Full-time, Part-time, Contract, etc.
@@ -318,12 +326,26 @@ const users: Record<string, User> = {
   },
 };
 
+// Organizations map - matches organizationId to organization details
+const organizations: Record<string, MockOrganization> = {
+  "org-stripe": { id: "org-stripe", name: "Stripe", slug: "stripe" },
+  "org-databricks": { id: "org-databricks", name: "Databricks", slug: "databricks" },
+  "org-vercel": { id: "org-vercel", name: "Vercel", slug: "vercel" },
+  "org-cloudflare": { id: "org-cloudflare", name: "Cloudflare", slug: "cloudflare" },
+  "org-google": { id: "org-google", name: "Google", slug: "google" },
+  "org-spotify": { id: "org-spotify", name: "Spotify", slug: "spotify" },
+  "org-meta": { id: "org-meta", name: "Meta", slug: "meta" },
+  "org-github": { id: "org-github", name: "GitHub", slug: "github" },
+  "org-notion": { id: "org-notion", name: "Notion", slug: "notion" },
+};
+
 const jobs: Record<string, Job> = {
   "job-1": {
     id: "job-1",
     title: "Senior Frontend Engineer",
     organizationId: "org-stripe",
     createdById: "employer-1",
+    organization: organizations["org-stripe"],
     department: "Engineering",
     location: "San Francisco, CA",
     employmentType: "Full-time",
@@ -389,6 +411,7 @@ const jobs: Record<string, Job> = {
     title: "Backend Engineer",
     organizationId: "org-databricks",
     createdById: "employer-1",
+    organization: organizations["org-databricks"],
     department: "Engineering",
     location: "Remote",
     employmentType: "Full-time",
@@ -446,6 +469,7 @@ const jobs: Record<string, Job> = {
     title: "Full Stack Engineer",
     organizationId: "org-vercel",
     createdById: "employer-1",
+    organization: organizations["org-vercel"],
     department: "Engineering",
     location: "New York, NY",
     employmentType: "Full-time",
@@ -511,6 +535,7 @@ const jobs: Record<string, Job> = {
     title: "DevOps Engineer",
     organizationId: "org-cloudflare",
     createdById: "employer-1",
+    organization: organizations["org-cloudflare"],
     department: "Engineering",
     location: "Austin, TX",
     employmentType: "Full-time",
@@ -568,6 +593,7 @@ const jobs: Record<string, Job> = {
     title: "ML Engineer",
     organizationId: "org-google",
     createdById: "employer-1",
+    organization: organizations["org-google"],
     department: "Engineering",
     location: "San Francisco, CA",
     employmentType: "Full-time",
@@ -625,6 +651,7 @@ const jobs: Record<string, Job> = {
     title: "Mobile Engineer",
     organizationId: "org-spotify",
     createdById: "employer-1",
+    organization: organizations["org-spotify"],
     department: "Engineering",
     location: "Stockholm, Sweden",
     employmentType: "Full-time",
@@ -682,6 +709,7 @@ const jobs: Record<string, Job> = {
     title: "Senior React Developer",
     organizationId: "org-meta",
     createdById: "employer-1",
+    organization: organizations["org-meta"],
     department: "Engineering",
     location: "Menlo Park, CA",
     employmentType: "Full-time",
@@ -739,6 +767,7 @@ const jobs: Record<string, Job> = {
     title: "Software Engineer - Infrastructure",
     organizationId: "org-github",
     createdById: "employer-1",
+    organization: organizations["org-github"],
     department: "Engineering",
     location: "Remote",
     employmentType: "Full-time",
@@ -796,6 +825,7 @@ const jobs: Record<string, Job> = {
     title: "Senior Backend Engineer",
     organizationId: "org-notion",
     createdById: "employer-1",
+    organization: organizations["org-notion"],
     department: "Engineering",
     location: "San Francisco, CA",
     employmentType: "Full-time",
@@ -960,6 +990,11 @@ export function getJobById(id: string): Job | undefined {
 
 export function getAllJobs(): Job[] {
   return Object.values(jobs);
+}
+
+// Organizations
+export function getOrganizationById(id: string): MockOrganization | undefined {
+  return organizations[id];
 }
 
 // Interviews
@@ -1148,11 +1183,14 @@ export function updateJobDescriptionVersion(
 export function createJob(jobData: Partial<Job>): Job {
   const id = `job-${Date.now()}`;
   const now = new Date();
+  const orgId = jobData.organizationId || "";
+  const org = jobData.organization || organizations[orgId] || { id: orgId, name: "Company", slug: "company" };
   const job: Job = {
     id,
     title: jobData.title || "Untitled Position",
-    organizationId: jobData.organizationId || "",
+    organizationId: orgId,
     createdById: jobData.createdById || "",
+    organization: org,
     department: jobData.department,
     location: jobData.location || "",
     employmentType: jobData.employmentType || "Full-time",

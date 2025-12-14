@@ -14,6 +14,7 @@ import type {
   InterviewQuestions,
   JobWithQuestions,
   Notification,
+  Organization,
   User,
 } from '@sync-hire/database';
 import { prisma } from '@sync-hire/database';
@@ -319,6 +320,16 @@ export class DatabaseStorage implements StorageInterface {
     }
 
     return user;
+  }
+
+  // =============================================================================
+  // Organization Methods
+  // =============================================================================
+
+  async getOrganization(id: string): Promise<Organization | null> {
+    return this.db.organization.findUnique({
+      where: { id },
+    });
   }
 
   // =============================================================================

@@ -77,7 +77,7 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
     notFound();
   }
 
-  const companyLogo = getCompanyLogoUrl(job.company);
+  const companyLogo = getCompanyLogoUrl(job.organization.name);
 
   return (
     <div className="min-h-screen bg-background overflow-y-auto">

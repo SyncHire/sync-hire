@@ -170,7 +170,7 @@ export default function ResultsContent({
             {companyLogo ? (
               <img
                 src={companyLogo}
-                alt={`${job.company} logo`}
+                alt={`${job.organization.name} logo`}
                 className="h-10 w-10 object-contain"
               />
             ) : (
@@ -182,7 +182,7 @@ export default function ResultsContent({
               {job.title}
             </h1>
             <p className="text-muted-foreground">
-              {job.company} - {job.location}
+              {job.organization.name} - {job.location}
             </p>
           </div>
         </div>
