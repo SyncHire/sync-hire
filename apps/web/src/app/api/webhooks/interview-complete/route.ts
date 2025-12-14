@@ -4,8 +4,10 @@
  * POST /api/webhooks/interview-complete
  */
 import { NextResponse } from "next/server";
-import type { AIEvaluation, Interview } from "@/lib/mock-data";
+import type { AIEvaluation } from "@/lib/mock-data";
+import type { Interview } from "@/lib/storage/storage-interface";
 import { getStorage } from "@/lib/storage/storage-factory";
+import { InterviewStatus, ApplicationStatus } from "@sync-hire/database";
 
 interface TranscriptEntry {
   speaker: string;
@@ -169,14 +171,14 @@ export async function POST(request: Request) {
       id: payload.interviewId,
       jobId: jobId || "unknown",
       candidateId: parsed.candidateId,
-      status: "COMPLETED",
+      status: InterviewStatus.COMPLETED,
       callId: payload.interviewId,
-      transcript: transcriptText,
-      score: payload.score ?? aiEvaluation?.overallScore,
+      transcript: transcriptText ?? null,
+      score: payload.score ?? aiEvaluation?.overallScore ?? null,
       durationMinutes: payload.durationMinutes,
       createdAt: existingInterview?.createdAt || new Date(),
       completedAt: new Date(payload.completedAt),
-      aiEvaluation,
+      aiEvaluation: aiEvaluation ?? null,
     };
 
     // Save interview to storage
@@ -184,14 +186,14 @@ export async function POST(request: Request) {
     console.log("✅ Interview saved to storage:", payload.interviewId);
 
     // Also update the CandidateApplication status if this is an application-based interview
-    if (payload.interviewId.startsWith("application-")) {
+    if (payload.interviewId.startsWith("application-") && jobId) {
       try {
-        // Find and update the application
-        const allApps = await storage.getAllApplications();
-        for (const app of allApps) {
+        // Find and update the application for this job
+        const jobApplications = await storage.getApplicationsForJob(jobId);
+        for (const app of jobApplications) {
           if (app.interviewId === payload.interviewId ||
               payload.interviewId.includes(app.jobId)) {
-            app.status = "completed";
+            app.status = ApplicationStatus.COMPLETED;
             app.updatedAt = new Date();
             await storage.saveApplication(app);
             console.log(`✅ Updated application ${app.id} status to completed`);

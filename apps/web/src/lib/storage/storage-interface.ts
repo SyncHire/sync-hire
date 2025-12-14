@@ -11,7 +11,7 @@ import type {
   ExtractedJobData,
   Interview,
   InterviewQuestions,
-  Job,
+  JobWithQuestions,
   Notification,
   User,
 } from "@sync-hire/database";
@@ -23,10 +23,12 @@ export type {
   ExtractedJobData,
   Interview,
   InterviewQuestions,
-  Job,
   Notification,
   User,
 };
+
+// Export Job type as JobWithQuestions since we always need questions relation
+export type Job = JobWithQuestions;
 
 export interface StorageInterface {
   /**
@@ -38,16 +40,6 @@ export interface StorageInterface {
    * Save job extraction data with hash key
    */
   saveExtraction(hash: string, data: ExtractedJobData): Promise<void>;
-
-  /**
-   * Save uploaded job description file and return path/URL
-   */
-  saveUpload(hash: string, buffer: Buffer): Promise<string>;
-
-  /**
-   * Get path to uploaded job description file
-   */
-  getUploadPath(hash: string): string;
 
   /**
    * Check if job extraction exists
@@ -83,16 +75,6 @@ export interface StorageInterface {
    * Save CV extraction data with hash key
    */
   saveCVExtraction(hash: string, data: ExtractedCVData): Promise<void>;
-
-  /**
-   * Save uploaded CV file and return path/URL
-   */
-  saveCVUpload(hash: string, buffer: Buffer): Promise<string>;
-
-  /**
-   * Get path to uploaded CV file
-   */
-  getCVUploadPath(hash: string): string;
 
   /**
    * Check if CV extraction exists
@@ -208,6 +190,7 @@ export interface StorageInterface {
 
   /**
    * Get all CV extractions (for AI matching)
+   * Returns cvId (the CVUpload.id), userId, and extracted data
    */
-  getAllCVExtractions(): Promise<Array<{ cvId: string; data: ExtractedCVData }>>;
+  getAllCVExtractions(): Promise<Array<{ cvId: string; userId: string; data: ExtractedCVData }>>;
 }

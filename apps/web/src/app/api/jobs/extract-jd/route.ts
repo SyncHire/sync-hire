@@ -7,6 +7,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { JobDescriptionProcessor } from "@/lib/backend/jd-processor";
 import { getStorage } from "@/lib/storage/storage-factory";
+import { getCloudStorageProvider } from "@/lib/storage/cloud/storage-provider-factory";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -50,7 +51,8 @@ export async function POST(request: NextRequest) {
 
     // Process file with extraction and caching
     const storage = getStorage();
-    const processor = new JobDescriptionProcessor(storage);
+    const cloudStorage = getCloudStorageProvider();
+    const processor = new JobDescriptionProcessor(storage, cloudStorage);
 
     const { hash, extractedData, aiSuggestions, aiQuestions, cached } =
       await processor.processFile(buffer, file.name);

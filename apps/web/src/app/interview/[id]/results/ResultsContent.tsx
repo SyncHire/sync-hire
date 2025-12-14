@@ -22,7 +22,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import type { AIEvaluation, Interview, Job } from "@/lib/mock-data";
+import type { AIEvaluation } from "@/lib/mock-data";
+import type { Interview, Job } from "@/lib/storage/storage-interface";
 import { useAnalyzeInterview, useInterviewDetails } from "@/lib/hooks/use-interview";
 
 interface ResultsContentProps {
@@ -157,7 +158,7 @@ export default function ResultsContent({
   // Show "Generating" while analysis is in progress
   const isGenerating = needsAnalysis && !interview.aiEvaluation;
 
-  const evaluation = buildEvaluation(interview.aiEvaluation, interview.score);
+  const evaluation = buildEvaluation(interview.aiEvaluation, interview.score ?? undefined);
   const hasTranscript = Boolean(interview.transcript);
 
   return (

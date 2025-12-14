@@ -11,6 +11,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDemoApplicants } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
 
+import { InterviewStatus } from "@sync-hire/database";
+
 // Common applicant type for the response
 interface ApplicantResponse {
   id: string;
@@ -19,7 +21,7 @@ interface ApplicantResponse {
   cvId: string | null;
   name: string;
   email: string;
-  status: "PENDING" | "IN_PROGRESS" | "COMPLETED";
+  status: InterviewStatus | "PENDING" | "IN_PROGRESS" | "COMPLETED";
   score?: number;
   durationMinutes: number;
   createdAt: string;
@@ -89,19 +91,19 @@ export async function GET(
           id: interview.id,
           interviewId: interview.id,
           candidateId: interview.candidateId,
-          cvId: cvId,
+          cvId: cvId ?? null,
           name: cvData?.personalInfo?.fullName ?? user?.name ?? "Unknown Candidate",
           email: cvData?.personalInfo?.email ?? user?.email ?? "",
           status: interview.status,
-          score: interview.score,
+          score: interview.score ?? undefined,
           durationMinutes: interview.durationMinutes,
           createdAt: interview.createdAt instanceof Date
             ? interview.createdAt.toISOString()
             : String(interview.createdAt),
           completedAt: interview.completedAt instanceof Date
             ? interview.completedAt.toISOString()
-            : interview.completedAt ? String(interview.completedAt) : null,
-          aiEvaluation: interview.aiEvaluation,
+            : interview.completedAt ? String(interview.completedAt) : undefined,
+          aiEvaluation: interview.aiEvaluation ?? undefined,
           skills: cvData?.skills ?? [],
           experience: cvData?.experience ?? [],
           source: "interview" as const,
@@ -124,18 +126,18 @@ export async function GET(
             cvId: app.cvUploadId,
             name: app.candidateName,
             email: app.candidateEmail,
-            status: app.status === "READY" ? "PENDING" as const : "PENDING" as const,
+            status: "PENDING" as const,
             score: app.matchScore,
             durationMinutes: 0,
             createdAt: app.createdAt?.toISOString?.() ?? new Date().toISOString(),
-            completedAt: null,
-            aiEvaluation: null,
+            completedAt: undefined,
+            aiEvaluation: undefined,
             skills: cvData?.skills ?? [],
             experience: cvData?.experience ?? [],
             source: "ai_match" as const,
             matchReasons: app.matchReasons,
             skillGaps: app.skillGaps,
-            questionsHash: app.questionsHash,
+            questionsHash: app.questionsHash ?? undefined,
           };
         }),
     );

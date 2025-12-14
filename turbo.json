@@ -13,8 +13,7 @@
       "persistent": true
     },
     "typecheck": {
-      "dependsOn": ["^db:generate", "db:generate"],
-      "cache": false
+      "dependsOn": ["^typecheck"]
     },
     "lint": {
       "dependsOn": ["^lint"]

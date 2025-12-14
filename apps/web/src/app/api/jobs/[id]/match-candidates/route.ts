@@ -8,9 +8,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
 import { geminiClient } from "@/lib/gemini-client";
-import type { ApplicationStatus, CandidateApplication, ExtractedCVData, ExtractedJobData, Question } from "@/lib/mock-data";
+import { ApplicationStatus, ApplicationSource } from "@sync-hire/database";
+import type { ExtractedCVData, ExtractedJobData, CandidateApplication, InterviewQuestions } from "@sync-hire/database";
+import type { Question } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
-import type { InterviewQuestions } from "@/lib/storage/storage-interface";
 import { generateStringHash } from "@/lib/utils/hash-utils";
 import { z } from "zod";
 
@@ -73,7 +74,7 @@ Be realistic with scoring:
 async function generateAndSaveQuestions(
   storage: Awaited<ReturnType<typeof getStorage>>,
   cvData: ExtractedCVData,
-  job: { title: string; company: string; requirements: string[]; description: string; questions?: Array<{ id: string; text: string; type: string; duration: number; category?: string }> },
+  job: { title: string; company: string; requirements: string[]; description: string; questions?: Array<{ id: string; content: string; type: string; duration: number; category: string | null }> },
   questionsHash: string,
   cvId: string,
   jobId: string,
@@ -86,16 +87,20 @@ async function generateAndSaveQuestions(
       company: job.company,
       location: "",
       employmentType: "Full-time",
-      workArrangement: "Not specified",
+      workArrangement: "On-site",
       seniority: "",
       requirements: job.requirements,
       responsibilities: [job.description],
     };
 
-    // Map job questions to include required category field
+    // Map job questions to Question interface format
+    // DB questions have `content` and different type enum, map to Question interface
     const questionsWithCategory: Question[] = (job.questions || []).map(q => ({
-      ...q,
-      category: q.category || "Technical Skills",
+      id: q.id,
+      text: q.content, // DB stores as `content`, Question interface uses `text`
+      type: "text" as const, // DB uses SHORT_ANSWER/LONG_ANSWER, map to "text" for interview
+      duration: q.duration,
+      category: (q.category ?? "Technical Skills") as Question["category"],
     }));
 
     // Generate smart merged questions
@@ -136,7 +141,7 @@ async function generateAndSaveQuestions(
     // Update application status to ready
     const application = await storage.getApplication(applicationId);
     if (application) {
-      application.status = "ready";
+      application.status = ApplicationStatus.READY;
       application.updatedAt = new Date();
       await storage.saveApplication(application);
     }
@@ -147,7 +152,7 @@ async function generateAndSaveQuestions(
     // Update application status to indicate failure so it doesn't stay stuck
     const application = await storage.getApplication(applicationId);
     if (application) {
-      application.status = "rejected";
+      application.status = ApplicationStatus.REJECTED;
       application.updatedAt = new Date();
       await storage.saveApplication(application);
       console.log(`Application ${applicationId} marked as rejected due to question generation failure`);
@@ -206,13 +211,13 @@ export async function POST(
     let failedCount = 0;
 
     // Process each CV
-    for (const { cvId, data: cvData } of cvExtractions) {
+    for (const { cvId, userId, data: cvData } of cvExtractions) {
       const candidateName = cvData.personalInfo?.fullName || "Unknown";
       console.log(`\n👤 [match-candidates] Processing: ${candidateName} (cvId: ${cvId})`);
 
       // Check if application already exists
       const existingApplications = await storage.getApplicationsForJob(jobId);
-      const alreadyApplied = existingApplications.some(app => app.cvId === cvId);
+      const alreadyApplied = existingApplications.some(app => app.cvUploadId === cvId);
 
       if (alreadyApplied) {
         console.log(`   ⏭️  Skipped: Already applied to this job`);
@@ -257,15 +262,18 @@ export async function POST(
         const application: CandidateApplication = {
           id: applicationId,
           jobId,
-          cvId,
+          cvUploadId: cvId,
+          userId,
           candidateName: cvData.personalInfo.fullName || "Unknown Candidate",
           candidateEmail: cvData.personalInfo.email || "",
           matchScore,
           matchReasons,
           skillGaps,
-          status: "generating_questions" as ApplicationStatus,
+          status: ApplicationStatus.GENERATING_QUESTIONS,
+          source: ApplicationSource.AI_MATCH,
+          questionsData: null,
           questionsHash,
-          source: "ai_match",
+          interviewId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         };

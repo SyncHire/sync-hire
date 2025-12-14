@@ -9,10 +9,10 @@ import { InterviewRoom } from "@/components/InterviewRoom";
 import { StreamVideoProvider } from "@/components/StreamVideoProvider";
 import {
   getDemoUser,
-  getJobById,
   mockInterviews,
   type Question,
 } from "@/lib/mock-data";
+import type { Job } from "@/lib/storage/storage-interface";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { generateStringHash } from "@/lib/utils/hash-utils";
 import { mergeInterviewQuestions } from "@/lib/utils/question-utils";
@@ -30,7 +30,7 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
 
   // Try to get interview from mock data first
   let interview = mockInterviews[id];
-  let job = interview ? getJobById(interview.jobId) : null;
+  let job: Job | null = interview ? await storage.getJob(interview.jobId) : null;
   let generatedQuestions: Question[] = [];
   let jobId: string | null = null;
 
@@ -76,9 +76,18 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
     }
   }
 
-  // Use generated questions if available, otherwise fall back to job's default questions
-  const questions =
-    generatedQuestions.length > 0 ? generatedQuestions : job.questions;
+  // Use generated questions if available, otherwise map job's questions to Question format
+  let questions: Question[] = generatedQuestions;
+  if (questions.length === 0 && job.questions) {
+    // Map database JobQuestion to Question format
+    questions = job.questions.map((q) => ({
+      id: q.id,
+      text: q.content,
+      type: "video" as const,
+      duration: q.duration,
+      category: (q.category ?? "Technical Skills") as Question["category"],
+    }));
+  }
 
   // Calculate duration: ~3 minutes per question, minimum 15 minutes
   const calculatedDuration = Math.max(15, Math.ceil(questions.length * 3));

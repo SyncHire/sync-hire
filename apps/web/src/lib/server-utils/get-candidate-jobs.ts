@@ -3,16 +3,29 @@
  */
 
 import "server-only";
-import type { JobApplication } from "@/lib/mock-data";
-import { getAllJobsData } from "./get-jobs";
+import { getAllJobsData, JobWithApplicantCount } from "./get-jobs";
 
 /**
- * Get all jobs as JobApplications for a candidate
+ * Candidate-facing job application type (uses database Job type)
+ */
+export interface CandidateJobApplication {
+  id: string;
+  job: JobWithApplicantCount;
+  candidateId: string;
+  matchPercentage: number;
+  status: "NOT_APPLIED" | "APPLIED" | "INTERVIEWING" | "COMPLETED";
+  interviewId?: string;
+  appliedAt?: Date;
+  createdAt: Date;
+}
+
+/**
+ * Get all jobs as CandidateJobApplications for a candidate
  * Returns jobs with candidate-specific application context
  */
 export async function getCandidateJobApplications(
   userId: string,
-): Promise<JobApplication[]> {
+): Promise<CandidateJobApplication[]> {
   const jobs = await getAllJobsData();
 
   return jobs.map((job) => ({

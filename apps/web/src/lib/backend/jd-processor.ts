@@ -8,13 +8,19 @@
 
 import { z } from "zod";
 import { geminiClient } from "@/lib/gemini-client";
-import {
-  EMPLOYMENT_TYPES,
-  WORK_ARRANGEMENTS,
-  type ExtractedJobData,
-} from "@/lib/mock-data";
+import type {
+  ExtractedJobData,
+  EmploymentType,
+  WorkArrangement,
+} from "@sync-hire/database";
 import type { StorageInterface } from "@/lib/storage/storage-interface";
+import type { CloudStorageProvider } from "@/lib/storage/cloud/cloud-storage-provider";
 import { generateFileHash } from "@/lib/utils/hash-utils";
+
+// Valid employment types for the database
+const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract', 'Internship'] as const;
+// Valid work arrangements for the database
+const WORK_ARRANGEMENTS = ['On-site', 'Remote', 'Hybrid'] as const;
 
 // Define Zod schema for extracted job data with enum constraints
 const extractedJobDataSchema = z.object({
@@ -35,12 +41,12 @@ const extractedJobDataSchema = z.object({
   employmentType: z
     .enum(EMPLOYMENT_TYPES)
     .describe(
-      "Employment type - must be one of: Full-time, Part-time, Contract, Temporary, Internship, Not specified",
+      "Employment type - must be one of: Full-time, Part-time, Contract, Internship",
     ),
   workArrangement: z
     .enum(WORK_ARRANGEMENTS)
     .describe(
-      "Work arrangement - must be one of: Remote, Hybrid, On-site, Flexible, Not specified",
+      "Work arrangement - must be one of: On-site, Remote, Hybrid",
     ),
 });
 
@@ -65,7 +71,10 @@ const aiContentSchema = z.object({
 });
 
 export class JobDescriptionProcessor {
-  constructor(private storage: StorageInterface) {}
+  constructor(
+    private storage: StorageInterface,
+    private cloudStorage: CloudStorageProvider,
+  ) {}
 
   /**
    * Process a file (PDF, Markdown, or Text) and extract structured job data
@@ -151,8 +160,8 @@ export class JobDescriptionProcessor {
     // Save to cache
     await this.storage.saveExtraction(hash, extractedData);
 
-    // Save original file
-    await this.storage.saveUpload(hash, buffer);
+    // Upload original file to cloud storage
+    await this.cloudStorage.uploadJobDescription(hash, buffer);
 
     return { hash, extractedData, aiSuggestions, aiQuestions, cached: false };
   }
@@ -180,10 +189,10 @@ export class JobDescriptionProcessor {
 - requirements: array of strings
 - seniority: string (e.g., Junior, Mid-level, Senior, Staff, Principal)
 - location: string (city, state/country)
-- employmentType: MUST be one of: "Full-time", "Part-time", "Contract", "Temporary", "Internship", "Not specified"
-- workArrangement: MUST be one of: "Remote", "Hybrid", "On-site", "Flexible", "Not specified"
+- employmentType: MUST be one of: "Full-time", "Part-time", "Contract", "Internship"
+- workArrangement: MUST be one of: "On-site", "Remote", "Hybrid"
 
-All fields must be present. Use "Not specified" for employmentType and workArrangement if not clearly stated in the document.`,
+All fields must be present. Default to "Full-time" for employmentType and "On-site" for workArrangement if not clearly stated.`,
           },
           {
             inlineData: {
@@ -230,8 +239,8 @@ All fields must be present. Use "Not specified" for employmentType and workArran
         requirements: [],
         seniority: "",
         location: "",
-        employmentType: "Not specified",
-        workArrangement: "Not specified",
+        employmentType: "Full-time",
+        workArrangement: "On-site",
       };
     }
   }
@@ -257,10 +266,10 @@ All fields must be present. Use "Not specified" for employmentType and workArran
 - requirements: array of strings
 - seniority: string (e.g., Junior, Mid-level, Senior, Staff, Principal)
 - location: string (city, state/country)
-- employmentType: MUST be one of: "Full-time", "Part-time", "Contract", "Temporary", "Internship", "Not specified"
-- workArrangement: MUST be one of: "Remote", "Hybrid", "On-site", "Flexible", "Not specified"
+- employmentType: MUST be one of: "Full-time", "Part-time", "Contract", "Internship"
+- workArrangement: MUST be one of: "On-site", "Remote", "Hybrid"
 
-All fields must be present. Use "Not specified" for employmentType and workArrangement if not clearly stated.
+All fields must be present. Default to "Full-time" for employmentType and "On-site" for workArrangement if not clearly stated.
 
 JOB DESCRIPTION:
 ${textContent}`,
@@ -297,8 +306,8 @@ ${textContent}`,
         requirements: [],
         seniority: "",
         location: "",
-        employmentType: "Not specified",
-        workArrangement: "Not specified",
+        employmentType: "Full-time",
+        workArrangement: "On-site",
       };
     }
   }

@@ -5,14 +5,14 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
-import type { EmploymentType, ExtractedJobData, Job, Question, WorkArrangement } from "@/lib/mock-data";
-import {
-  createJob,
-  createJobDescriptionVersion,
-} from "@/lib/mock-data";
+import { ApplicationStatus, ApplicationSource, MatchingStatus, JobStatus } from "@sync-hire/database";
+import type { ExtractedCVData, ExtractedJobData } from "@sync-hire/database";
+import type { Question } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
+import type { Job } from "@/lib/storage/storage-interface";
 import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
 import { generateStringHash } from "@/lib/utils/hash-utils";
+import { jobToExtractedJobData } from "@/lib/utils/type-adapters";
 import { geminiClient } from "@/lib/gemini-client";
 import { z } from "zod";
 
@@ -73,13 +73,13 @@ async function triggerCandidateMatching(jobId: string): Promise<{ matchedCount: 
     const matchedCandidates: string[] = [];
 
     // Process each CV
-    for (const { cvId, data: cvData } of cvExtractions) {
+    for (const { cvId, userId, data: cvData } of cvExtractions) {
       const candidateName = cvData.personalInfo?.fullName || "Unknown";
       console.log(`\n👤 [auto-match] Processing: ${candidateName}`);
 
       // Check if application already exists
       const existingApplications = await storage.getApplicationsForJob(jobId);
-      const alreadyApplied = existingApplications.some(app => app.cvId === cvId);
+      const alreadyApplied = existingApplications.some(app => app.cvUploadId === cvId);
 
       if (alreadyApplied) {
         console.log(`   ⏭️  Skipped: Already applied`);
@@ -143,15 +143,18 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
         const application = {
           id: applicationId,
           jobId,
-          cvId,
+          cvUploadId: cvId,
+          userId,
           candidateName: cvData.personalInfo.fullName || "Unknown",
           candidateEmail: cvData.personalInfo.email || "",
           matchScore,
           matchReasons,
           skillGaps,
-          status: "generating_questions" as const,
+          status: ApplicationStatus.GENERATING_QUESTIONS,
+          source: ApplicationSource.AI_MATCH,
+          questionsData: null,
           questionsHash,
-          source: "ai_match" as const,
+          interviewId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -164,21 +167,16 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
         // No need to update counter here to avoid race conditions
 
         // Generate questions in background (don't await)
-        // Map job questions to include required category field
-        const questionsWithCategory: Question[] = job.questions.map(q => ({
-          ...q,
-          category: q.category || "Technical Skills",
+        // Map job questions to Question interface format
+        const questionsWithCategory: Question[] = (job.questions || []).map(q => ({
+          id: q.id,
+          text: q.content,
+          type: "text" as const,
+          duration: q.duration,
+          category: (q.category ?? "Technical Skills") as Question["category"],
         }));
-        generateSmartMergedQuestions(cvData, {
-          title: job.title,
-          company: job.company,
-          location: job.location,
-          employmentType: (job.type || "Not specified") as EmploymentType,
-          workArrangement: job.workArrangement || "Not specified",
-          seniority: "",
-          requirements: job.requirements,
-          responsibilities: [job.description],
-        }, questionsWithCategory).then(async (mergedQuestions) => {
+        const jdData = jobToExtractedJobData(job);
+        generateSmartMergedQuestions(cvData as ExtractedCVData, jdData, questionsWithCategory).then(async (mergedQuestions) => {
           const interviewQuestions = {
             metadata: {
               cvId,
@@ -208,7 +206,7 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
           // Update application status to ready
           const app = await storage.getApplication(applicationId);
           if (app) {
-            app.status = "ready";
+            app.status = ApplicationStatus.READY;
             app.updatedAt = new Date();
             await storage.saveApplication(app);
           }
@@ -218,10 +216,10 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
           // Update application status to indicate failure
           const app = await storage.getApplication(applicationId);
           if (app) {
-            app.status = "rejected"; // Mark as rejected so it doesn't stay stuck
+            app.status = ApplicationStatus.REJECTED; // Mark as rejected so it doesn't stay stuck
             app.updatedAt = new Date();
             await storage.saveApplication(app);
-            console.log(`   ⚠️ Application status updated to 'rejected' due to question generation failure`);
+            console.log(`   ⚠️ Application status updated to REJECTED due to question generation failure`);
           }
         });
       } else {
@@ -234,9 +232,9 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
     // Update job status to complete
     const finalJob = await storage.getJob(jobId);
     if (finalJob) {
-      finalJob.aiMatchingStatus = "complete";
+      finalJob.aiMatchingStatus = MatchingStatus.COMPLETE;
       await storage.saveJob(jobId, finalJob);
-      console.log(`✅ [auto-match] Job status updated to 'complete'`);
+      console.log(`✅ [auto-match] Job status updated to COMPLETE`);
     }
 
     return { matchedCount, candidateNames: matchedCandidates };
@@ -247,7 +245,7 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
     const storage = getStorage();
     const errorJob = await storage.getJob(jobId);
     if (errorJob) {
-      errorJob.aiMatchingStatus = "complete";
+      errorJob.aiMatchingStatus = MatchingStatus.COMPLETE;
       await storage.saveJob(jobId, errorJob);
     }
 
@@ -270,59 +268,69 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build questions array from customQuestions
-    const questions = (body.customQuestions || []).map((q, index) => ({
-      id: `q-${Date.now()}-${index}`,
-      text: q.text,
-      type: q.type || "text",
-      duration: q.duration || 2,
-    }));
-
     // AI matching is enabled by default
     const aiMatchingEnabled = body.aiMatchingEnabled !== false;
     const aiMatchingThreshold = body.aiMatchingThreshold || 80;
 
-    // Create the job with questions
-    const job = createJob({
+    // Generate job ID
+    const jobId = `job-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+    // Build extracted data if original JD text provided
+    const jdExtraction: ExtractedJobData | null = body.originalJDText ? {
       title: body.title,
-      description: body.description,
-      location: body.location,
-      type: body.employmentType || "Not specified",
-      workArrangement: body.workArrangement || "Not specified",
-      requirements: body.requirements || [],
       company: body.company || "Company",
-      department: body.department || "Engineering",
-      salary: body.salary || "",
-      employerId: body.employerId || "employer-1",
-      status: "ACTIVE",
-      questions: questions,
+      responsibilities: body.responsibilities || [],
+      requirements: body.requirements || [],
+      seniority: body.seniority || "",
+      location: body.location,
+      employmentType: (body.employmentType || "Full-time") as ExtractedJobData["employmentType"],
+      workArrangement: (body.workArrangement || "On-site") as ExtractedJobData["workArrangement"],
+    } : null;
+
+    // Build questions in the database format
+    const dbQuestions = (body.customQuestions || []).map((q, index) => ({
+      id: `q-${Date.now()}-${index}`,
+      jobId,
+      content: q.text,
+      type: q.type === "video" ? "LONG_ANSWER" as const : "SHORT_ANSWER" as const,
+      options: [] as string[],
+      duration: q.duration || 2,
+      category: null,
+      required: true,
+      order: index,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
+    // Create job object matching the Prisma Job type with questions
+    const now = new Date();
+    const job: Job = {
+      id: jobId,
+      title: body.title,
+      company: body.company || "Company",
+      department: body.department || null,
+      location: body.location,
+      employmentType: body.employmentType || "Full-time",
+      workArrangement: body.workArrangement || null,
+      salary: body.salary || null,
+      description: body.description,
+      requirements: body.requirements || [],
+      status: JobStatus.ACTIVE,
       aiMatchingEnabled,
       aiMatchingThreshold,
-      aiMatchingStatus: aiMatchingEnabled ? "scanning" : "disabled",
-    } as Partial<Job>);
+      aiMatchingStatus: aiMatchingEnabled ? MatchingStatus.SCANNING : MatchingStatus.DISABLED,
+      employerId: body.employerId || "demo-user",
+      jdFileUrl: null,
+      jdFileHash: null,
+      jdExtraction,
+      jdVersion: null,
+      postedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      questions: dbQuestions,
+    };
 
-    // Create JD version with extraction data
-    if (body.originalJDText) {
-      const extractedData: ExtractedJobData = {
-        title: body.title,
-        company: body.company || "Company",
-        responsibilities: body.responsibilities || [],
-        requirements: body.requirements || [],
-        seniority: body.seniority || "",
-        location: body.location,
-        employmentType: (body.employmentType || "Not specified") as ExtractedJobData["employmentType"],
-        workArrangement: (body.workArrangement || "Not specified") as ExtractedJobData["workArrangement"],
-      };
-
-      createJobDescriptionVersion(
-        job.id,
-        body.originalJDText,
-        extractedData,
-        undefined,
-      );
-    }
-
-    // Persist job to file storage
+    // Persist job to storage
     const storage = getStorage();
     await storage.saveJob(job.id, job);
 
@@ -336,8 +344,7 @@ export async function POST(request: NextRequest) {
         try {
           const failedJob = await storage.getJob(job.id);
           if (failedJob) {
-            failedJob.aiMatchingStatus = "failed";
-            failedJob.aiMatchingError = err.message || "Unknown error";
+            failedJob.aiMatchingStatus = MatchingStatus.FAILED;
             await storage.saveJob(job.id, failedJob);
           }
         } catch (updateErr) {
@@ -353,7 +360,7 @@ export async function POST(request: NextRequest) {
           id: job.id,
           title: job.title,
           location: job.location,
-          customQuestionsCount: questions.length,
+          customQuestionsCount: dbQuestions.length,
           status: job.status,
           aiMatchingStatus: job.aiMatchingStatus,
         },

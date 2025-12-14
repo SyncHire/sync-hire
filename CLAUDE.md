@@ -17,6 +17,21 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 <!-- OPENSPEC:END -->
 
+## Package Manager
+
+ALWAYS use `pnpm` instead of `npm` or `npx` for all commands. This is a pnpm workspace.
+
+## Build/Lint/Test Commands
+
+Always use pnpm workspace commands targeting specific apps or packages.
+
+### Root Commands
+- Root: `pnpm build` - build all workspaces
+- Root: `pnpm lint` - lint all workspaces
+- Root: `pnpm typecheck` - typecheck all workspaces
+- Root: `pnpm clean` - clean all workspaces
+- Root: `pnpm db:generate` - generate new prisma client after schema.prisma changes
+
 ## Python Development
 
 ### Package Management
@@ -43,6 +58,43 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - **Never use inline/dynamic imports** - always use static imports at the top of the file
 - Bad: `const { toast } = await import('@/lib/hooks/use-toast');`
 - Good: `import { toast } from '@/lib/hooks/use-toast';` at the top of the file
+
+### Barrel Files (Anti-pattern)
+- **Never create barrel files (index.ts)** - import directly from the source file
+- Barrel files cause circular dependency issues, slow down builds, and make tree-shaking less effective
+- Bad: Creating `index.ts` that re-exports from other files
+- Good: Import directly from the specific module file
+- Example: `import { GCSStorageProvider } from './cloud/gcs-storage-provider';` not `import { GCSStorageProvider } from './cloud';`
+
+### Dependency Injection
+- **Always use constructor injection for dependencies** - enables testability and loose coupling
+- Pass dependencies (database clients, storage clients, external services) as constructor parameters
+- Use `typeof` for singleton instances to get the correct type
+
+**Good patterns:**
+```typescript
+// Inject dependencies via constructor
+export class DatabaseStorage {
+  constructor(private readonly db: typeof prisma) {}
+}
+
+export class GCSStorageProvider {
+  constructor(private readonly client: Storage) {}
+}
+
+// Factory creates instances with dependencies
+function createProvider(): Provider {
+  return new GCSStorageProvider(gcsClient);
+}
+```
+
+**Bad patterns:**
+```typescript
+// Don't import and use singletons directly in class body
+export class GCSStorageProvider {
+  private client = gcsClient; // Hard to test, tightly coupled
+}
+```
 
 ### Data Fetching (Frontend)
 - **Always use react-query (`@tanstack/react-query`) for data fetching in React components** - not raw `fetch` in useEffect

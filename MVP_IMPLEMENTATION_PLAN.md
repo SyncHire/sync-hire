@@ -6,11 +6,11 @@
 
 **Current State**:
 - AI-powered video interview platform (Next.js 16 + Python FastAPI + Gemini AI)
-- File-based JSON storage in `/data` directory
-- No authentication (hardcoded demo users)
+- PostgreSQL database with Prisma 7 ORM (implemented)
+- GCP Cloud Storage for files (in progress)
+- No authentication yet (hardcoded demo users)
+- Sentry monitoring configured
 - Zero test coverage
-- 100+ console.log statements
-- Hardcoded API key in source code
 
 **Target State**: Production MVP with:
 - PostgreSQL database (Prisma ORM on GCP Cloud SQL)
@@ -23,6 +23,34 @@
 - Production deployment ready
 
 **Timeline**: 3-4 weeks (balanced approach)
+
+---
+
+## Progress Tracking
+
+| Week | Phase | Status | Notes |
+|------|-------|--------|-------|
+| Week 1 | Security + Database Foundation | **COMPLETE** | Prisma 7 + PostgreSQL + Sentry |
+| Week 2 | Authentication + Testing | NOT STARTED | Deferred - prioritizing cloud storage |
+| Week 3 | Cloud Storage + Core Testing | **IN PROGRESS** | GCP Cloud Storage implementation |
+| Week 4 | Production Hardening | NOT STARTED | |
+
+### Completed Items
+- [x] Prisma 7 schema with all MVP models (User, Job, CVUpload, CandidateApplication, Interview, etc.)
+- [x] Database storage implementation (`DatabaseStorage` class)
+- [x] Storage factory pattern for switching between file/database storage
+- [x] Sentry error monitoring configuration
+- [x] Python agent deployment setup
+
+### In Progress
+- [ ] GCP Cloud Storage integration for file uploads
+- [ ] CV apply and interview flow enhancements
+
+### Pending
+- [ ] NextAuth.js authentication (Google OAuth)
+- [ ] Unit and integration tests
+- [ ] E2E tests with Playwright
+- [ ] Rate limiting with Upstash Redis
 
 ---
 
