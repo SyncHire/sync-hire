@@ -294,7 +294,7 @@ export class FileStorage implements StorageInterface {
         id: mockUser.id,
         name: mockUser.name,
         email: mockUser.email,
-        emailVerified: null,
+        emailVerified: false,
         image: null,
         password: null,
         createdAt: mockUser.createdAt,
@@ -311,7 +311,7 @@ export class FileStorage implements StorageInterface {
       id: mockUser.id,
       name: mockUser.name,
       email: mockUser.email,
-      emailVerified: null,
+      emailVerified: false,
       image: null,
       password: null,
       createdAt: mockUser.createdAt,
@@ -491,6 +491,53 @@ export class FileStorage implements StorageInterface {
     } catch {
       return null;
     }
+  }
+
+  async getOrCreateApplication(cvHash: string, jobId: string): Promise<CandidateApplication> {
+    const user = await this.getCurrentUser();
+
+    // Check existing applications for this job
+    const jobApplicationsDir = join(APPLICATIONS_DIR, jobId);
+    try {
+      const files = await fs.readdir(jobApplicationsDir);
+      for (const file of files) {
+        if (file.endsWith(".json")) {
+          const filePath = join(jobApplicationsDir, file);
+          const data = await fs.readFile(filePath, "utf-8");
+          const application = JSON.parse(data) as CandidateApplication;
+          // Match by userId
+          if (application.userId === user.id) {
+            return application;
+          }
+        }
+      }
+    } catch {
+      // Directory doesn't exist yet, will create below
+    }
+
+    // Create new application
+    const now = new Date();
+    const application: CandidateApplication = {
+      id: `app-${Date.now()}`,
+      jobId,
+      cvUploadId: cvHash,
+      userId: user.id,
+      candidateName: user.name,
+      candidateEmail: user.email,
+      matchScore: 0,
+      matchReasons: [],
+      skillGaps: [],
+      status: "GENERATING_QUESTIONS",
+      source: "MANUAL_APPLY",
+      interviewId: null,
+      questionsData: null,
+      questionsHash: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await this.saveApplication(application);
+    return application;
   }
 
   async saveApplication(application: CandidateApplication): Promise<void> {

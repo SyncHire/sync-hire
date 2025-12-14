@@ -12,10 +12,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Routes that require authentication
-const protectedRoutes = ["/hr", "/candidate", "/interview"];
-
-// Routes that require organization membership (subset of protected)
-const orgRequiredRoutes = ["/hr"];
+const protectedRoutes = ["/hr", "/candidate", "/interview", "/select-organization"];
 
 // Public routes that don't need auth
 const publicRoutes = ["/", "/login", "/signup", "/verify-email", "/forgot-password", "/reset-password"];
@@ -42,25 +39,13 @@ export function proxy(request: NextRequest) {
 
   // IMPORTANT: This only checks cookie existence, NOT validity
   // Real validation happens in pages/API routes via requireAuth()
+  // Organization check also happens at page level (session.activeOrganizationId)
   const sessionCookie = request.cookies.get("better-auth.session_token");
   if (!sessionCookie) {
     // Redirect to login with callback URL
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
-  }
-
-  // For HR routes, check if active org cookie exists (optimistic)
-  const isOrgRoute = orgRequiredRoutes.some((route) =>
-    pathname.startsWith(route),
-  );
-  if (isOrgRoute) {
-    const activeOrg = request.cookies.get("better-auth.active_organization");
-    if (!activeOrg) {
-      return NextResponse.redirect(
-        new URL("/select-organization", request.url),
-      );
-    }
   }
 
   return NextResponse.next();

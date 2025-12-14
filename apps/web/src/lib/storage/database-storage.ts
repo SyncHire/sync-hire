@@ -19,6 +19,7 @@ import type {
 } from '@sync-hire/database';
 import { prisma } from '@sync-hire/database';
 import type { StorageInterface, Job } from './storage-interface';
+import { getServerSession } from '@/lib/auth-server';
 
 export class DatabaseStorage implements StorageInterface {
   constructor(private readonly db: typeof prisma) {}
@@ -171,6 +172,8 @@ export class DatabaseStorage implements StorageInterface {
   }
 
   async saveCVExtraction(hash: string, data: ExtractedCVData): Promise<void> {
+    const user = await this.getCurrentUser();
+
     await this.db.cVUpload.upsert({
       where: { fileHash: hash },
       update: { extraction: data },
@@ -180,7 +183,7 @@ export class DatabaseStorage implements StorageInterface {
         fileUrl: `/uploads/cv/${hash}`,
         fileSize: 0, // Will be updated when file is uploaded
         extraction: data,
-        userId: 'demo-user', // TODO: Get from auth
+        userId: user.id,
       },
     });
   }
@@ -217,10 +220,26 @@ export class DatabaseStorage implements StorageInterface {
   }
 
   async saveInterviewQuestions(hash: string, data: InterviewQuestions): Promise<void> {
-    // Find application by combining cvId and jobId from metadata
+    // cvId might be fileHash or cvUploadId - look up CVUpload first
+    const cvUpload = await this.db.cVUpload.findFirst({
+      where: {
+        OR: [
+          { id: data.metadata.cvId },
+          { fileHash: data.metadata.cvId },
+        ],
+      },
+    });
+
+    if (!cvUpload) {
+      throw new Error(
+        `Cannot save interview questions: CV not found for ${data.metadata.cvId}.`
+      );
+    }
+
+    // Find application by cvUploadId and jobId
     const application = await this.db.candidateApplication.findFirst({
       where: {
-        cvUploadId: data.metadata.cvId,
+        cvUploadId: cvUpload.id,
         jobId: data.metadata.jobId,
       },
     });
@@ -309,17 +328,14 @@ export class DatabaseStorage implements StorageInterface {
   }
 
   async getCurrentUser(): Promise<User> {
-    // TODO: Get from auth session
-    // For now, return demo user
-    const user = await this.db.user.findUnique({
-      where: { id: 'demo-user' },
-    });
+    const session = await getServerSession();
 
-    if (!user) {
-      throw new Error('Demo user not found. Run pnpm db:seed');
+    if (!session?.user) {
+      throw new Error('Not authenticated');
     }
 
-    return user;
+    // Session user from Better Auth has all user fields
+    return session.user as User;
   }
 
   // =============================================================================
@@ -399,6 +415,59 @@ export class DatabaseStorage implements StorageInterface {
   async getApplication(applicationId: string): Promise<CandidateApplication | null> {
     return this.db.candidateApplication.findUnique({
       where: { id: applicationId },
+    });
+  }
+
+  async getOrCreateApplication(cvHash: string, jobId: string): Promise<CandidateApplication> {
+    const user = await this.getCurrentUser();
+
+    // Get CV upload by hash
+    const cvUpload = await this.db.cVUpload.findFirst({
+      where: {
+        OR: [
+          { id: cvHash },
+          { fileHash: cvHash },
+        ],
+      },
+    });
+
+    if (!cvUpload) {
+      throw new Error(`CV not found: ${cvHash}`);
+    }
+
+    // Check if application already exists
+    const existing = await this.db.candidateApplication.findUnique({
+      where: {
+        jobId_userId: {
+          jobId,
+          userId: user.id,
+        },
+      },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    // Get CV extraction for candidate name/email
+    const extraction = cvUpload.extraction as { personalInfo?: { fullName?: string; email?: string } } | null;
+    const candidateName = extraction?.personalInfo?.fullName || user.name;
+    const candidateEmail = extraction?.personalInfo?.email || user.email;
+
+    // Create new application
+    return this.db.candidateApplication.create({
+      data: {
+        jobId,
+        cvUploadId: cvUpload.id,
+        userId: user.id,
+        candidateName,
+        candidateEmail,
+        matchScore: 0, // Will be updated by AI matching
+        matchReasons: [],
+        skillGaps: [],
+        status: 'GENERATING_QUESTIONS',
+        source: 'MANUAL_APPLY',
+      },
     });
   }
 

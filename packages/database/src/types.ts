@@ -31,13 +31,12 @@ export type OrganizationWithJobs = Prisma.OrganizationGetPayload<{
   };
 }>;
 
-export type OrganizationMemberWithRelations =
-  Prisma.OrganizationMemberGetPayload<{
-    include: {
-      organization: true;
-      user: true;
-    };
-  }>;
+export type MemberWithRelations = Prisma.MemberGetPayload<{
+  include: {
+    organization: true;
+    user: true;
+  };
+}>;
 
 // =============================================================================
 // User Types
@@ -60,7 +59,7 @@ export type UserWithApplications = Prisma.UserGetPayload<{
 
 export type UserWithOrganizations = Prisma.UserGetPayload<{
   include: {
-    organizationMembers: {
+    members: {
       include: {
         organization: true;
       };

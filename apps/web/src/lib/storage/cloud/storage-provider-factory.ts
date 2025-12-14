@@ -10,12 +10,11 @@ import { GCSStorageProvider } from "./gcs-storage-provider";
 import { LocalStorageProvider } from "./local-storage-provider";
 import { singleton } from "@/lib/utils/singleton";
 import { gcsClient } from "../gcs-client";
+import { storageConfig } from "../storage-config";
 
 function createCloudStorageProvider(): CloudStorageProvider {
-  const useCloudStorage = process.env.USE_CLOUD_STORAGE === "true";
-
-  if (useCloudStorage) {
-    console.log("[Storage] Using GCP Cloud Storage");
+  if (storageConfig.useCloudStorage) {
+    console.log(`[Storage] Using GCP Cloud Storage (bucket: ${storageConfig.gcsBucket})`);
     return new GCSStorageProvider(gcsClient);
   }
 

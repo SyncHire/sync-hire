@@ -114,6 +114,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Ensure application exists for this user (creates if needed)
+    await storage.getOrCreateApplication(cvId, jobId);
+
     // Generate questions using Gemini
     const suggestedQuestions = await generateInterviewQuestions(cvData, jdData);
 

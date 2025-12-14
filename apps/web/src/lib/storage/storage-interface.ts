@@ -195,6 +195,12 @@ export interface StorageInterface {
   getApplication(applicationId: string): Promise<CandidateApplication | null>;
 
   /**
+   * Get or create application for a CV and job combination
+   * Creates application if it doesn't exist for the current user
+   */
+  getOrCreateApplication(cvHash: string, jobId: string): Promise<CandidateApplication>;
+
+  /**
    * Save/update a candidate application
    */
   saveApplication(application: CandidateApplication): Promise<void>;

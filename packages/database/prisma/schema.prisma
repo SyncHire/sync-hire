@@ -22,14 +22,14 @@ datasource db {
 // =============================================================================
 
 model User {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid())
   name          String
-  email         String    @unique
-  emailVerified DateTime?
+  email         String   @unique
+  emailVerified Boolean  @default(false) // Better Auth expects Boolean
   image         String?
-  password      String?   // Better Auth: hashed password for email/password auth
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  password      String?  // Better Auth: hashed password for email/password auth
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relations
   accounts            Account[]
@@ -38,7 +38,7 @@ model User {
   interviews          Interview[]
   applications        CandidateApplication[]
   notifications       Notification[]
-  organizationMembers OrganizationMember[] // User's org memberships
+  members             Member[] // User's org memberships
   jobsCreated         Job[]               @relation("JobCreator") // Jobs this user created
   invitations         Invitation[]        // Invitations sent by this user
 
@@ -113,7 +113,7 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  members     OrganizationMember[]
+  members     Member[]
   jobs        Job[]
   invitations Invitation[]
 
@@ -138,7 +138,7 @@ model Invitation {
   @@map("invitation")
 }
 
-model OrganizationMember {
+model Member {
   id             String        @id @default(cuid())
   organizationId String
   userId         String

@@ -12,7 +12,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { organization, useSession } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -23,7 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
-import { Building2, Plus, ChevronRight } from "lucide-react";
+import { Building2, ChevronRight } from "lucide-react";
 
 interface Organization {
   id: string;
@@ -52,19 +51,28 @@ export default function SelectOrganizationPage() {
       }
 
       const orgs = result.data || [];
-      setOrganizations(orgs);
-      setIsLoading(false);
+
+      // No orgs = candidate user, redirect to candidate jobs
+      if (orgs.length === 0) {
+        router.push("/candidate/jobs");
+        return;
+      }
 
       // Auto-select if user has only one organization
       if (orgs.length === 1) {
         selectOrganization(orgs[0].id);
+        return;
       }
+
+      // Multiple orgs - show selection UI
+      setOrganizations(orgs);
+      setIsLoading(false);
     }
 
     if (!sessionPending && session) {
       loadOrganizations();
     }
-  }, [session, sessionPending]);
+  }, [session, sessionPending, router]);
 
   async function selectOrganization(orgId: string) {
     setSelectingId(orgId);
@@ -78,8 +86,8 @@ export default function SelectOrganizationPage() {
       return;
     }
 
-    // Redirect to HR dashboard
-    router.push("/hr");
+    // Redirect to HR jobs page
+    router.push("/hr/jobs");
   }
 
   if (sessionPending || isLoading) {
@@ -114,63 +122,41 @@ export default function SelectOrganizationPage() {
           </Alert>
         )}
 
-        {organizations.length === 0 ? (
-          <div className="text-center py-6">
-            <p className="text-muted-foreground mb-4">
-              You&apos;re not a member of any organizations yet.
-            </p>
-            <Link href="/hr/organizations/create">
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Organization
-              </Button>
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {organizations.map((org) => (
-              <button
-                key={org.id}
-                onClick={() => selectOrganization(org.id)}
-                disabled={selectingId !== null}
-                className="w-full flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    {org.logo ? (
-                      <img
-                        src={org.logo}
-                        alt={org.name}
-                        className="h-10 w-10 rounded-full"
-                      />
-                    ) : (
-                      <Building2 className="h-5 w-5 text-primary" />
-                    )}
-                  </div>
-                  <div className="text-left">
-                    <p className="font-medium">{org.name}</p>
-                    <p className="text-sm text-muted-foreground">{org.slug}</p>
-                  </div>
+        <div className="space-y-2">
+          {organizations.map((org) => (
+            <button
+              key={org.id}
+              onClick={() => selectOrganization(org.id)}
+              disabled={selectingId !== null}
+              className="w-full flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  {org.logo ? (
+                    <img
+                      src={org.logo}
+                      alt={org.name}
+                      className="h-10 w-10 rounded-full"
+                    />
+                  ) : (
+                    <Building2 className="h-5 w-5 text-primary" />
+                  )}
                 </div>
-                {selectingId === org.id ? (
-                  <Spinner className="h-5 w-5" />
-                ) : (
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                )}
-              </button>
-            ))}
-          </div>
-        )}
+                <div className="text-left">
+                  <p className="font-medium">{org.name}</p>
+                  <p className="text-sm text-muted-foreground">{org.slug}</p>
+                </div>
+              </div>
+              {selectingId === org.id ? (
+                <Spinner className="h-5 w-5" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </button>
+          ))}
+        </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-2">
-        {organizations.length > 0 && (
-          <Link href="/hr/organizations/create" className="w-full">
-            <Button variant="outline" className="w-full">
-              <Plus className="mr-2 h-4 w-4" />
-              Create New Organization
-            </Button>
-          </Link>
-        )}
         <Link
           href="/"
           className="text-sm text-muted-foreground hover:text-primary"

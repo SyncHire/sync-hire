@@ -9,6 +9,7 @@
 import { promises as fs } from "fs";
 import { dirname, join } from "path";
 import type { CloudStorageProvider } from "./cloud-storage-provider";
+import { storageConfig } from "../storage-config";
 
 const CV_DIR = "cv-uploads";
 const JD_DIR = "jd-uploads";
@@ -17,7 +18,7 @@ export class LocalStorageProvider implements CloudStorageProvider {
   private baseDir: string;
 
   constructor(baseDir?: string) {
-    this.baseDir = baseDir ?? join(process.cwd(), "data");
+    this.baseDir = baseDir ?? join(process.cwd(), storageConfig.localStorageDir);
   }
 
   async uploadCV(hash: string, buffer: Buffer): Promise<string> {
@@ -62,11 +63,15 @@ export class LocalStorageProvider implements CloudStorageProvider {
   ): Promise<void> {
     const fullPath = join(this.baseDir, dir, filename);
 
+    console.log(`[Local] Uploading: ${fullPath} (${buffer.length} bytes)`);
+
     // Ensure directory exists
     await fs.mkdir(dirname(fullPath), { recursive: true });
 
     // Write file
     await fs.writeFile(fullPath, buffer);
+
+    console.log(`[Local] Upload complete: ${fullPath}`);
   }
 
   private async deleteFile(dir: string, filename: string): Promise<void> {

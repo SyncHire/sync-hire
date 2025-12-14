@@ -15,7 +15,14 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   output: 'standalone',
   transpilePackages: ["@sync-hire/database"],
-  serverExternalPackages: ["@prisma/client", "@prisma/adapter-pg", "pg"],
+  serverExternalPackages: [
+    "@prisma/client",
+    "@prisma/adapter-pg",
+    "pg",
+    // Sentry/OpenTelemetry instrumentation packages (fix Turbopack + pnpm resolution)
+    "import-in-the-middle",
+    "require-in-the-middle",
+  ],
 
   // Inject build info as public env vars
   env: {

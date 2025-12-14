@@ -8,8 +8,7 @@
 
 import type { Storage } from "@google-cloud/storage";
 import type { CloudStorageProvider } from "./cloud-storage-provider";
-
-const BUCKET = process.env.GCS_BUCKET ?? "synchire-uploads";
+import { storageConfig } from "../storage-config";
 
 export class GCSStorageProvider implements CloudStorageProvider {
   constructor(private readonly client: Storage) {}
@@ -27,7 +26,7 @@ export class GCSStorageProvider implements CloudStorageProvider {
   }
 
   async getSignedUrl(_type: 'cv' | 'jd', path: string, expiresInMinutes = 60): Promise<string> {
-    const bucket = this.client.bucket(BUCKET);
+    const bucket = this.client.bucket(storageConfig.gcsBucket);
     const file = bucket.file(path);
 
     const [url] = await file.getSignedUrl({
@@ -59,17 +58,21 @@ export class GCSStorageProvider implements CloudStorageProvider {
     buffer: Buffer,
     contentType: string
   ): Promise<void> {
-    const bucket = this.client.bucket(BUCKET);
+    const bucket = this.client.bucket(storageConfig.gcsBucket);
     const file = bucket.file(path);
+
+    console.log(`[GCS] Uploading: gs://${storageConfig.gcsBucket}/${path} (${buffer.length} bytes)`);
 
     await file.save(buffer, {
       metadata: { contentType },
       resumable: false, // For files under 10MB, non-resumable is faster
     });
+
+    console.log(`[GCS] Upload complete: gs://${storageConfig.gcsBucket}/${path}`);
   }
 
   private async deleteFile(path: string): Promise<void> {
-    const bucket = this.client.bucket(BUCKET);
+    const bucket = this.client.bucket(storageConfig.gcsBucket);
     const file = bucket.file(path);
 
     try {
@@ -88,7 +91,7 @@ export class GCSStorageProvider implements CloudStorageProvider {
   }
 
   private async fileExists(path: string): Promise<boolean> {
-    const bucket = this.client.bucket(BUCKET);
+    const bucket = this.client.bucket(storageConfig.gcsBucket);
     const file = bucket.file(path);
 
     const [exists] = await file.exists();
