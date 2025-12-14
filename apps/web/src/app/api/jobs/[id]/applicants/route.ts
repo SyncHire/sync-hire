@@ -112,19 +112,19 @@ export async function GET(
     // Convert AI applications to applicant format (only those without interviews)
     const aiApplicants = await Promise.all(
       aiApplications
-        .filter(app => !interviewCvIds.has(app.cvId))
+        .filter(app => !interviewCvIds.has(app.cvUploadId))
         .map(async (app) => {
           // Get CV data for skills
-          const cvData = await storage.getCVExtraction(app.cvId);
+          const cvData = await storage.getCVExtraction(app.cvUploadId);
 
           return {
             id: app.id,
             interviewId: null,
-            candidateId: app.cvId,
-            cvId: app.cvId,
+            candidateId: app.cvUploadId,
+            cvId: app.cvUploadId,
             name: app.candidateName,
             email: app.candidateEmail,
-            status: app.status === "ready" ? "PENDING" as const : "PENDING" as const,
+            status: app.status === "READY" ? "PENDING" as const : "PENDING" as const,
             score: app.matchScore,
             durationMinutes: 0,
             createdAt: app.createdAt?.toISOString?.() ?? new Date().toISOString(),

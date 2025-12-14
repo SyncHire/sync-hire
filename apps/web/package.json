@@ -9,6 +9,7 @@
     "dev": "next dev -p ${WEB_PORT:-3000}",
     "build": "next build",
     "start": "next start -p ${WEB_PORT:-3000}",
+    "typecheck": "tsc --noEmit",
     "lint": "biome check",
     "format": "biome format --write",
     "data:clean": "rm -rf data/ && mkdir -p data/",

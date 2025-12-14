@@ -286,6 +286,8 @@ enum InterviewStatus {
   PENDING
   IN_PROGRESS
   COMPLETED
+  TRANSCRIPT_MISSING
+  ANALYSIS_FAILED
 }
 
 // =============================================================================

@@ -12,6 +12,10 @@
       "cache": false,
       "persistent": true
     },
+    "typecheck": {
+      "dependsOn": ["^db:generate", "db:generate"],
+      "cache": false
+    },
     "lint": {
       "dependsOn": ["^lint"]
     },
