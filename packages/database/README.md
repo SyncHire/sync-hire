@@ -259,8 +259,13 @@ pnpm db:test              # Test database connection
 
 ### Migrations (Production)
 ```bash
-pnpm db:migrate           # Create migration
-pnpm db:migrate:deploy    # Apply migrations (production)
+pnpm db:migrate           # Create new migration (dev)
+pnpm db:migrate:deploy    # Apply migrations (requires DATABASE_URL)
+
+# Production migration script (auto-loads DATABASE_URL from Secret Manager)
+./scripts/migrate-production.sh              # Apply migrations
+./scripts/migrate-production.sh --status     # Check migration status
+./scripts/migrate-production.sh --seed       # Apply migrations + seed
 ```
 
 ### Seed & Reset
@@ -337,12 +342,19 @@ datasource db {
 
 ### Client with Adapter
 ```typescript
-import { PrismaClient } from './generated/client';
+import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
+  max: parseInt(process.env.DB_POOL_MAX || '20', 10),
+  min: parseInt(process.env.DB_POOL_MIN || '2', 10),
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+  ssl: isProduction ? { rejectUnauthorized: true } : false,
 });
 
 const adapter = new PrismaPg(pool);
@@ -408,32 +420,71 @@ import { prisma } from '@sync-hire/database';
 ```bash
 gcloud sql instances create synchire-db \
   --database-version=POSTGRES_16 \
-  --tier=db-f1-micro \
-  --region=us-central1
+  --tier=db-custom-4-16384 \
+  --region=us-central1 \
+  --backup-start-time=03:00 \
+  --retained-backups-count=30
 ```
 
-### 2. Update DATABASE_URL
+### 2. Configure Environment Variables
 
-For Cloud SQL with Unix socket:
+**Required:**
 ```env
 DATABASE_URL="postgresql://user:password@/dbname?host=/cloudsql/project:region:instance"
+USE_DATABASE=true
+NODE_ENV=production
 ```
 
-For Cloud SQL with TCP:
+**Optional (connection pool tuning):**
 ```env
-DATABASE_URL="postgresql://user:password@<instance-ip>:5432/dbname"
+DB_POOL_MAX=20    # Maximum connections (default: 20)
+DB_POOL_MIN=2     # Minimum connections (default: 2)
 ```
 
-### 3. Run Migrations
+### 3. Production Features
 
+The database package automatically enables these in production (`NODE_ENV=production`):
+
+- **SSL enforcement** - All connections require SSL
+- **Connection pooling** - Configurable max/min connections with timeouts
+- **Hard startup failure** - App exits if database connection fails
+- **Seed protection** - Seeding blocked unless `ALLOW_SEED=true`
+
+### 4. Run Migrations Locally (via Cloud SQL Proxy)
+
+**One-command migration** (recommended):
 ```bash
-pnpm db:migrate:deploy
+# Set up credentials (one-time)
+gcloud auth application-default login
+
+# Run migrations (starts proxy, fetches secrets, runs migration)
+./scripts/migrate-cloud.sh
+
+# Or check status / seed
+./scripts/migrate-cloud.sh --status
+./scripts/migrate-cloud.sh --seed
 ```
 
-### 4. Seed Production (Optional)
+**Manual method** (if you need more control):
+```bash
+# 1. Start Cloud SQL Proxy (use port 5433 if local PostgreSQL is on 5432)
+cloud-sql-proxy synchire-hackathon:asia-southeast1:synchire-db --port 5433
+
+# 2. In another terminal, run migrations
+DATABASE_URL="postgresql://synchire:PASSWORD@127.0.0.1:5433/synchire" ./scripts/migrate-production.sh
+```
+
+### 5. Seed Staging (Optional)
+
+For staging environments only:
+```bash
+ALLOW_SEED=true pnpm db:seed
+```
+
+### 6. Verify Deployment
 
 ```bash
-pnpm db:seed
+pnpm db:test
 ```
 
 ---

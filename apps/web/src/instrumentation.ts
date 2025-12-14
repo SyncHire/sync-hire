@@ -20,9 +20,15 @@ export async function register() {
       try {
         await validateDatabaseConnection();
       } catch (error) {
-        console.error('Server startup aborted: Database connection failed');
-        // In production, you may want to exit the process
-        // process.exit(1);
+        Sentry.captureException(error);
+        console.error('FATAL: Database connection failed');
+
+        if (process.env.NODE_ENV === 'production') {
+          console.error('Exiting: Database connection is required in production');
+          process.exit(1);
+        } else {
+          console.warn('Continuing without database (non-production environment)');
+        }
       }
     }
   }
