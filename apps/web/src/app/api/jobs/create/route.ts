@@ -5,12 +5,16 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
-import type { ExtractedJobData, Job } from "@/lib/mock-data";
+import type { EmploymentType, ExtractedJobData, Job, Question, WorkArrangement } from "@/lib/mock-data";
 import {
   createJob,
   createJobDescriptionVersion,
 } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
+import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
+import { generateStringHash } from "@/lib/utils/hash-utils";
+import { geminiClient } from "@/lib/gemini-client";
+import { z } from "zod";
 
 interface CreateJobRequest {
   title: string;
@@ -43,12 +47,6 @@ interface CreateJobRequest {
  */
 async function triggerCandidateMatching(jobId: string): Promise<{ matchedCount: number; candidateNames: string[] }> {
   try {
-    // Import dynamically to avoid circular dependencies
-    const { generateSmartMergedQuestions } = await import("@/lib/backend/question-generator");
-    const { generateStringHash } = await import("@/lib/utils/hash-utils");
-    const { geminiClient } = await import("@/lib/gemini-client");
-    const { z } = await import("zod");
-
     const storage = getStorage();
     const job = await storage.getJob(jobId);
     if (!job) {
@@ -166,24 +164,26 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
         // No need to update counter here to avoid race conditions
 
         // Generate questions in background (don't await)
+        // Map job questions to include required category field
+        const questionsWithCategory: Question[] = job.questions.map(q => ({
+          ...q,
+          category: q.category || "Technical Skills",
+        }));
         generateSmartMergedQuestions(cvData, {
           title: job.title,
           company: job.company,
           location: job.location,
-          employmentType: job.type as any,
-          workArrangement: job.workArrangement as any,
+          employmentType: (job.type || "Not specified") as EmploymentType,
+          workArrangement: job.workArrangement || "Not specified",
           seniority: "",
           requirements: job.requirements,
           responsibilities: [job.description],
-        }, job.questions as any).then(async (mergedQuestions) => {
+        }, questionsWithCategory).then(async (mergedQuestions) => {
           const interviewQuestions = {
             metadata: {
               cvId,
               jobId,
               generatedAt: new Date().toISOString(),
-              questionCount: mergedQuestions.length,
-              customQuestionCount: mergedQuestions.filter(q => q.source === "job").length,
-              suggestedQuestionCount: mergedQuestions.filter(q => q.source === "ai-personalized").length,
             },
             customQuestions: mergedQuestions
               .filter(q => q.source === "job")
@@ -205,7 +205,7 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
 
           await storage.saveInterviewQuestions(questionsHash, interviewQuestions);
 
-          // Update application status
+          // Update application status to ready
           const app = await storage.getApplication(applicationId);
           if (app) {
             app.status = "ready";
@@ -213,7 +213,17 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
             await storage.saveApplication(app);
           }
           console.log(`   ✅ Questions generated for ${candidateName}`);
-        }).catch(err => console.error(`   ❌ Question generation failed:`, err));
+        }).catch(async (err) => {
+          console.error(`   ❌ Question generation failed for ${candidateName}:`, err);
+          // Update application status to indicate failure
+          const app = await storage.getApplication(applicationId);
+          if (app) {
+            app.status = "rejected"; // Mark as rejected so it doesn't stay stuck
+            app.updatedAt = new Date();
+            await storage.saveApplication(app);
+            console.log(`   ⚠️ Application status updated to 'rejected' due to question generation failure`);
+          }
+        });
       } else {
         console.log(`   ❌ Below threshold`);
       }

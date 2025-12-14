@@ -76,7 +76,7 @@ export interface Interview {
   id: string;
   jobId: string;
   candidateId: string;
-  status: "PENDING" | "IN_PROGRESS" | "COMPLETED";
+  status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "TRANSCRIPT_MISSING";
   callId?: string;
   transcript?: string;
   score?: number;

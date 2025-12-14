@@ -51,3 +51,6 @@ env/
 # Docker
 .dockerignore
 firebase-debug.log
+
+# Local data files
+apps/web/data/

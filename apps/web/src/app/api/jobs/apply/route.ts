@@ -3,15 +3,16 @@
  *
  * Apply CV to a job position with automatic interview question generation.
  * Generates 6-8 personalized questions based on CV + Job Description using Gemini.
- * Falls back to demo CV data if no CV is uploaded (for demo purposes).
+ * Requires a valid CV to be uploaded first.
  */
 
 import { type NextRequest, NextResponse } from "next/server";
 import { generateInterviewQuestions } from "@/lib/backend/question-generator";
-import { getDemoCVExtraction, type ExtractedJobData } from "@/lib/mock-data";
+import type { ExtractedJobData } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
 import type { InterviewQuestions } from "@/lib/storage/storage-interface";
 import { generateStringHash } from "@/lib/utils/hash-utils";
+import { getQuestionCounts } from "@sync-hire/database";
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,15 +43,19 @@ export async function POST(request: NextRequest) {
 
     const storage = getStorage();
 
-    // Get CV extraction - fall back to demo CV if not found (for demo purposes)
-    let cvData = await storage.getCVExtraction(cvId);
-    let usingDemoCV = false;
+    // Get CV extraction - return error if not found
+    const cvData = await storage.getCVExtraction(cvId);
 
     if (!cvData) {
-      // Use demo CV data as fallback for demo flow
-      cvData = getDemoCVExtraction();
-      usingDemoCV = true;
-      console.log("📋 Using demo CV data for question generation (no uploaded CV found)");
+      console.error("CV not found for interview question generation:", { cvId, jobId });
+      return NextResponse.json(
+        {
+          error: "CV not found",
+          message: `Your CV (ID: ${cvId}) was not found. Please re-upload your CV and try again.`,
+          action: "Please upload your CV before applying to this job.",
+        },
+        { status: 404 },
+      );
     }
 
     // Try to get JD extraction first (for jobs created via upload)
@@ -90,15 +95,16 @@ export async function POST(request: NextRequest) {
     if (existingQuestions) {
       const questions = await storage.getInterviewQuestions(combinedHash);
       if (questions) {
+        const counts = getQuestionCounts(questions);
         return NextResponse.json(
           {
             data: {
               id: combinedHash,
               cvId,
               jobId,
-              questionCount: questions.metadata.questionCount,
-              customQuestionCount: questions.metadata.customQuestionCount,
-              suggestedQuestionCount: questions.metadata.suggestedQuestionCount,
+              questionCount: counts.total,
+              customQuestionCount: counts.custom,
+              suggestedQuestionCount: counts.suggested,
               cached: true,
             },
           },
@@ -114,7 +120,6 @@ export async function POST(request: NextRequest) {
     // For now, we'll use an empty array since custom questions are stored in the Job model
     // In a real implementation, this would fetch from the Job record
     const customQuestions: InterviewQuestions["customQuestions"] = [];
-    const customQuestionCount = 0;
 
     // Build questions file
     const interviewQuestions: InterviewQuestions = {
@@ -122,9 +127,6 @@ export async function POST(request: NextRequest) {
         cvId,
         jobId,
         generatedAt: new Date().toISOString(),
-        questionCount: customQuestionCount + suggestedQuestions.length,
-        customQuestionCount,
-        suggestedQuestionCount: suggestedQuestions.length,
       },
       customQuestions,
       suggestedQuestions,
@@ -133,18 +135,17 @@ export async function POST(request: NextRequest) {
     // Save questions to storage
     await storage.saveInterviewQuestions(combinedHash, interviewQuestions);
 
+    const counts = getQuestionCounts(interviewQuestions);
     return NextResponse.json(
       {
         data: {
           id: combinedHash,
           cvId,
           jobId,
-          questionCount: interviewQuestions.metadata.questionCount,
-          customQuestionCount: interviewQuestions.metadata.customQuestionCount,
-          suggestedQuestionCount:
-            interviewQuestions.metadata.suggestedQuestionCount,
+          questionCount: counts.total,
+          customQuestionCount: counts.custom,
+          suggestedQuestionCount: counts.suggested,
           cached: false,
-          usingDemoCV,
         },
       },
       { status: 200 },

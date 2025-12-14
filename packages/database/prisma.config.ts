@@ -1,0 +1,19 @@
+/**
+ * Prisma 7 Configuration
+ *
+ * Defines database connection, schema location, and migrations path.
+ * Environment variables are loaded explicitly using dotenv.
+ */
+
+import 'dotenv/config';
+import { defineConfig, env } from 'prisma/config';
+
+export default defineConfig({
+  schema: 'prisma/schema.prisma',
+  migrations: {
+    path: 'prisma/migrations',
+  },
+  datasource: {
+    url: env('DATABASE_URL'),
+  },
+});

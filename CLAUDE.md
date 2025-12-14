@@ -33,6 +33,12 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 ## TypeScript/JavaScript Development
 
+### Type Safety
+- **Never use non-null assertion operator (`!`)** - it hides potential null/undefined runtime errors
+- Bad: `const data = cv.extraction!` or `user!.name`
+- Good: Use optional chaining `??`, explicit checks, or proper type guards
+- Example: `return cv?.extraction ?? null` or `if (!user) return null`
+
 ### Import Rules
 - **Never use inline/dynamic imports** - always use static imports at the top of the file
 - Bad: `const { toast } = await import('@/lib/hooks/use-toast');`
@@ -95,6 +101,50 @@ useEffect(() => {
 <div className="bg-amber-50 text-amber-700">
 <div className="bg-blue-100 text-blue-600">
 ```
+
+## Database (Prisma 7)
+
+### Using Types
+```typescript
+import { prisma } from '@sync-hire/database';
+import type { User, Job, Prisma } from '@sync-hire/database';
+
+// Use base types from Prisma
+const user: User = await prisma.user.findFirst();
+```
+
+### Custom Types with Relations
+**Create types in `packages/database/src/types.ts`:**
+
+```typescript
+// packages/database/src/types.ts
+import type { Prisma } from './generated/client';
+
+export type UserWithInterviews = Prisma.UserGetPayload<{
+  include: { interviews: true };
+}>;
+
+export type JobWithApplications = Prisma.JobGetPayload<{
+  include: {
+    applications: { include: { cvUpload: true } };
+    questions: true;
+  };
+}>;
+```
+
+**Use in apps:**
+```typescript
+import type { UserWithInterviews } from '@sync-hire/database';
+
+const user: UserWithInterviews = await prisma.user.findFirst({
+  include: { interviews: true }
+});
+```
+
+### Key Points
+- Define custom types in `packages/database/src/types.ts`, not in apps
+- Use `Prisma.XGetPayload<{ include: {...} }>` for type-safe relations
+- Export from `@sync-hire/database` for reuse across apps
 
 ## Git
 

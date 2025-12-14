@@ -73,7 +73,8 @@
   - Files:
     - Create: `/apps/web/prisma/schema.prisma`
     - Update: `/apps/web/package.json` (add Prisma deps)
-  - Action: Define 11 models, install dependencies
+  - Action: Define 11 models, install dependencies, setup local PostgreSQL
+  - Database: Use Docker (`docker run postgres:16`) or local install
   - Estimated: 6 hours
   - Completed: _____
 
@@ -192,35 +193,36 @@
 **Status**: 🔴 Not Started
 **Progress**: 0/8 tasks completed
 
-### Phase 3A: Supabase Storage (Days 1-2)
+### Phase 3A: GCP Cloud Storage (Days 1-2)
 
-- [ ] **Task 3.1: Supabase Storage Setup**
+- [ ] **Task 3.1: GCP Cloud Storage Setup**
   - Status: 🔴 Not Started
   - Files:
-    - Create: `/apps/web/src/lib/cloud-storage/storage-client.ts`
+    - Create: `/apps/web/src/lib/cloud-storage/gcs-client.ts`
     - Create: `/apps/web/src/lib/cloud-storage/upload-handler.ts`
-  - Action: Configure Supabase client, create buckets
-  - Estimated: 4 hours
+  - Action: Configure GCP Storage, create buckets (cvs, job-descriptions, recordings)
+  - GCP Setup: Enable Cloud Storage API, create service account, create 3 buckets
+  - Estimated: 5 hours
   - Completed: _____
 
 - [ ] **Task 3.2: Update CV Upload Route**
   - Status: 🔴 Not Started
   - File: `/apps/web/src/app/api/cv/extract/route.ts`
-  - Action: Upload to Supabase, store URL in DB
+  - Action: Upload to GCP Cloud Storage, store signed URL in DB
   - Estimated: 3 hours
   - Completed: _____
 
 - [ ] **Task 3.3: Update JD Upload Route**
   - Status: 🔴 Not Started
   - File: `/apps/web/src/app/api/jobs/extract-jd/route.ts`
-  - Action: Upload to Supabase, store URL in DB
+  - Action: Upload to GCP Cloud Storage, store signed URL in DB
   - Estimated: 2 hours
   - Completed: _____
 
-- [ ] **Task 3.4: File Migration to Cloud**
+- [ ] **Task 3.4: File Migration to GCS**
   - Status: 🔴 Not Started
-  - File: Create `/apps/web/scripts/migrate-files-to-cloud.ts`
-  - Action: Migrate existing files from /data to Supabase
+  - File: Create `/apps/web/scripts/migrate-files-to-gcs.ts`
+  - Action: Migrate existing files from /data to GCP Cloud Storage
   - Estimated: 4 hours
   - Completed: _____
 
@@ -263,9 +265,9 @@
   - Completed: _____
 
 ### Week 3 Deliverables Checklist
-- [ ] Supabase storage operational (3 buckets created)
-- [ ] All file uploads go to Supabase
-- [ ] Existing files migrated to cloud
+- [ ] GCP Cloud Storage operational (3 buckets created)
+- [ ] All file uploads go to GCP Cloud Storage
+- [ ] Existing files migrated to GCS
 - [ ] 150 unit tests written and passing
 - [ ] 180 integration tests written and passing
 - [ ] 50-60 Python tests written and passing
@@ -415,27 +417,36 @@
 
 | Service | Purpose | Plan | Cost | Status | Setup Date |
 |---------|---------|------|------|--------|------------|
-| PostgreSQL | Database | Supabase Free | $0 | 🔴 | _____ |
-| Supabase Storage | File storage | Free tier | $0 | 🔴 | _____ |
+| Local PostgreSQL | Dev database | Docker/Local | $0 | 🔴 | _____ |
+| GCP Cloud SQL | Production DB | db-f1-micro | $10-25/mo* | 🔴 | _____ |
+| GCP Cloud Storage | File storage | Standard | $1-5/mo* | 🔴 | _____ |
+| Firebase Hosting | Web hosting | Free tier | $0 | 🔴 | _____ |
 | Google OAuth | Authentication | Free | $0 | 🔴 | _____ |
-| Upstash Redis | Rate limiting | Free tier | $0 | 🔴 | _____ |
+| Upstash Redis | Rate limiting | Free tier | $0-10/mo | 🔴 | _____ |
 | Sentry | Error monitoring | Developer | $29/mo | 🔴 | _____ |
 | Better Stack | Log aggregation | Startup (opt) | $29/mo | 🔴 | _____ |
 
-**Total Monthly Cost**: $29 (Sentry only) or $58 (with Better Stack)
+**Development Cost**: ~$0-40/mo (Local DB, free tiers)
+**Production Cost**: ~$0-40/mo (with ~$2k GCP credits)
+**Post-Credits**: ~$50-80/mo
+
+*Covered by GCP credits during initial period
 
 ---
 
 ## Environment Variables Checklist
 
-- [ ] DATABASE_URL
+- [ ] DATABASE_URL (GCP Cloud SQL)
 - [ ] USE_DATABASE
 - [ ] NEXTAUTH_URL
 - [ ] NEXTAUTH_SECRET
 - [ ] GOOGLE_CLIENT_ID
 - [ ] GOOGLE_CLIENT_SECRET
-- [ ] NEXT_PUBLIC_SUPABASE_URL
-- [ ] SUPABASE_SERVICE_ROLE_KEY
+- [ ] GCP_PROJECT_ID
+- [ ] GCP_STORAGE_BUCKET_CVS
+- [ ] GCP_STORAGE_BUCKET_JDS
+- [ ] GCP_STORAGE_BUCKET_RECORDINGS
+- [ ] GCP_SERVICE_ACCOUNT_KEY
 - [ ] GEMINI_API_KEY
 - [ ] AGENT_API_URL
 - [ ] NEXT_PUBLIC_STREAM_API_KEY
@@ -545,13 +556,14 @@
 | Hardcoded secrets removed | 1 | 0 | 🔴 |
 | API routes with auth | 24 | 0 | 🔴 |
 | Database models implemented | 11 | 0 | 🔴 |
+| GCP buckets created | 3 | 0 | 🔴 |
 | Unit tests written | 150 | 0 | 🔴 |
 | Integration tests written | 180 | 0 | 🔴 |
 | E2E tests written | 20 | 0 | 🔴 |
 | Code coverage | 75% | 0% | 🔴 |
 | console.log removed | 100+ | 0 | 🔴 |
-| Files migrated to cloud | All | 0 | 🔴 |
-| Production deployments | 1 | 0 | 🔴 |
+| Files migrated to GCS | All | 0 | 🔴 |
+| Firebase deployments | 1 | 0 | 🔴 |
 
 ---
 
@@ -559,6 +571,12 @@
 
 ### Development
 ```bash
+# Start local PostgreSQL (Docker)
+docker run --name synchire-postgres \
+  -e POSTGRES_PASSWORD=synchire \
+  -e POSTGRES_DB=synchire \
+  -p 5432:5432 -d postgres:16
+
 # Start dev servers
 pnpm dev
 
@@ -569,15 +587,17 @@ pnpm test:integration    # Integration tests
 pnpm test:e2e           # E2E tests
 pnpm test:coverage      # With coverage
 
-# Database
-pnpm db:push            # Push schema to dev
-pnpm db:migrate         # Create migration
-pnpm db:studio          # Open Prisma Studio
-pnpm data:migrate       # Migrate JSON to DB
+# Database (Development - Local)
+pnpm prisma db push            # Push schema to local DB
+pnpm prisma studio             # Open Prisma Studio UI
+pnpm data:migrate              # Migrate JSON to local DB
+
+# Database (Production - Cloud SQL)
+pnpm prisma migrate deploy     # Deploy migrations to production
 
 # Build & Deploy
 pnpm build
-pnpm start
+firebase deploy --only hosting
 ```
 
 ### Testing
