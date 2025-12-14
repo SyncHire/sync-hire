@@ -95,3 +95,12 @@ useEffect(() => {
 <div className="bg-amber-50 text-amber-700">
 <div className="bg-blue-100 text-blue-600">
 ```
+
+## Git
+
+- **Default branch**: `main` (use this as the base for PRs)
+
+## Additional Guidelines
+
+For detailed guidelines on specific tools and integrations, refer to the files in `.claude/rules/`:
+- **Sentry**: `.claude/rules/sentry.md` - Exception catching, tracing, spans, and logging
