@@ -1,0 +1,52 @@
+# Firebase App Hosting Configuration
+# https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  cpu: 1
+  memoryMiB: 512
+  minInstances: 0
+  maxInstances: 10
+  concurrency: 80
+
+env:
+  # Public environment variables (needed at build time for Next.js)
+  - variable: NEXT_PUBLIC_STREAM_API_KEY
+    value: 98ftk7pxystq
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_DEMO_USER_NAME
+    value: Demo Candidate
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_DEMO_USER_EMAIL
+    value: demo@synchire.com
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_LOGO_DEV_KEY
+    value: pk_FgUgq-__SdOal0JNAYVqJQ
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Python Agent Cloud Run URL (runtime only)
+  - variable: PYTHON_AGENT_URL
+    value: https://sync-hire-agent-297349712190.asia-southeast1.run.app
+    availability:
+      - RUNTIME
+
+  # Secrets (runtime only - don't expose at build time)
+  - variable: API_SECRET_KEY
+    secret: API_SECRET_KEY
+    availability:
+      - RUNTIME
+  - variable: STREAM_API_SECRET
+    secret: STREAM_API_SECRET
+    availability:
+      - RUNTIME
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
+    availability:
+      - RUNTIME

@@ -7,8 +7,12 @@ import os
 from typing import Optional
 from dotenv import load_dotenv
 
-# Load .env file
+# Load .env file (development)
 load_dotenv()
+
+# Determine environment
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+IS_PRODUCTION = ENVIRONMENT == "production"
 
 
 class Config:
@@ -16,6 +20,13 @@ class Config:
 
     # Cached validation result
     _validated: bool | None = None
+
+    # Environment
+    ENVIRONMENT: str = ENVIRONMENT
+    IS_PRODUCTION: bool = IS_PRODUCTION
+
+    # API Security (shared secret between Next.js and FastAPI)
+    API_SECRET_KEY: str = os.getenv("API_SECRET_KEY", "")
 
     # Stream Video
     STREAM_API_KEY: str = os.getenv("STREAM_API_KEY", "")
@@ -39,13 +50,6 @@ class Config:
     HEYGEN_API_KEY: Optional[str] = os.getenv("HEYGEN_API_KEY")
     HEYGEN_AVATAR_ID: str = os.getenv("HEYGEN_AVATAR_ID", "default")
     HEYGEN_VIDEO_QUALITY: str = os.getenv("HEYGEN_VIDEO_QUALITY", "LOW")
-
-    # ElevenLabs (TTS)
-    ELEVENLABS_API_KEY: Optional[str] = os.getenv("ELEVENLABS_API_KEY")
-    ELEVENLABS_VOICE_ID: str = os.getenv(
-        "ELEVENLABS_VOICE_ID",
-        "21m00Tcm4TlvDq8ikWAM"  # Default professional voice
-    )
 
     # Next.js Webhook
     NEXTJS_WEBHOOK_URL: str = os.getenv(
@@ -78,6 +82,7 @@ class Config:
         # Always required
         required = [
             ("STREAM_API_KEY", cls.STREAM_API_KEY),
+            ("API_SECRET_KEY", cls.API_SECRET_KEY),
         ]
 
         # Need at least one LLM

@@ -7,8 +7,8 @@ __pycache__/
 *$py.class
 *.so
 
-# UV lock file (managed by uv)
-uv.lock
+# UV lock file - tracked for reproducible builds
+# uv.lock
 
 # Environment variables
 .env

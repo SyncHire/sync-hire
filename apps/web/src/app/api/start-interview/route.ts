@@ -16,8 +16,7 @@ import { getStorage } from "@/lib/storage/storage-factory";
 import { getStreamClient } from "@/lib/stream-token";
 import { generateStringHash } from "@/lib/utils/hash-utils";
 import { mergeInterviewQuestions } from "@/lib/utils/question-utils";
-
-const AGENT_API_URL = process.env.AGENT_API_URL || "http://localhost:8080";
+import { getAgentEndpoint, getAgentHeaders } from "@/lib/agent-config";
 
 // Track which calls have had agents invited (in-memory cache)
 // This prevents duplicate invitations on page refreshes
@@ -152,14 +151,13 @@ export async function POST(request: Request) {
 
     // Invite agent if we haven't invited one yet (regardless of whether call is new or existing)
     if (!alreadyInvited) {
-      console.log(`🔗 Agent URL: ${AGENT_API_URL}/join-interview`);
+      const agentUrl = getAgentEndpoint("/join-interview");
+      console.log(`🔗 Agent URL: ${agentUrl}`);
       try {
         console.log("⏳ Sending request to agent...");
-        const agentResponse = await fetch(`${AGENT_API_URL}/join-interview`, {
+        const agentResponse = await fetch(agentUrl, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: getAgentHeaders(),
           body: JSON.stringify({
             callId,
             questions: interviewQuestions,

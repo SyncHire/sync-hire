@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
+import { getAgentEndpoint, getAgentHeaders } from "@/lib/agent-config";
 
 export async function GET() {
   try {
-    const agentUrl = process.env.PYTHON_AGENT_URL || "http://localhost:8080";
+    const agentUrl = getAgentEndpoint("/health");
 
-    console.log(`Calling Python agent at ${agentUrl}/health`);
+    console.log(`Calling Python agent at ${agentUrl}`);
 
-    const response = await fetch(`${agentUrl}/health`, {
+    const response = await fetch(agentUrl, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: getAgentHeaders(),
     });
 
     if (!response.ok) {
@@ -43,15 +42,13 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const agentUrl = process.env.PYTHON_AGENT_URL || "http://localhost:8080";
+    const agentUrl = getAgentEndpoint("/process");
 
     console.log(`Sending message to Python agent:`, body);
 
-    const response = await fetch(`${agentUrl}/process`, {
+    const response = await fetch(agentUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: getAgentHeaders(),
       body: JSON.stringify(body),
     });
 

@@ -26,3 +26,7 @@ dev = [
     "ruff>=0.8.0",
     "mypy>=1.0.0",
 ]
+
+[tool.uv]
+# Note: CPU-only PyTorch is configured in Dockerfile for Cloud Run
+# Local development uses standard PyTorch

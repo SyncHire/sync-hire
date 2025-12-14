@@ -22,8 +22,8 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", module="dataclasses_json.core", category=RuntimeWarning)
 
 # FastAPI imports (for HTTP endpoints)
-from fastapi import FastAPI, BackgroundTasks
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, BackgroundTasks, Request, HTTPException, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import uvicorn
 
@@ -111,14 +111,37 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+# API Key Authentication Middleware
+@app.middleware("http")
+async def verify_api_key(request: Request, call_next):
+    """
+    Verify API key for all endpoints except /health
+
+    Since this service is behind Firebase Hosting proxy, we don't need CORS.
+    Instead, we use a shared secret API key between Next.js and FastAPI.
+    """
+    # Allow health check without authentication
+    if request.url.path == "/health":
+        return await call_next(request)
+
+    # Check for API key header
+    api_key = request.headers.get("X-API-Key")
+
+    if not api_key:
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "Missing X-API-Key header"}
+        )
+
+    if api_key != Config.API_SECRET_KEY:
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "Invalid API key"}
+        )
+
+    response = await call_next(request)
+    return response
 
 
 # Request/Response models
