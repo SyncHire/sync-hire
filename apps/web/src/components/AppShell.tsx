@@ -210,42 +210,53 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </PopoverContent>
               </Popover>
 
-              <div className="h-4 w-px bg-border/50" />
+              {user ? (
+                <>
+                  <div className="h-4 w-px bg-border/50" />
 
-              <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={isCandidate ? "/hr/jobs" : "/candidate/jobs"}
+                      className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1 hover:bg-secondary rounded"
+                    >
+                      {isCandidate ? "Switch to HR" : "Switch to Candidate"}
+                    </Link>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="h-7 w-7 rounded-full overflow-hidden border border-border/50 bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors cursor-pointer">
+                          <span className="text-xs font-medium">{userInitials}</span>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="w-56 p-0">
+                        <div className="px-4 py-3 border-b border-border">
+                          <p className="text-sm font-medium">{user.name}</p>
+                          <p className="text-xs text-muted-foreground">{user.email}</p>
+                        </div>
+                        <div className="p-2">
+                          <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                            View: {isHRView ? "Employer" : "Candidate"}
+                          </p>
+                          <button
+                            onClick={handleSignOut}
+                            disabled={isSigningOut}
+                            className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 rounded transition-colors disabled:opacity-50"
+                          >
+                            <LogOut className="h-4 w-4" />
+                            {isSigningOut ? "Signing out..." : "Sign out"}
+                          </button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </>
+              ) : (
                 <Link
-                  href={isCandidate ? "/hr/jobs" : "/candidate/jobs"}
-                  className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1 hover:bg-secondary rounded"
+                  href="/login"
+                  className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
                 >
-                  {isCandidate ? "Switch to HR" : "Switch to Candidate"}
+                  Sign in
                 </Link>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="h-7 w-7 rounded-full overflow-hidden border border-border/50 bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors cursor-pointer">
-                      <span className="text-xs font-medium">{userInitials}</span>
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-56 p-0">
-                    <div className="px-4 py-3 border-b border-border">
-                      <p className="text-sm font-medium">{user?.name ?? "User"}</p>
-                      <p className="text-xs text-muted-foreground">{user?.email}</p>
-                    </div>
-                    <div className="p-2">
-                      <p className="px-2 py-1.5 text-xs text-muted-foreground">
-                        View: {isHRView ? "Employer" : "Candidate"}
-                      </p>
-                      <button
-                        onClick={handleSignOut}
-                        disabled={isSigningOut}
-                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 rounded transition-colors disabled:opacity-50"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        {isSigningOut ? "Signing out..." : "Sign out"}
-                      </button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
+              )}
             </div>
           </div>
         </header>
