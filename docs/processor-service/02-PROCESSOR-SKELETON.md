@@ -28,7 +28,7 @@ apps/processor/
 │   │   └── gemini.service.ts       # Gemini API client
 │   └── utils/
 │       ├── logger.ts               # Structured logging
-│       └── pdf-parser.ts           # PDF extraction utility
+
 ```
 
 ---
@@ -54,7 +54,6 @@ apps/processor/
     "@sync-hire/shared": "workspace:*",
     "express": "^4.21.0",
     "multer": "^1.4.5-lts.1",
-    "pdf-parse": "^1.1.1",
     "zod": "^3.22.0"
   },
   "devDependencies": {
@@ -314,38 +313,7 @@ export async function generateContent(
 }
 ```
 
-### 10. Create pdf-parser.ts
-```typescript
-// src/utils/pdf-parser.ts
-import pdf from "pdf-parse";
-import { logger } from "./logger";
 
-export interface ParsedPDF {
-  text: string;
-  pageCount: number;
-  info: Record<string, unknown>;
-}
-
-export async function parsePDF(buffer: Buffer): Promise<ParsedPDF> {
-  try {
-    const data = await pdf(buffer);
-
-    logger.debug("PDF parsed", {
-      pageCount: data.numpages,
-      textLength: data.text.length,
-    });
-
-    return {
-      text: data.text,
-      pageCount: data.numpages,
-      info: data.info || {},
-    };
-  } catch (error) {
-    logger.error("PDF parsing failed", error);
-    throw new Error("Failed to parse PDF file");
-  }
-}
-```
 
 ### 11. Create main index.ts
 ```typescript

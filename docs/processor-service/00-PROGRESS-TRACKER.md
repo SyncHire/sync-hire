@@ -32,26 +32,26 @@ These files can be archived or removed once the implementation is complete.
 ### Base Tasks
 | Task | Status | Notes |
 |------|--------|-------|
-| Create package structure | [ ] | |
-| Move ExtractedJobData type | [ ] | |
-| Move ExtractedCVData type | [ ] | |
-| Move enums (EmploymentType, WorkArrangement) | [ ] | |
-| Create Zod schemas for JD | [ ] | |
-| Create Zod schemas for CV | [ ] | |
-| Create webhook payload types | [ ] | |
-| Move hash-utils.ts | [ ] | |
-| Update pnpm-workspace.yaml | [ ] | |
-| Update apps/web imports | [ ] | |
+| Create package structure | [x] | |
+| Move ExtractedJobData type | [x] | |
+| Move ExtractedCVData type | [x] | |
+| Move enums (EmploymentType, WorkArrangement) | [x] | |
+| Create Zod schemas for JD | [x] | |
+| Create Zod schemas for CV | [x] | |
+| Create webhook payload types | [x] | |
+| Move hash-utils.ts | [x] | |
+| Update pnpm-workspace.yaml | [x] | |
+| Update apps/web imports | [x] | |
 
 ### Relevance Scoring Enhancements
 | Task | Status | Notes |
 |------|--------|-------|
-| Add NodeEvaluationOutput type | [ ] | Node output with relevance scores |
-| Add UserFeedback type | [ ] | Approve/edit/reject signals |
-| Add NodeCalibration type | [ ] | Feedback aggregation for calibration |
-| Add CalibrationStorageInterface | [ ] | Abstract for future DB migration |
-| Create node-evaluation-schemas.ts | [ ] | Zod validation schemas |
-| Update index.ts exports | [ ] | Export new types |
+| Add NodeEvaluationOutput type | [x] | Node output with relevance scores |
+| Add UserFeedback type | [x] | Approve/edit/reject signals |
+| Add NodeCalibration type | [x] | Feedback aggregation for calibration |
+| Add CalibrationStorageInterface | [x] | Abstract for future DB migration |
+| Create node-evaluation-schemas.ts | [x] | Merged into schemas.ts |
+| Update index.ts exports | [x] | Export new types |
 
 ---
 
@@ -60,16 +60,16 @@ These files can be archived or removed once the implementation is complete.
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Initialize package.json | [ ] | |
-| Create tsconfig.json | [ ] | |
-| Set up Express server | [ ] | |
-| Create config.ts | [ ] | |
-| Create health endpoint | [ ] | |
-| Set up multer for uploads | [ ] | |
-| Create error handler middleware | [ ] | |
-| Create logger utility | [ ] | |
-| Add to turbo.json | [ ] | |
-| Test server starts | [ ] | |
+| Initialize package.json | [x] | |
+| Create tsconfig.json | [x] | |
+| Set up Express server | [x] | |
+| Create config.ts | [x] | |
+| Create health endpoint | [x] | |
+| Set up multer for uploads | [x] | |
+| Create error handler middleware | [x] | |
+| Create logger utility | [x] | |
+| Add to turbo.json | [x] | |
+| Test server starts | [x] | |
 
 ---
 

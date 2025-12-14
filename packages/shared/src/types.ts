@@ -152,3 +152,20 @@ export interface WebhookPayload {
 
 // Alias for specific webhook types
 export type DocumentProcessedWebhook = WebhookPayload;
+
+// --- Calibration Types ---
+
+export interface NodeCalibration {
+  nodeId: string;
+  originalRelevanceScore: number;
+  feedbackSignal: UserFeedbackSignal;
+  timestamp: string;
+  adjustedScore?: number; // Calculated after feedback
+}
+
+export interface CalibrationStorageInterface {
+  saveFeedback(feedback: UserFeedback): Promise<void>;
+  getFeedbackForNode(processingId: string, nodeId: string): Promise<UserFeedback[]>;
+  saveCalibration(calibration: NodeCalibration): Promise<void>;
+  getCalibrationStats(nodeName: string): Promise<any>; // TBD
+}
