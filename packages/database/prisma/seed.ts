@@ -31,7 +31,6 @@ async function main() {
       id: 'demo-user',
       name: 'Demo Candidate',
       email: 'demo@synchire.com',
-      role: 'CANDIDATE',
     },
   });
 
@@ -42,7 +41,6 @@ async function main() {
       id: 'employer-1',
       name: 'Sarah Johnson',
       email: 'hr@techcorp.com',
-      role: 'EMPLOYER',
     },
   });
 
@@ -53,7 +51,6 @@ async function main() {
       id: 'employer-2',
       name: 'Mike Chen',
       email: 'talent@startup.io',
-      role: 'EMPLOYER',
     },
   });
 
@@ -62,6 +59,83 @@ async function main() {
     employer1: employer1.email,
     employer2: employer2.email,
   });
+
+  // =============================================================================
+  // ORGANIZATIONS
+  // =============================================================================
+
+  console.log('Creating organizations...');
+
+  const techCorpOrg = await prisma.organization.upsert({
+    where: { slug: 'techcorp' },
+    update: {},
+    create: {
+      id: 'org-techcorp',
+      name: 'TechCorp',
+      slug: 'techcorp',
+      description: 'Leading technology company building innovative solutions.',
+      website: 'https://techcorp.com',
+      industry: 'Technology',
+      size: '201-500',
+    },
+  });
+
+  const startupOrg = await prisma.organization.upsert({
+    where: { slug: 'startup-io' },
+    update: {},
+    create: {
+      id: 'org-startup',
+      name: 'Startup.io',
+      slug: 'startup-io',
+      description: 'Fast-growing startup disrupting the industry.',
+      website: 'https://startup.io',
+      industry: 'Technology',
+      size: '11-50',
+    },
+  });
+
+  console.log('✓ Created organizations:', {
+    techCorp: techCorpOrg.name,
+    startup: startupOrg.name,
+  });
+
+  // =============================================================================
+  // ORGANIZATION MEMBERS
+  // =============================================================================
+
+  console.log('Creating organization members...');
+
+  await prisma.organizationMember.upsert({
+    where: {
+      organizationId_userId: {
+        organizationId: techCorpOrg.id,
+        userId: employer1.id,
+      },
+    },
+    update: {},
+    create: {
+      organizationId: techCorpOrg.id,
+      userId: employer1.id,
+      role: 'OWNER',
+    },
+  });
+
+  await prisma.organizationMember.upsert({
+    where: {
+      organizationId_userId: {
+        organizationId: startupOrg.id,
+        userId: employer2.id,
+      },
+    },
+    update: {},
+    create: {
+      organizationId: startupOrg.id,
+      userId: employer2.id,
+      role: 'OWNER',
+    },
+  });
+
+  console.log('✓ Created organization members');
 
   // =============================================================================
   // CV UPLOAD (Demo Candidate)
@@ -173,7 +247,8 @@ async function main() {
     data: {
       id: 'job-1',
       title: 'Senior Full Stack Engineer',
-      company: 'TechCorp',
+      organizationId: techCorpOrg.id,
+      createdById: employer1.id,
       department: 'Engineering',
       location: 'San Francisco, CA',
       employmentType: 'Full-time',
@@ -198,7 +273,6 @@ Key Responsibilities:
       aiMatchingEnabled: true,
       aiMatchingThreshold: 75,
       aiMatchingStatus: 'COMPLETE',
-      employerId: employer1.id,
       questions: {
         create: [
           {
@@ -231,7 +305,8 @@ Key Responsibilities:
     data: {
       id: 'job-2',
       title: 'Backend Engineer',
-      company: 'Startup.io',
+      organizationId: startupOrg.id,
+      createdById: employer2.id,
       department: 'Engineering',
       location: 'Remote',
       employmentType: 'Full-time',
@@ -247,7 +322,6 @@ Key Responsibilities:
       ],
       status: 'ACTIVE',
       aiMatchingEnabled: false,
-      employerId: employer2.id,
       questions: {
         create: [
           {
@@ -467,6 +541,8 @@ John: I believe in hands-on mentoring. I conduct regular code reviews with detai
   console.log('\n✅ Database seeded successfully!');
   console.log('\nSummary:');
   console.log('- Users: 3 (1 candidate, 2 employers)');
+  console.log('- Organizations: 2 (TechCorp, Startup.io)');
+  console.log('- Organization Members: 2');
   console.log('- CV Uploads: 1');
   console.log('- Jobs: 2');
   console.log('- Applications: 1');
@@ -474,8 +550,8 @@ John: I believe in hands-on mentoring. I conduct regular code reviews with detai
   console.log('- Notifications: 3');
   console.log('\nDemo accounts:');
   console.log('- Candidate: demo@synchire.com (demo-user)');
-  console.log('- Employer 1: hr@techcorp.com (employer-1)');
-  console.log('- Employer 2: talent@startup.io (employer-2)');
+  console.log('- Employer 1: hr@techcorp.com (employer-1) - Owner of TechCorp');
+  console.log('- Employer 2: talent@startup.io (employer-2) - Owner of Startup.io');
 }
 
 main()

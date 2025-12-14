@@ -27,26 +27,20 @@ model User {
   email         String    @unique
   emailVerified DateTime?
   image         String?
-  role          UserRole  @default(CANDIDATE)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  accounts      Account[]
-  sessions      Session[]
-  cvUploads     CVUpload[]
-  interviews    Interview[]
-  applications  CandidateApplication[]
-  notifications Notification[]
-  jobsPosted    Job[]                  @relation("EmployerJobs")
+  accounts            Account[]
+  sessions            Session[]
+  cvUploads           CVUpload[]
+  interviews          Interview[]
+  applications        CandidateApplication[]
+  notifications       Notification[]
+  organizationMembers OrganizationMember[] // User's org memberships
+  jobsCreated         Job[]               @relation("JobCreator") // Jobs this user created
 
   @@map("users")
-}
-
-enum UserRole {
-  EMPLOYER
-  CANDIDATE
-  ADMIN
 }
 
 model Account {
@@ -93,6 +87,54 @@ model VerificationToken {
 }
 
 // =============================================================================
+// ORGANIZATIONS
+// =============================================================================
+
+model Organization {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique // URL-friendly identifier: "acme-corp"
+  logo        String?
+  website     String?
+  description String? @db.Text
+  industry    String?
+  size        String? // "1-10", "11-50", "51-200", "201-500", "501+"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members OrganizationMember[]
+  jobs    Job[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String        @id @default(cuid())
+  organizationId String
+  userId         String
+  role           OrgMemberRole @default(RECRUITER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+enum OrgMemberRole {
+  OWNER // Full control, billing, can delete org
+  ADMIN // Manage members, all jobs
+  RECRUITER // Create/manage jobs, view candidates
+  HIRING_MANAGER // View assigned jobs/candidates only
+  VIEWER // Read-only access
+}
+
+// =============================================================================
 // CV MANAGEMENT
 // =============================================================================
 
@@ -123,7 +165,8 @@ model CVUpload {
 model Job {
   id              String    @id @default(cuid())
   title           String
-  company         String
+  organizationId  String // Which organization owns this job
+  createdById     String // Who created this job
   department      String?
   location        String
   employmentType  String // Full-time, Part-time, Contract, etc.
@@ -144,17 +187,18 @@ model Job {
   jdExtraction Json?
   jdVersion    Json?
 
-  employerId String
-  postedAt   DateTime @default(now())
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  postedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  employer     User                   @relation("EmployerJobs", fields: [employerId], references: [id])
+  organization Organization           @relation(fields: [organizationId], references: [id])
+  createdBy    User                   @relation("JobCreator", fields: [createdById], references: [id])
   questions    JobQuestion[]
   applications CandidateApplication[]
   interviews   Interview[]
 
-  @@index([employerId])
+  @@index([organizationId])
+  @@index([createdById])
   @@index([status])
   @@index([aiMatchingStatus])
   @@map("jobs")

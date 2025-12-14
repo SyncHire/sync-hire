@@ -11,6 +11,35 @@
 import type { Prisma } from '@prisma/client';
 
 // =============================================================================
+// Organization Types
+// =============================================================================
+
+export type OrganizationWithMembers = Prisma.OrganizationGetPayload<{
+  include: {
+    members: {
+      include: {
+        user: true;
+      };
+    };
+  };
+}>;
+
+export type OrganizationWithJobs = Prisma.OrganizationGetPayload<{
+  include: {
+    jobs: true;
+    members: true;
+  };
+}>;
+
+export type OrganizationMemberWithRelations =
+  Prisma.OrganizationMemberGetPayload<{
+    include: {
+      organization: true;
+      user: true;
+    };
+  }>;
+
+// =============================================================================
 // User Types
 // =============================================================================
 
@@ -29,6 +58,16 @@ export type UserWithApplications = Prisma.UserGetPayload<{
   };
 }>;
 
+export type UserWithOrganizations = Prisma.UserGetPayload<{
+  include: {
+    organizationMembers: {
+      include: {
+        organization: true;
+      };
+    };
+  };
+}>;
+
 // =============================================================================
 // Job Types
 // =============================================================================
@@ -37,8 +76,16 @@ export type JobWithQuestions = Prisma.JobGetPayload<{
   include: { questions: true };
 }>;
 
+export type JobWithOrganization = Prisma.JobGetPayload<{
+  include: {
+    organization: true;
+    createdBy: true;
+  };
+}>;
+
 export type JobWithApplications = Prisma.JobGetPayload<{
   include: {
+    organization: true;
     applications: {
       include: {
         cvUpload: true;

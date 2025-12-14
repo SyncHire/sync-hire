@@ -41,13 +41,13 @@ export class DatabaseStorage implements StorageInterface {
       create: {
         id: hash,
         title: data.title || 'Untitled',
-        company: data.company || 'Unknown',
+        organizationId: 'org-techcorp', // TODO: Get from active organization context
+        createdById: 'demo-user', // TODO: Get from auth
         location: data.location || '',
         employmentType: data.employmentType || 'Full-time',
         description: data.responsibilities?.join('\n') || '',
         requirements: data.requirements || [],
         jdExtraction: data,
-        employerId: 'demo-user', // TODO: Get from auth
         status: 'DRAFT',
       },
     });
@@ -74,7 +74,7 @@ export class DatabaseStorage implements StorageInterface {
         where: { id },
         update: {
           title: job.title,
-          company: job.company,
+          organizationId: job.organizationId,
           department: job.department,
           location: job.location,
           employmentType: job.employmentType,
@@ -90,7 +90,8 @@ export class DatabaseStorage implements StorageInterface {
         create: {
           id,
           title: job.title,
-          company: job.company,
+          organizationId: job.organizationId,
+          createdById: job.createdById,
           department: job.department,
           location: job.location,
           employmentType: job.employmentType,
@@ -102,7 +103,6 @@ export class DatabaseStorage implements StorageInterface {
           aiMatchingEnabled: job.aiMatchingEnabled,
           aiMatchingThreshold: job.aiMatchingThreshold,
           aiMatchingStatus: job.aiMatchingStatus,
-          employerId: job.employerId,
         },
       });
 
