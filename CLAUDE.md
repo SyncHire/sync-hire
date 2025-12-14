@@ -44,6 +44,13 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - Bad: `const { toast } = await import('@/lib/hooks/use-toast');`
 - Good: `import { toast } from '@/lib/hooks/use-toast';` at the top of the file
 
+### Barrel Files (Anti-pattern)
+- **Never create barrel files (index.ts)** - import directly from the source file
+- Barrel files cause circular dependency issues, slow down builds, and make tree-shaking less effective
+- Bad: Creating `index.ts` that re-exports from other files
+- Good: Import directly from the specific module file
+- Example: `import { GCSStorageProvider } from './cloud/gcs-storage-provider';` not `import { GCSStorageProvider } from './cloud';`
+
 ### Data Fetching (Frontend)
 - **Always use react-query (`@tanstack/react-query`) for data fetching in React components** - not raw `fetch` in useEffect
 - Use `useQuery` for GET requests with automatic caching and refetching

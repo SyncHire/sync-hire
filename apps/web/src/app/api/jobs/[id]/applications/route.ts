@@ -25,7 +25,7 @@ export async function GET(
         total: applications.length,
         applications: applications.map(app => ({
           id: app.id,
-          cvId: app.cvId,
+          cvId: app.cvUploadId,
           candidateName: app.candidateName,
           candidateEmail: app.candidateEmail,
           matchScore: app.matchScore,

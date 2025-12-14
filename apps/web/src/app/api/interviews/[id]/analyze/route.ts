@@ -55,12 +55,8 @@ export async function POST(
     if (!transcript || transcript.length === 0) {
       console.error(`❌ No transcript available for interview: ${interviewId}`);
 
-      // Mark interview as failed, not completed
-      interview.status = "TRANSCRIPT_MISSING";
-      interview.aiEvaluation = null;
-      interview.score = null;
-      await storage.saveInterview(interviewId, interview);
-
+      // Don't change status - interview may still be in progress or pending
+      // Just return error indicating transcript is not yet available
       return NextResponse.json(
         {
           error: "Missing transcript",
@@ -126,12 +122,8 @@ Be fair but honest in your assessment. Base scores on what was actually discusse
     } catch (aiError) {
       console.error("❌ AI evaluation failed:", aiError);
 
-      // Update interview status to indicate failure
-      interview.status = "ANALYSIS_FAILED";
-      interview.aiEvaluation = null;
-      interview.score = null;
-      await storage.saveInterview(interviewId, interview);
-
+      // Don't change status - analysis failure is retriable
+      // Return error so caller can retry later
       return NextResponse.json(
         {
           error: "AI analysis failed",

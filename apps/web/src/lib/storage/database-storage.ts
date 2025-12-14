@@ -1,24 +1,36 @@
 /**
  * Database Storage Implementation using Prisma
  *
- * Stores all data in PostgreSQL database instead of files.
- * File uploads still handled separately (will be moved to GCP Cloud Storage).
+ * Stores all data in PostgreSQL database.
+ * File uploads are stored in GCP Cloud Storage (production) or local filesystem (development).
  */
 
-import { prisma, ApplicationStatus, ApplicationSource } from '@sync-hire/database';
+import { prisma, ApplicationStatus, ApplicationSource, Prisma } from '@sync-hire/database';
+import type { CloudStorageProvider } from './cloud/cloud-storage-provider';
+import {
+  createStorageProvider,
+  getCVBucket,
+  getJDBucket,
+} from './cloud/storage-provider-factory';
 import type {
   CandidateApplication,
   ExtractedCVData,
   ExtractedJobData,
   Interview,
   InterviewQuestions,
-  Job,
+  JobWithQuestions,
   Notification,
   User,
 } from '@sync-hire/database';
-import type { StorageInterface } from './storage-interface';
+import type { StorageInterface, Job } from './storage-interface';
 
 export class DatabaseStorage implements StorageInterface {
+  private cloudStorage: CloudStorageProvider;
+
+  constructor() {
+    this.cloudStorage = createStorageProvider();
+  }
+
   // =============================================================================
   // Job Description Extraction Methods
   // =============================================================================
@@ -39,6 +51,10 @@ export class DatabaseStorage implements StorageInterface {
         id: hash,
         title: data.title || 'Untitled',
         company: data.company || 'Unknown',
+        location: data.location || '',
+        employmentType: data.employmentType || 'Full-time',
+        description: data.responsibilities?.join('\n') || '',
+        requirements: data.requirements || [],
         jdExtraction: data,
         employerId: 'demo-user', // TODO: Get from auth
         status: 'DRAFT',
@@ -47,16 +63,25 @@ export class DatabaseStorage implements StorageInterface {
   }
 
   async saveUpload(hash: string, buffer: Buffer): Promise<string> {
-    // TODO: Upload to GCP Cloud Storage
-    // For now, return a placeholder path
-    const path = `/uploads/jd/${hash}`;
+    const bucket = getJDBucket();
+    const path = `jd/${hash}`;
+    const contentType = 'application/pdf';
 
+    // Upload file to cloud storage
+    const fileUrl = await this.cloudStorage.uploadFile(
+      bucket,
+      path,
+      buffer,
+      contentType
+    );
+
+    // Update database with file URL
     await prisma.job.update({
       where: { id: hash },
-      data: { jdFileUrl: path },
+      data: { jdFileUrl: fileUrl },
     });
 
-    return path;
+    return fileUrl;
   }
 
   getUploadPath(hash: string): string {
@@ -67,7 +92,7 @@ export class DatabaseStorage implements StorageInterface {
     const count = await prisma.job.count({
       where: {
         id: hash,
-        jdExtraction: { not: null },
+        jdExtraction: { not: Prisma.JsonNull },
       },
     });
     return count > 0;
@@ -148,31 +173,8 @@ export class DatabaseStorage implements StorageInterface {
       return null;
     }
 
-    return {
-      id: job.id,
-      title: job.title,
-      company: job.company,
-      department: job.department || undefined,
-      location: job.location,
-      employmentType: job.employmentType,
-      workArrangement: job.workArrangement,
-      salary: job.salary || undefined,
-      description: job.description,
-      requirements: job.requirements,
-      status: job.status,
-      aiMatchingEnabled: job.aiMatchingEnabled,
-      aiMatchingThreshold: job.aiMatchingThreshold || undefined,
-      aiMatchingStatus: job.aiMatchingStatus || undefined,
-      employerId: job.employerId,
-      createdAt: job.createdAt.toISOString(),
-      questions: job.questions.map(q => ({
-        id: q.id,
-        content: q.content,
-        type: q.type,
-        duration: q.duration,
-        category: q.category || undefined,
-      })),
-    };
+    // Return the job directly from Prisma - it already includes questions
+    return job;
   }
 
   async getAllStoredJobs(): Promise<Job[]> {
@@ -181,31 +183,8 @@ export class DatabaseStorage implements StorageInterface {
       orderBy: { createdAt: 'desc' },
     });
 
-    return jobs.map(job => ({
-      id: job.id,
-      title: job.title,
-      company: job.company,
-      department: job.department || undefined,
-      location: job.location,
-      employmentType: job.employmentType,
-      workArrangement: job.workArrangement,
-      salary: job.salary || undefined,
-      description: job.description,
-      requirements: job.requirements,
-      status: job.status,
-      aiMatchingEnabled: job.aiMatchingEnabled,
-      aiMatchingThreshold: job.aiMatchingThreshold || undefined,
-      aiMatchingStatus: job.aiMatchingStatus || undefined,
-      employerId: job.employerId,
-      createdAt: job.createdAt.toISOString(),
-      questions: job.questions.map(q => ({
-        id: q.id,
-        content: q.content,
-        type: q.type,
-        duration: q.duration,
-        category: q.category || undefined,
-      })),
-    }));
+    // Return jobs directly from Prisma - they already include questions
+    return jobs;
   }
 
   async hasJob(id: string): Promise<boolean> {
@@ -241,19 +220,29 @@ export class DatabaseStorage implements StorageInterface {
   }
 
   async saveCVUpload(hash: string, buffer: Buffer): Promise<string> {
-    // TODO: Upload to GCP Cloud Storage
-    const path = `/uploads/cv/${hash}`;
+    const bucket = getCVBucket();
+    const path = `cv/${hash}`;
+    const contentType = 'application/pdf';
     const fileSize = buffer.length;
 
+    // Upload file to cloud storage
+    const fileUrl = await this.cloudStorage.uploadFile(
+      bucket,
+      path,
+      buffer,
+      contentType
+    );
+
+    // Update database with file URL and size
     await prisma.cVUpload.update({
       where: { fileHash: hash },
       data: {
-        fileUrl: path,
+        fileUrl,
         fileSize,
       },
     });
 
-    return path;
+    return fileUrl;
   }
 
   getCVUploadPath(hash: string): string {
@@ -264,7 +253,7 @@ export class DatabaseStorage implements StorageInterface {
     const count = await prisma.cVUpload.count({
       where: {
         fileHash: hash,
-        extraction: { not: null },
+        extraction: { not: Prisma.JsonNull },
       },
     });
     return count > 0;
@@ -317,7 +306,7 @@ export class DatabaseStorage implements StorageInterface {
     const count = await prisma.candidateApplication.count({
       where: {
         id: hash,
-        questionsData: { not: null },
+        questionsData: { not: Prisma.JsonNull },
       },
     });
     return count > 0;
@@ -328,68 +317,22 @@ export class DatabaseStorage implements StorageInterface {
   // =============================================================================
 
   async getInterview(id: string): Promise<Interview | null> {
-    const interview = await prisma.interview.findUnique({
+    return prisma.interview.findUnique({
       where: { id },
     });
-
-    if (!interview) {
-      return null;
-    }
-
-    return {
-      id: interview.id,
-      jobId: interview.jobId,
-      candidateId: interview.candidateId,
-      status: interview.status,
-      callId: interview.callId || undefined,
-      transcript: interview.transcript || undefined,
-      score: interview.score || undefined,
-      durationMinutes: interview.durationMinutes || undefined,
-      completedAt: interview.completedAt?.toISOString(),
-      createdAt: interview.createdAt.toISOString(),
-      aiEvaluation: interview.aiEvaluation ?? undefined,
-    };
   }
 
   async getAllInterviews(): Promise<Interview[]> {
-    const interviews = await prisma.interview.findMany({
+    return prisma.interview.findMany({
       orderBy: { createdAt: 'desc' },
     });
-
-    return interviews.map(interview => ({
-      id: interview.id,
-      jobId: interview.jobId,
-      candidateId: interview.candidateId,
-      status: interview.status,
-      callId: interview.callId || undefined,
-      transcript: interview.transcript || undefined,
-      score: interview.score || undefined,
-      durationMinutes: interview.durationMinutes || undefined,
-      completedAt: interview.completedAt?.toISOString(),
-      createdAt: interview.createdAt.toISOString(),
-      aiEvaluation: interview.aiEvaluation ?? undefined,
-    }));
   }
 
   async getInterviewsForUser(userId: string): Promise<Interview[]> {
-    const interviews = await prisma.interview.findMany({
+    return prisma.interview.findMany({
       where: { candidateId: userId },
       orderBy: { createdAt: 'desc' },
     });
-
-    return interviews.map(interview => ({
-      id: interview.id,
-      jobId: interview.jobId,
-      candidateId: interview.candidateId,
-      status: interview.status,
-      callId: interview.callId || undefined,
-      transcript: interview.transcript || undefined,
-      score: interview.score || undefined,
-      durationMinutes: interview.durationMinutes || undefined,
-      completedAt: interview.completedAt?.toISOString(),
-      createdAt: interview.createdAt.toISOString(),
-      aiEvaluation: interview.aiEvaluation ?? undefined,
-    }));
   }
 
   async saveInterview(id: string, interview: Interview): Promise<void> {
@@ -401,7 +344,7 @@ export class DatabaseStorage implements StorageInterface {
         transcript: interview.transcript,
         score: interview.score,
         durationMinutes: interview.durationMinutes,
-        completedAt: interview.completedAt ? new Date(interview.completedAt) : null,
+        completedAt: interview.completedAt,
         aiEvaluation: interview.aiEvaluation,
       },
       create: {
@@ -413,7 +356,7 @@ export class DatabaseStorage implements StorageInterface {
         transcript: interview.transcript,
         score: interview.score,
         durationMinutes: interview.durationMinutes,
-        completedAt: interview.completedAt ? new Date(interview.completedAt) : null,
+        completedAt: interview.completedAt,
         aiEvaluation: interview.aiEvaluation,
       },
     });
@@ -424,20 +367,9 @@ export class DatabaseStorage implements StorageInterface {
   // =============================================================================
 
   async getUser(id: string): Promise<User | null> {
-    const user = await prisma.user.findUnique({
+    return prisma.user.findUnique({
       where: { id },
     });
-
-    if (!user) {
-      return null;
-    }
-
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    };
   }
 
   async getCurrentUser(): Promise<User> {
@@ -451,12 +383,7 @@ export class DatabaseStorage implements StorageInterface {
       throw new Error('Demo user not found. Run pnpm db:seed');
     }
 
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    };
+    return user;
   }
 
   // =============================================================================
@@ -485,21 +412,10 @@ export class DatabaseStorage implements StorageInterface {
   // =============================================================================
 
   async getNotifications(userId: string): Promise<Notification[]> {
-    const notifications = await prisma.notification.findMany({
+    return prisma.notification.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
     });
-
-    return notifications.map(n => ({
-      id: n.id,
-      userId: n.userId,
-      type: n.type,
-      title: n.title,
-      message: n.message,
-      read: n.read,
-      actionUrl: n.actionUrl || undefined,
-      createdAt: n.createdAt.toISOString(),
-    }));
   }
 
   async saveNotification(notification: Notification): Promise<void> {
@@ -528,56 +444,16 @@ export class DatabaseStorage implements StorageInterface {
   // =============================================================================
 
   async getApplicationsForJob(jobId: string): Promise<CandidateApplication[]> {
-    const applications = await prisma.candidateApplication.findMany({
+    return prisma.candidateApplication.findMany({
       where: { jobId },
       orderBy: { matchScore: 'desc' },
     });
-
-    return applications.map(app => ({
-      id: app.id,
-      jobId: app.jobId,
-      cvUploadId: app.cvUploadId,
-      userId: app.userId,
-      candidateName: app.candidateName,
-      candidateEmail: app.candidateEmail,
-      matchScore: app.matchScore,
-      matchReasons: app.matchReasons,
-      skillGaps: app.skillGaps,
-      status: app.status,
-      source: app.source,
-      interviewId: app.interviewId || undefined,
-      createdAt: app.createdAt,
-      updatedAt: app.updatedAt,
-      questionsData: app.questionsData ?? undefined,
-    }));
   }
 
   async getApplication(applicationId: string): Promise<CandidateApplication | null> {
-    const app = await prisma.candidateApplication.findUnique({
+    return prisma.candidateApplication.findUnique({
       where: { id: applicationId },
     });
-
-    if (!app) {
-      return null;
-    }
-
-    return {
-      id: app.id,
-      jobId: app.jobId,
-      cvUploadId: app.cvUploadId,
-      userId: app.userId,
-      candidateName: app.candidateName,
-      candidateEmail: app.candidateEmail,
-      matchScore: app.matchScore,
-      matchReasons: app.matchReasons,
-      skillGaps: app.skillGaps,
-      status: app.status,
-      source: app.source,
-      interviewId: app.interviewId || undefined,
-      createdAt: app.createdAt,
-      updatedAt: app.updatedAt,
-      questionsData: app.questionsData ?? undefined,
-    };
   }
 
   async saveApplication(application: CandidateApplication): Promise<void> {
@@ -609,7 +485,7 @@ export class DatabaseStorage implements StorageInterface {
     });
   }
 
-  async getAllCVExtractions(): Promise<Array<{ cvId: string; data: ExtractedCVData }>> {
+  async getAllCVExtractions(): Promise<Array<{ cvId: string; userId: string; data: ExtractedCVData }>> {
     const cvs = await prisma.cVUpload.findMany({
       where: { extraction: { not: null } },
     });
@@ -619,7 +495,8 @@ export class DatabaseStorage implements StorageInterface {
         cv.extraction !== null
       )
       .map(cv => ({
-        cvId: cv.fileHash,
+        cvId: cv.id,
+        userId: cv.userId,
         data: cv.extraction,
       }));
   }

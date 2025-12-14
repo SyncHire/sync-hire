@@ -11,7 +11,7 @@ import type {
   ExtractedJobData,
   Interview,
   InterviewQuestions,
-  Job,
+  JobWithQuestions,
   Notification,
   User,
 } from "@sync-hire/database";
@@ -23,10 +23,12 @@ export type {
   ExtractedJobData,
   Interview,
   InterviewQuestions,
-  Job,
   Notification,
   User,
 };
+
+// Export Job type as JobWithQuestions since we always need questions relation
+export type Job = JobWithQuestions;
 
 export interface StorageInterface {
   /**
@@ -208,6 +210,7 @@ export interface StorageInterface {
 
   /**
    * Get all CV extractions (for AI matching)
+   * Returns cvId (the CVUpload.id), userId, and extracted data
    */
-  getAllCVExtractions(): Promise<Array<{ cvId: string; data: ExtractedCVData }>>;
+  getAllCVExtractions(): Promise<Array<{ cvId: string; userId: string; data: ExtractedCVData }>>;
 }
