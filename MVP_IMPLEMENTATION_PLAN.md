@@ -6,17 +6,17 @@
 
 **Current State**:
 - AI-powered video interview platform (Next.js 16 + Python FastAPI + Gemini AI)
-- PostgreSQL database with Prisma 7 ORM (implemented)
-- GCP Cloud Storage for files (in progress)
-- No authentication yet (hardcoded demo users)
-- Sentry monitoring configured
+- PostgreSQL database with Prisma 7 ORM ✅
+- GCP Cloud Storage for files ✅
+- Better Auth with organization support ✅
+- Sentry monitoring configured ✅
 - Zero test coverage
 
 **Target State**: Production MVP with:
-- PostgreSQL database (Prisma ORM on GCP Cloud SQL)
-- NextAuth.js authentication (Google OAuth + Email)
-- GCP Cloud Storage for files
-- Firebase Hosting for deployment
+- PostgreSQL database (Prisma ORM on GCP Cloud SQL) ✅
+- Better Auth authentication (Google OAuth + Email) ✅
+- GCP Cloud Storage for files ✅
+- Firebase App Hosting for deployment
 - 350+ tests (75% coverage)
 - Structured logging + Sentry monitoring
 - Rate limiting + caching
@@ -31,9 +31,9 @@
 | Week | Phase | Status | Notes |
 |------|-------|--------|-------|
 | Week 1 | Security + Database Foundation | **COMPLETE** | Prisma 7 + PostgreSQL + Sentry |
-| Week 2 | Authentication + Testing | NOT STARTED | Deferred - prioritizing cloud storage |
-| Week 3 | Cloud Storage + Core Testing | **IN PROGRESS** | GCP Cloud Storage implementation |
-| Week 4 | Production Hardening | NOT STARTED | |
+| Week 2 | Authentication + Testing | **COMPLETE** | Better Auth + Organization support |
+| Week 3 | Cloud Storage + Core Testing | **COMPLETE** | GCP Cloud Storage implementation |
+| Week 4 | Production Hardening | **IN PROGRESS** | Email verification, testing |
 
 ### Completed Items
 - [x] Prisma 7 schema with all MVP models (User, Job, CVUpload, CandidateApplication, Interview, etc.)
@@ -41,16 +41,26 @@
 - [x] Storage factory pattern for switching between file/database storage
 - [x] Sentry error monitoring configuration
 - [x] Python agent deployment setup
+- [x] GCP Cloud Storage integration for CV and JD file uploads
+- [x] Better Auth implementation with Prisma adapter
+- [x] Google OAuth authentication
+- [x] Email/password authentication with verification flow
+- [x] Organization plugin with custom roles (owner, admin, recruiter, hiring_manager, viewer)
+- [x] Auth pages: login, signup, verify-email, forgot-password, reset-password, select-organization
+- [x] Route protection via proxy.ts + page-level validation
+- [x] Session management with cookie caching
+- [x] Storage layer using authenticated user (replaced hardcoded demo-user)
+- [x] `getOrCreateApplication()` for new users applying to jobs
+- [x] Centralized storage configuration
 
 ### In Progress
-- [ ] GCP Cloud Storage integration for file uploads
-- [ ] CV apply and interview flow enhancements
-
-### Pending
-- [ ] NextAuth.js authentication (Google OAuth)
+- [ ] Email sending integration (Resend/SendGrid) for verification emails
 - [ ] Unit and integration tests
 - [ ] E2E tests with Playwright
+
+### Pending
 - [ ] Rate limiting with Upstash Redis
+- [ ] Production deployment to Firebase App Hosting
 
 ---
 
@@ -132,16 +142,7 @@ docker run --name synchire-postgres \
 # Or use existing PostgreSQL installation
 ```
 
-**Environment Variables**:
-```bash
-# Development (.env.local)
-DATABASE_URL="postgresql://postgres:synchire@localhost:5432/synchire"
-USE_DATABASE=true
-
-# Production (.env.production)
-DATABASE_URL="postgresql://user:password@/dbname?host=/cloudsql/project:region:instance"
-USE_DATABASE=true
-```
+**Environment Variables**: See `apps/web/.env.example` for database configuration.
 
 **Prisma Commands**:
 ```bash
@@ -156,42 +157,41 @@ pnpm prisma migrate deploy   # Run migrations on Cloud SQL
 
 ---
 
-## Week 2: Authentication + Testing Infrastructure
+## Week 2: Authentication + Testing Infrastructure ✅ COMPLETE
 
-### Phase 2A: NextAuth.js Implementation (Days 1-3)
+### Phase 2A: Better Auth Implementation (Days 1-3) ✅
 
-#### 1. Auth Configuration
-**Create Files**:
-- `/apps/web/src/lib/auth.ts` - NextAuth config with Google + Credentials providers
-- `/apps/web/src/app/api/auth/[...nextauth]/route.ts` - Auth handlers
-- `/apps/web/src/middleware.ts` - Page protection middleware
-- `/apps/web/src/lib/api-auth.ts` - API route auth helpers
+#### 1. Auth Configuration ✅
+**Created Files**:
+- `/apps/web/src/lib/auth.ts` - Better Auth config with Prisma adapter + organization plugin
+- `/apps/web/src/lib/auth-client.ts` - Type-safe client hooks
+- `/apps/web/src/lib/auth-server.ts` - Server-side session helpers
+- `/apps/web/src/app/api/auth/[...all]/route.ts` - Auth API handlers
+- `/apps/web/src/proxy.ts` - Route protection (Next.js 16 middleware)
 
-**Auth Middleware Functions**:
-- `requireAuth(req)` - Verify session exists
-- `requireRole(req, 'EMPLOYER' | 'CANDIDATE')` - Role-based access
+**Auth Helper Functions**:
+- `getServerSession()` - Get session with cookie caching
+- `getValidatedSession()` - Get session with forced DB validation
+- `requireAuth()` - Require authenticated session
+- `requireOrgMembership()` - Require active organization
 
-#### 2. Protect All API Routes
-**Update 24 Routes** with auth checks:
+#### 2. Organization Support ✅
+**Custom Roles Implemented**:
+- `owner` - Full permissions
+- `admin` - Org management + all job/member operations
+- `recruiter` - Job management + member read
+- `hiring_manager` - Job read + candidate management
+- `viewer` - Read-only access
 
-**Employer-only**:
-- `/apps/web/src/app/api/jobs/create/route.ts`
-- `/apps/web/src/app/api/jobs/[id]/route.ts` (PUT/DELETE)
-- `/apps/web/src/app/api/jobs/[id]/applicants/route.ts`
-- `/apps/web/src/app/api/jobs/[id]/match-candidates/route.ts`
+#### 3. Auth Pages Created ✅
+- `/apps/web/src/app/(auth)/login/page.tsx` - Email/password + Google OAuth
+- `/apps/web/src/app/(auth)/signup/page.tsx` - Registration with password strength
+- `/apps/web/src/app/(auth)/verify-email/page.tsx` - Email verification handling
+- `/apps/web/src/app/(auth)/forgot-password/page.tsx` - Password reset request
+- `/apps/web/src/app/(auth)/reset-password/page.tsx` - Password reset form
+- `/apps/web/src/app/(auth)/select-organization/page.tsx` - Organization selection
 
-**Candidate-only**:
-- `/apps/web/src/app/api/cv/extract/route.ts`
-- `/apps/web/src/app/api/jobs/apply/route.ts`
-- `/apps/web/src/app/api/start-interview/route.ts`
-
-**Environment Variables**:
-```bash
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="generate-random-32-chars"
-GOOGLE_CLIENT_ID="..."
-GOOGLE_CLIENT_SECRET="..."
-```
+**Environment Variables**: See `apps/web/.env.example` for Better Auth and Google OAuth configuration.
 
 ### Phase 2B: Testing Infrastructure (Days 4-5)
 
@@ -243,91 +243,45 @@ test = ["pytest>=8.3.0", "pytest-asyncio>=0.24.0", "pytest-cov>=6.0.0"]
 
 ---
 
-## Week 3: Cloud Storage + Core Testing
+## Week 3: Cloud Storage + Core Testing ✅ COMPLETE
 
-### Phase 3A: GCP Cloud Storage (Days 1-2)
+### Phase 3A: GCP Cloud Storage (Days 1-2) ✅
 
-#### 1. GCP Cloud Storage Setup
-**Create Files**:
-- `/apps/web/src/lib/cloud-storage/gcs-client.ts` - GCP Storage wrapper
-- `/apps/web/src/lib/cloud-storage/upload-handler.ts` - Upload utilities
+#### 1. GCP Cloud Storage Setup ✅
+**Created Files**:
+- `/apps/web/src/lib/storage/gcs-client.ts` - GCP Storage client singleton
+- `/apps/web/src/lib/storage/cloud/cloud-storage-provider.ts` - Provider interface
+- `/apps/web/src/lib/storage/cloud/gcs-storage-provider.ts` - GCS implementation
+- `/apps/web/src/lib/storage/cloud/local-storage-provider.ts` - Local dev implementation
+- `/apps/web/src/lib/storage/cloud/storage-provider-factory.ts` - Factory pattern
+- `/apps/web/src/lib/storage/storage-config.ts` - Centralized configuration
 
-**GCP Setup**:
-1. Create GCP project (if not exists)
-2. Enable Cloud Storage API
-3. Create service account with Storage Admin role
-4. Download service account key JSON
-5. Create buckets:
-   - `synchire-cvs` (private) - CV PDFs
-   - `synchire-job-descriptions` (private) - JD uploads
-   - `synchire-interview-recordings` (private) - Interview transcripts
+**Architecture**:
+- Single bucket with path prefixes: `cv/`, `jd/`
+- Files stored privately with signed URLs for time-limited access
+- Local filesystem fallback for development
 
-**Add Dependencies** (`/apps/web/package.json`):
-```json
-{
-  "dependencies": {
-    "@google-cloud/storage": "^7.14.0"
-  }
-}
-```
+**Environment Variables**: See `apps/web/.env.example` for GCS configuration.
 
-**Environment Variables**:
-```bash
-GCP_PROJECT_ID="your-project-id"
-GCP_STORAGE_BUCKET_CVS="synchire-cvs"
-GCP_STORAGE_BUCKET_JDS="synchire-job-descriptions"
-GCP_STORAGE_BUCKET_RECORDINGS="synchire-interview-recordings"
-# Service account key (base64 encoded or path)
-GCP_SERVICE_ACCOUNT_KEY="base64-encoded-json-key"
-# Or use Application Default Credentials in production
-```
-
-**Implementation Example**:
+#### 2. Storage Provider Pattern ✅
 ```typescript
-// gcs-client.ts
-import { Storage } from '@google-cloud/storage';
-
-const storage = new Storage({
-  projectId: process.env.GCP_PROJECT_ID,
-  credentials: JSON.parse(
-    Buffer.from(process.env.GCP_SERVICE_ACCOUNT_KEY!, 'base64').toString()
-  ),
-});
-
-export async function uploadFile(
-  bucketName: string,
-  filePath: string,
-  buffer: Buffer,
-  contentType: string
-): Promise<string> {
-  const bucket = storage.bucket(bucketName);
-  const file = bucket.file(filePath);
-
-  await file.save(buffer, {
-    contentType,
-    metadata: {
-      cacheControl: 'public, max-age=31536000',
-    },
-  });
-
-  // Generate signed URL or make public
-  const [url] = await file.getSignedUrl({
-    action: 'read',
-    expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
-
-  return url;
+// CloudStorageProvider interface
+interface CloudStorageProvider {
+  uploadCV(hash: string, buffer: Buffer): Promise<string>;
+  uploadJobDescription(hash: string, buffer: Buffer): Promise<string>;
+  getSignedUrl(type: 'cv' | 'jd', path: string): Promise<string>;
+  deleteCV(hash: string): Promise<void>;
+  deleteJobDescription(hash: string): Promise<void>;
+  cvExists(hash: string): Promise<boolean>;
+  jobDescriptionExists(hash: string): Promise<boolean>;
 }
 ```
 
-#### 2. Update Upload Routes
-**Files to Modify**:
-- `/apps/web/src/app/api/cv/extract/route.ts` - Upload to GCS, store URL in DB
-- `/apps/web/src/app/api/jobs/extract-jd/route.ts` - Same pattern
-
-#### 3. File Migration Script
-**Create**: `/apps/web/scripts/migrate-files-to-gcs.ts`
-- Upload existing files from `/data/cv-uploads/` and `/data/jd-uploads/` to GCS
+#### 3. Processor Integration ✅
+- `CVProcessor` - Handles CV upload + extraction with caching
+- `JDProcessor` - Handles JD upload + extraction with caching
+- Both use `CloudStorageProvider` for file operations
+- Both use `StorageInterface` for metadata storage
 
 ### Phase 3B: Unit + Integration Tests (Days 3-5)
 
@@ -389,19 +343,8 @@ export async function uploadFile(
 - `/apps/web/src/lib/backend/question-generator.ts`
 - `/apps/web/src/lib/backend/jd-processor.ts`
 
-#### 2. Error Monitoring (Sentry)
-**Create Files**:
-- `/apps/web/sentry.client.config.ts`
-- `/apps/web/sentry.server.config.ts`
-- `/apps/web/sentry.edge.config.ts`
-- `/apps/web/src/lib/error-tracking.ts`
-
-**Environment Variables**:
-```bash
-NEXT_PUBLIC_SENTRY_DSN="..."
-SENTRY_AUTH_TOKEN="..."
-NODE_ENV=production
-```
+#### 2. Error Monitoring (Sentry) ✅ CONFIGURED
+Sentry is already configured. See `apps/web/.env.example` for Sentry configuration.
 
 #### 3. Error Handling System
 **Create Files**:
@@ -441,12 +384,6 @@ NODE_ENV=production
 - `/apps/web/src/app/api/jobs/extract-jd/route.ts` (10 req/min)
 - `/apps/web/src/app/api/jobs/[id]/match-candidates/route.ts` (5 req/hour)
 
-**Environment Variables**:
-```bash
-UPSTASH_REDIS_REST_URL="..."
-UPSTASH_REDIS_REST_TOKEN="..."
-```
-
 #### 3. Bundle Optimization
 **Update**: `/apps/web/next.config.ts`
 ```typescript
@@ -481,10 +418,6 @@ const nextConfig = {
 
 #### 3. Demo Data Management
 **Create**: `/apps/web/src/lib/feature-flags/flags.ts`
-**Environment Variables**:
-```bash
-NEXT_PUBLIC_DEMO_MODE=false  # Disable in production
-```
 
 **Update**: `/apps/web/src/lib/mock-data.ts`
 - Wrap demo data in feature flag checks
@@ -523,110 +456,68 @@ NEXT_PUBLIC_DEMO_MODE=false  # Disable in production
 
 ---
 
-## Environment Variables (Complete List)
+## Environment Variables
 
-```bash
-# Database
-# Development:
-DATABASE_URL="postgresql://postgres:synchire@localhost:5432/synchire"
-# Production (GCP Cloud SQL):
-DATABASE_URL="postgresql://user:password@/dbname?host=/cloudsql/project:region:instance"
-USE_DATABASE=true
-
-# Authentication
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="generate-random-32-chars"
-GOOGLE_CLIENT_ID="..."
-GOOGLE_CLIENT_SECRET="..."
-
-# Cloud Storage (GCP)
-GCP_PROJECT_ID="your-project-id"
-GCP_STORAGE_BUCKET_CVS="synchire-cvs"
-GCP_STORAGE_BUCKET_JDS="synchire-job-descriptions"
-GCP_STORAGE_BUCKET_RECORDINGS="synchire-interview-recordings"
-GCP_SERVICE_ACCOUNT_KEY="base64-encoded-json-key"
-
-# AI Services
-GEMINI_API_KEY="..."
-AGENT_API_URL="http://localhost:8080"
-
-# Video
-NEXT_PUBLIC_STREAM_API_KEY="..."
-STREAM_API_SECRET="..."
-
-# Monitoring
-NEXT_PUBLIC_SENTRY_DSN="..."
-SENTRY_AUTH_TOKEN="..."
-
-# Rate Limiting & Cache
-UPSTASH_REDIS_REST_URL="..."
-UPSTASH_REDIS_REST_TOKEN="..."
-
-# Feature Flags
-NEXT_PUBLIC_DEMO_MODE=false
-NODE_ENV=production
-
-# Misc
-NEXT_PUBLIC_LOGO_DEV_KEY="..."
-WEBHOOK_SECRET="generate-random-string"
-```
+See `apps/web/.env.example` for the complete list of environment variables with documentation.
 
 ---
 
 ## Critical Files by Priority
 
-### Immediate (Week 1)
-1. `/apps/web/src/lib/logo-utils.ts` - Remove hardcoded API key (line 7)
-2. `/apps/web/prisma/schema.prisma` - Database schema (11 models)
-3. `/apps/web/src/lib/storage/database-storage.ts` - Storage implementation
-4. `/apps/web/src/app/api/webhooks/interview-complete/route.ts` - Add signature verification
+### Week 1 ✅ COMPLETE
+1. ✅ `/packages/database/prisma/schema.prisma` - Database schema (all models)
+2. ✅ `/apps/web/src/lib/storage/database-storage.ts` - Storage implementation
+3. ✅ `/apps/web/src/lib/logo-utils.ts` - Environment variable for API key
 
-### Week 2
-5. `/apps/web/src/lib/auth.ts` - NextAuth config
-6. `/apps/web/src/lib/api-auth.ts` - Auth middleware
-7. `/apps/web/src/lib/validators/api-schemas.ts` - Input validation
-8. `/apps/web/vitest.config.ts` + test files
+### Week 2 ✅ COMPLETE
+4. ✅ `/apps/web/src/lib/auth.ts` - Better Auth config with organization plugin
+5. ✅ `/apps/web/src/lib/auth-client.ts` - Type-safe client hooks
+6. ✅ `/apps/web/src/lib/auth-server.ts` - Server-side session helpers
+7. ✅ `/apps/web/src/proxy.ts` - Route protection middleware
+8. ✅ `/apps/web/src/app/(auth)/*.tsx` - Auth pages (login, signup, verify-email, etc.)
 
-### Week 3
-9. `/apps/web/src/lib/cloud-storage/gcs-client.ts` - GCP Cloud Storage integration
-10. `/apps/web/src/lib/backend/cv-processor.test.ts` - Critical unit tests
-11. `/apps/web/src/app/api/cv/extract/route.test.ts` - Integration tests
+### Week 3 ✅ COMPLETE
+9. ✅ `/apps/web/src/lib/storage/gcs-client.ts` - GCP Storage client
+10. ✅ `/apps/web/src/lib/storage/cloud/gcs-storage-provider.ts` - GCS implementation
+11. ✅ `/apps/web/src/lib/storage/cloud/local-storage-provider.ts` - Local dev fallback
+12. ✅ `/apps/web/src/lib/storage/storage-config.ts` - Centralized config
 
-### Week 4
-12. `/apps/web/src/lib/logger/logger.ts` - Structured logging
-13. `/apps/web/sentry.client.config.ts` - Error monitoring
-14. `/apps/web/src/lib/rate-limit/rate-limiter.ts` - Rate limiting
-15. `/apps/web/e2e/*.spec.ts` - E2E tests
+### Week 4 (In Progress)
+13. `/apps/web/src/lib/backend/cv-processor.test.ts` - Critical unit tests
+14. `/apps/web/src/app/api/cv/extract/route.test.ts` - Integration tests
+15. `/apps/web/src/lib/rate-limit/rate-limiter.ts` - Rate limiting
+16. `/apps/web/e2e/*.spec.ts` - E2E tests
 
 ---
 
 ## Success Metrics
 
-### Week 1 Checkpoint
+### Week 1 Checkpoint ✅ COMPLETE
 - ✅ Zero hardcoded secrets in code
-- ✅ Database schema defined + migrated
-- ✅ All API inputs validated with Zod
-- ✅ Webhook secured with HMAC
+- ✅ Database schema defined + migrated (Prisma 7)
+- ✅ Database storage fully functional
+- ✅ Sentry monitoring configured
 
-### Week 2 Checkpoint
-- ✅ Authentication working (Google + Email)
-- ✅ All 24 API routes protected with auth
-- ✅ 100+ unit tests written (50% coverage)
-- ✅ CI/CD pipeline running
+### Week 2 Checkpoint ✅ COMPLETE
+- ✅ Better Auth working (Google OAuth + Email/Password)
+- ✅ Organization plugin with custom roles
+- ✅ Auth pages created (login, signup, verify-email, etc.)
+- ✅ Route protection via proxy.ts + page-level validation
+- ⏳ CI/CD pipeline (pending)
 
-### Week 3 Checkpoint
-- ✅ Files migrated to GCP Cloud Storage
-- ✅ 250+ tests total (75% coverage)
-- ✅ Database storage fully functional (Cloud SQL)
-- ✅ Python agent tested
+### Week 3 Checkpoint ✅ COMPLETE
+- ✅ GCP Cloud Storage integration
+- ✅ Local storage fallback for development
+- ✅ Storage provider pattern implemented
+- ✅ CV and JD processors using cloud storage
+- ⏳ Unit tests (pending)
 
-### Week 4 Checkpoint (MVP READY)
-- ✅ Zero console.log in production
-- ✅ All errors tracked in Sentry
-- ✅ Rate limiting active
-- ✅ 350+ tests (75%+ coverage)
-- ✅ E2E tests passing
-- ✅ Production deployment successful
+### Week 4 Checkpoint (IN PROGRESS)
+- ⏳ Email sending for verification (Resend/SendGrid)
+- ⏳ Unit and integration tests
+- ⏳ E2E tests with Playwright
+- ⏳ Rate limiting with Upstash Redis
+- ⏳ Production deployment to Firebase App Hosting
 
 ---
 
@@ -768,13 +659,7 @@ firebase deploy --only hosting
 ```
 
 ### Environment Variables in Firebase
-Use Firebase Functions config or GitHub Actions secrets:
-```bash
-firebase functions:config:set \
-  database.url="postgresql://..." \
-  gemini.api_key="..." \
-  stream.api_key="..."
-```
+Use Firebase App Hosting secrets or GitHub Actions secrets. See `apps/web/.env.example` for the complete list.
 
 ### CI/CD with GitHub Actions
 **Create**: `.github/workflows/deploy.yml`
