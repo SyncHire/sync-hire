@@ -21,9 +21,6 @@ import { getCompanyLogoUrl } from "@/lib/logo-utils";
 export default function HRJDListings() {
   const { data: jobs = [], isLoading } = useJobs({ pollWhileScanning: true });
 
-  // Check if any jobs are currently scanning
-  const hasScanning = jobs.some((job) => job.aiMatchingStatus === "SCANNING");
-
   if (isLoading) {
     return (
       <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto px-4 py-8">
