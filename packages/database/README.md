@@ -259,8 +259,13 @@ pnpm db:test              # Test database connection
 
 ### Migrations (Production)
 ```bash
-pnpm db:migrate           # Create migration
-pnpm db:migrate:deploy    # Apply migrations (production)
+pnpm db:migrate           # Create new migration (dev)
+pnpm db:migrate:deploy    # Apply migrations (requires DATABASE_URL)
+
+# Production migration script (auto-loads DATABASE_URL from Secret Manager)
+./scripts/migrate-production.sh              # Apply migrations
+./scripts/migrate-production.sh --status     # Check migration status
+./scripts/migrate-production.sh --seed       # Apply migrations + seed
 ```
 
 ### Seed & Reset
@@ -445,11 +450,28 @@ The database package automatically enables these in production (`NODE_ENV=produc
 - **Hard startup failure** - App exits if database connection fails
 - **Seed protection** - Seeding blocked unless `ALLOW_SEED=true`
 
-### 4. Deploy Migrations
+### 4. Run Migrations Locally (via Cloud SQL Proxy)
 
+**One-command migration** (recommended):
 ```bash
-# Deploy all pending migrations
-pnpm db:migrate:deploy
+# Set up credentials (one-time)
+gcloud auth application-default login
+
+# Run migrations (starts proxy, fetches secrets, runs migration)
+./scripts/migrate-cloud.sh
+
+# Or check status / seed
+./scripts/migrate-cloud.sh --status
+./scripts/migrate-cloud.sh --seed
+```
+
+**Manual method** (if you need more control):
+```bash
+# 1. Start Cloud SQL Proxy (use port 5433 if local PostgreSQL is on 5432)
+cloud-sql-proxy synchire-hackathon:asia-southeast1:synchire-db --port 5433
+
+# 2. In another terminal, run migrations
+DATABASE_URL="postgresql://synchire:PASSWORD@127.0.0.1:5433/synchire" ./scripts/migrate-production.sh
 ```
 
 ### 5. Seed Staging (Optional)
