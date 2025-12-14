@@ -3,23 +3,20 @@
  */
 import { StreamClient } from "@stream-io/node-sdk";
 import { streamConfig } from "./stream-config";
+import { singleton } from "@/lib/utils/singleton";
 
-let streamClient: StreamClient | null = null;
-
-export function getStreamClient(): StreamClient {
-  if (!streamClient) {
-    if (!streamConfig.apiKey || !streamConfig.apiSecret) {
-      throw new Error("Stream API credentials not configured");
-    }
-
-    streamClient = new StreamClient(
-      streamConfig.apiKey,
-      streamConfig.apiSecret,
-    );
+function createStreamClient(): StreamClient {
+  if (!streamConfig.apiKey || !streamConfig.apiSecret) {
+    throw new Error("Stream API credentials not configured");
   }
 
-  return streamClient;
+  return new StreamClient(streamConfig.apiKey, streamConfig.apiSecret);
 }
+
+/**
+ * Get the singleton Stream client instance
+ */
+export const getStreamClient = singleton(createStreamClient);
 
 export function generateStreamToken(userId: string): string {
   const client = getStreamClient();

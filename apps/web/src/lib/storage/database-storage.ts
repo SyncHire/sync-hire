@@ -8,7 +8,6 @@
 import { prisma } from '@sync-hire/database';
 import { Prisma } from '@prisma/client';
 import type { CloudStorageProvider } from './cloud/cloud-storage-provider';
-import { getCVBucket, getJDBucket } from './cloud/storage-provider-factory';
 import type {
   CandidateApplication,
   ExtractedCVData,
@@ -56,17 +55,8 @@ export class DatabaseStorage implements StorageInterface {
   }
 
   async uploadJobDescription(hash: string, buffer: Buffer): Promise<string> {
-    const bucket = getJDBucket();
-    const path = `jd/${hash}`;
-    const contentType = 'application/pdf';
-
     // Upload file to cloud storage
-    const fileUrl = await this.cloudStorage.uploadFile(
-      bucket,
-      path,
-      buffer,
-      contentType
-    );
+    const fileUrl = await this.cloudStorage.uploadJobDescription(hash, buffer);
 
     // Update database with file URL
     await prisma.job.update({
@@ -213,18 +203,10 @@ export class DatabaseStorage implements StorageInterface {
   }
 
   async uploadCV(hash: string, buffer: Buffer): Promise<string> {
-    const bucket = getCVBucket();
-    const path = `cv/${hash}`;
-    const contentType = 'application/pdf';
     const fileSize = buffer.length;
 
     // Upload file to cloud storage
-    const fileUrl = await this.cloudStorage.uploadFile(
-      bucket,
-      path,
-      buffer,
-      contentType
-    );
+    const fileUrl = await this.cloudStorage.uploadCV(hash, buffer);
 
     // Update database with file URL and size
     await prisma.cVUpload.update({

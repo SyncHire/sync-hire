@@ -17,6 +17,21 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 <!-- OPENSPEC:END -->
 
+## Package Manager
+
+ALWAYS use `pnpm` instead of `npm` or `npx` for all commands. This is a pnpm workspace.
+
+## Build/Lint/Test Commands
+
+Always use pnpm workspace commands targeting specific apps or packages.
+
+### Root Commands
+- Root: `pnpm build` - build all workspaces
+- Root: `pnpm lint` - lint all workspaces
+- Root: `pnpm typecheck` - typecheck all workspaces
+- Root: `pnpm clean` - clean all workspaces
+- Root: `pnpm db:generate` - generate new prisma client after schema.prisma changes
+
 ## Python Development
 
 ### Package Management

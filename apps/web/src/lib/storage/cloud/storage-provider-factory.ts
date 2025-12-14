@@ -8,46 +8,25 @@
 import type { CloudStorageProvider } from "./cloud-storage-provider";
 import { GCSStorageProvider } from "./gcs-storage-provider";
 import { LocalStorageProvider } from "./local-storage-provider";
+import { singleton } from "@/lib/utils/singleton";
 
-let cachedProvider: CloudStorageProvider | null = null;
-
-/**
- * Create a cloud storage provider instance
- *
- * Uses environment variable USE_CLOUD_STORAGE to determine which provider to use:
- * - "true": GCP Cloud Storage (for production)
- * - "false" or unset: Local filesystem (for development)
- *
- * The provider is cached for performance.
- */
-export function createStorageProvider(): CloudStorageProvider {
-  if (cachedProvider) {
-    return cachedProvider;
-  }
-
+function createCloudStorageProvider(): CloudStorageProvider {
   const useCloudStorage = process.env.USE_CLOUD_STORAGE === "true";
 
   if (useCloudStorage) {
     console.log("[Storage] Using GCP Cloud Storage");
-    cachedProvider = new GCSStorageProvider();
-  } else {
-    console.log("[Storage] Using local file storage (development mode)");
-    cachedProvider = new LocalStorageProvider();
+    return new GCSStorageProvider();
   }
 
-  return cachedProvider;
+  console.log("[Storage] Using local file storage (development mode)");
+  return new LocalStorageProvider();
 }
 
 /**
- * Get the bucket name for CV uploads
+ * Get the singleton cloud storage provider instance
+ *
+ * Uses environment variable USE_CLOUD_STORAGE to determine which provider to use:
+ * - "true": GCP Cloud Storage (for production)
+ * - "false" or unset: Local filesystem (for development)
  */
-export function getCVBucket(): string {
-  return process.env.GCS_BUCKET_CV ?? "synchire-cvs";
-}
-
-/**
- * Get the bucket name for Job Description uploads
- */
-export function getJDBucket(): string {
-  return process.env.GCS_BUCKET_JD ?? "synchire-job-descriptions";
-}
+export const getCloudStorageProvider = singleton(createCloudStorageProvider);
