@@ -125,40 +125,55 @@ pnpm lint
 pnpm clean
 ```
 
+## Infrastructure Scripts
+
+| Script | Description |
+|--------|-------------|
+| `apps/web/scripts/setup-database.sh` | Create Cloud SQL instance, VPC, and secrets |
+| `apps/web/scripts/setup-apphosting.sh` | Set up GCS bucket and App Hosting secrets |
+| `packages/database/scripts/migrate-cloud.sh` | Run migrations via Cloud SQL Proxy |
+| `packages/database/scripts/migrate-production.sh` | Run migrations (direct connection) |
+
+Setup scripts run in dry-run mode by default; pass `--create` to execute.
+
 ## Project Status
 
 ### ✅ Completed
 - Monorepo foundation (Turborepo + PNPM)
 - Next.js 16 application with TypeScript
-- Python FastAPI agent with minimal endpoints
-- API route for Next.js ↔ Python communication
-- Docker Compose configuration
+- Python FastAPI agent with AI interview capabilities
+- Database setup (Prisma + Cloud SQL with VPC)
+- Authentication (Better Auth with Google OAuth)
+- Cloud Storage (GCS for CV uploads)
+- CV parsing and analysis (Gemini AI)
+- Question generation from job descriptions
+- HR dashboard with job management
 
 ### 🚧 In Progress
-- Vision-Agents integration
-- Database setup (Prisma + Cloud SQL)
-- Authentication (NextAuth.js v5)
-- Firebase Cloud Storage
+- Real-time AI interviews (Stream Video)
+- Interview summaries and scoring
 
 ### 📋 Planned
-- AI interview functionality
-- Real-time WebRTC video
-- Question generation (Gemini 2.5 Flash)
-- CV analysis
-- Interview summaries
+- Email notifications
+- Advanced analytics dashboard
 
 ## Environment Variables
 
-### apps/web/.env.local
-```env
-PYTHON_AGENT_URL=http://localhost:8080
+Copy the example files and fill in your values:
+
+```bash
+# Web app
+cp apps/web/.env.example apps/web/.env.local
+
+# Python agent
+cp apps/agent/.env.example apps/agent/.env
 ```
 
-### apps/agent/.env
-```env
-PORT=8080
-ENVIRONMENT=development
-```
+See `apps/web/.env.example` for all required variables including:
+- Database connection (`DATABASE_URL`)
+- Authentication (`BETTER_AUTH_SECRET`, Google OAuth)
+- AI services (`GEMINI_API_KEY`, `STREAM_API_SECRET`)
+- Cloud Storage (`GCS_BUCKET`)
 
 ## Architecture
 
@@ -173,13 +188,12 @@ ENVIRONMENT=development
 └─────────────────┘                       └──────────────────┘
 ```
 
-## Next Steps
+## Development Workflow
 
-1. **Test the connection** using the methods above
-2. **Add Vision-Agents** to the Python agent for AI interview capabilities
-3. **Set up database** (Prisma + PostgreSQL)
-4. **Add authentication** (NextAuth.js v5)
-5. **Integrate AI models** (Gemini 2.5 Flash, OpenAI gpt-realtime)
+1. **Start local development**: `pnpm dev`
+2. **Run database migrations**: `pnpm db:migrate`
+3. **Check types**: `pnpm typecheck`
+4. **Deploy**: Push to `main` branch (Firebase App Hosting auto-deploys)
 
 ## Documentation
 
