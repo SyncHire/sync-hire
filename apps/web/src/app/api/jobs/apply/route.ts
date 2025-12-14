@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       // Build minimal JD data from job for question generation
       jdData = {
         title: job.title,
-        company: job.company,
+        company: job.organization.name,
         location: job.location,
         employmentType: toEmploymentType(job.employmentType),
         workArrangement: toWorkArrangement(job.workArrangement),
@@ -113,6 +113,9 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+
+    // Ensure application exists for this user (creates if needed)
+    await storage.getOrCreateApplication(cvId, jobId);
 
     // Generate questions using Gemini
     const suggestedQuestions = await generateInterviewQuestions(cvData, jdData);

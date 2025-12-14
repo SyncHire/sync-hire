@@ -86,8 +86,8 @@ export default function InterviewHistory() {
           comparison = a.createdAt.getTime() - b.createdAt.getTime();
           break;
         case "company":
-          comparison = (a.job?.company || "").localeCompare(
-            b.job?.company || "",
+          comparison = (a.job?.organization?.name || "").localeCompare(
+            b.job?.organization?.name || "",
           );
           break;
         case "position":
@@ -274,11 +274,11 @@ export default function InterviewHistory() {
                   <TableCell className="pl-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center border border-border group-hover:border-blue-500/30 transition-colors overflow-hidden">
-                        {interview.job?.company &&
-                        getCompanyLogoUrl(interview.job.company) ? (
+                        {interview.job?.organization?.name &&
+                        getCompanyLogoUrl(interview.job.organization.name) ? (
                           <img
-                            src={getCompanyLogoUrl(interview.job.company)!}
-                            alt={`${interview.job.company} logo`}
+                            src={getCompanyLogoUrl(interview.job.organization.name)!}
+                            alt={`${interview.job.organization.name} logo`}
                             className="h-6 w-6 object-contain"
                           />
                         ) : (
@@ -298,16 +298,16 @@ export default function InterviewHistory() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {interview.job?.company &&
-                        getCompanyLogoUrl(interview.job.company) && (
+                      {interview.job?.organization?.name &&
+                        getCompanyLogoUrl(interview.job.organization.name) && (
                           <img
-                            src={getCompanyLogoUrl(interview.job.company)!}
-                            alt={`${interview.job.company} logo`}
+                            src={getCompanyLogoUrl(interview.job.organization.name)!}
+                            alt={`${interview.job.organization.name} logo`}
                             className="h-5 w-5 object-contain rounded"
                           />
                         )}
                       <span className="text-sm font-medium text-foreground">
-                        {interview.job?.company}
+                        {interview.job?.organization?.name}
                       </span>
                     </div>
                   </TableCell>

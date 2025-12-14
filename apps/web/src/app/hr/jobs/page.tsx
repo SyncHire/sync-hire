@@ -21,9 +21,6 @@ import { getCompanyLogoUrl } from "@/lib/logo-utils";
 export default function HRJDListings() {
   const { data: jobs = [], isLoading } = useJobs({ pollWhileScanning: true });
 
-  // Check if any jobs are currently scanning
-  const hasScanning = jobs.some((job) => job.aiMatchingStatus === "scanning");
-
   if (isLoading) {
     return (
       <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto px-4 py-8">
@@ -69,10 +66,10 @@ export default function HRJDListings() {
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
                     <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center border border-border group-hover:border-blue-500/30 transition-colors overflow-hidden">
-                      {getCompanyLogoUrl(job.company) ? (
+                      {getCompanyLogoUrl(job.organization?.name || "") ? (
                         <img
-                          src={getCompanyLogoUrl(job.company)!}
-                          alt={`${job.company} logo`}
+                          src={getCompanyLogoUrl(job.organization?.name || "")!}
+                          alt={`${job.organization?.name} logo`}
                           className="h-8 w-8 object-contain"
                         />
                       ) : (
@@ -80,7 +77,7 @@ export default function HRJDListings() {
                       )}
                     </div>
                     <span className="text-lg font-bold text-foreground">
-                      {job.company}
+                      {job.organization?.name}
                     </span>
                   </div>
                   <Button
@@ -102,7 +99,7 @@ export default function HRJDListings() {
                       ON
                     </Badge>
                     <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> {job.postedAt}
+                      <Clock className="h-3 w-3" /> {job.postedAt instanceof Date ? job.postedAt.toLocaleDateString() : job.postedAt}
                     </span>
                   </div>
                   <h3 className="font-semibold text-xl text-foreground group-hover:text-blue-400 transition-colors">
@@ -118,7 +115,7 @@ export default function HRJDListings() {
                     <MapPin className="h-3.5 w-3.5" /> {job.location}
                   </span>
                   <span className="flex items-center gap-1.5 bg-secondary/50 px-2.5 py-1.5 rounded-md border border-border">
-                    <Users className="h-3.5 w-3.5" /> {job.type}
+                    <Users className="h-3.5 w-3.5" /> {job.employmentType}
                   </span>
                 </div>
               </div>
@@ -133,7 +130,7 @@ export default function HRJDListings() {
                       />
                     ))}
                   </div>
-                  {job.aiMatchingStatus === "scanning" ? (
+                  {job.aiMatchingStatus === "SCANNING" ? (
                     <span className="text-xs font-medium text-blue-400 flex items-center gap-1.5 animate-pulse">
                       <Loader2 className="h-3 w-3 animate-spin" />
                       Scanning CVs...

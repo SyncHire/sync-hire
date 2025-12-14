@@ -3,9 +3,19 @@
  *
  * Populates the database with initial demo data for development and testing.
  * Run with: pnpm db:seed
+ *
+ * Note: Uses Better Auth's hashPassword for password hashing.
  */
 
 import { prisma, disconnectPrisma } from '../src';
+import { hashPassword } from 'better-auth/crypto';
+
+// Test passwords for seed users (complex for realistic testing)
+const TEST_PASSWORDS = {
+  candidate: 'Demo@User2024!',
+  employer1: 'TechCorp#HR2024',
+  employer2: 'Startup$Talent24',
+};
 
 async function main() {
   // Production guard: prevent accidental seeding in production
@@ -17,6 +27,12 @@ async function main() {
   }
 
   console.log('🌱 Starting database seed...');
+  console.log('🔐 Hashing passwords...');
+  const hashedPasswords = {
+    candidate: await hashPassword(TEST_PASSWORDS.candidate),
+    employer1: await hashPassword(TEST_PASSWORDS.employer1),
+    employer2: await hashPassword(TEST_PASSWORDS.employer2),
+  };
 
   // =============================================================================
   // USERS
@@ -26,34 +42,46 @@ async function main() {
 
   const demoCandidate = await prisma.user.upsert({
     where: { email: 'demo@synchire.com' },
-    update: {},
+    update: {
+      password: hashedPasswords.candidate,
+      emailVerified: true,
+    },
     create: {
       id: 'demo-user',
       name: 'Demo Candidate',
       email: 'demo@synchire.com',
-      role: 'CANDIDATE',
+      password: hashedPasswords.candidate,
+      emailVerified: true,
     },
   });
 
   const employer1 = await prisma.user.upsert({
     where: { email: 'hr@techcorp.com' },
-    update: {},
+    update: {
+      password: hashedPasswords.employer1,
+      emailVerified: true,
+    },
     create: {
       id: 'employer-1',
       name: 'Sarah Johnson',
       email: 'hr@techcorp.com',
-      role: 'EMPLOYER',
+      password: hashedPasswords.employer1,
+      emailVerified: true,
     },
   });
 
   const employer2 = await prisma.user.upsert({
     where: { email: 'talent@startup.io' },
-    update: {},
+    update: {
+      password: hashedPasswords.employer2,
+      emailVerified: true,
+    },
     create: {
       id: 'employer-2',
       name: 'Mike Chen',
       email: 'talent@startup.io',
-      role: 'EMPLOYER',
+      password: hashedPasswords.employer2,
+      emailVerified: true,
     },
   });
 
@@ -62,6 +90,118 @@ async function main() {
     employer1: employer1.email,
     employer2: employer2.email,
   });
+
+  // =============================================================================
+  // ACCOUNTS (Better Auth credential accounts for email/password login)
+  // =============================================================================
+
+  console.log('Creating credential accounts...');
+
+  // Better Auth requires Account records with providerId: "credential" for email/password auth
+  const userPasswordPairs = [
+    { user: demoCandidate, password: hashedPasswords.candidate },
+    { user: employer1, password: hashedPasswords.employer1 },
+    { user: employer2, password: hashedPasswords.employer2 },
+  ];
+
+  for (const { user, password } of userPasswordPairs) {
+    await prisma.account.upsert({
+      where: {
+        providerId_accountId: {
+          providerId: 'credential',
+          accountId: user.id,
+        },
+      },
+      update: {
+        password,
+      },
+      create: {
+        userId: user.id,
+        providerId: 'credential',
+        accountId: user.id,
+        password,
+      },
+    });
+  }
+
+  console.log('✓ Created credential accounts for all users');
+
+  // =============================================================================
+  // ORGANIZATIONS
+  // =============================================================================
+
+  console.log('Creating organizations...');
+
+  const techCorpOrg = await prisma.organization.upsert({
+    where: { slug: 'techcorp' },
+    update: {},
+    create: {
+      id: 'org-techcorp',
+      name: 'TechCorp',
+      slug: 'techcorp',
+      description: 'Leading technology company building innovative solutions.',
+      website: 'https://techcorp.com',
+      industry: 'Technology',
+      size: '201-500',
+    },
+  });
+
+  const startupOrg = await prisma.organization.upsert({
+    where: { slug: 'startup-io' },
+    update: {},
+    create: {
+      id: 'org-startup',
+      name: 'Startup.io',
+      slug: 'startup-io',
+      description: 'Fast-growing startup disrupting the industry.',
+      website: 'https://startup.io',
+      industry: 'Technology',
+      size: '11-50',
+    },
+  });
+
+  console.log('✓ Created organizations:', {
+    techCorp: techCorpOrg.name,
+    startup: startupOrg.name,
+  });
+
+  // =============================================================================
+  // ORGANIZATION MEMBERS
+  // =============================================================================
+
+  console.log('Creating organization members...');
+
+  await prisma.member.upsert({
+    where: {
+      organizationId_userId: {
+        organizationId: techCorpOrg.id,
+        userId: employer1.id,
+      },
+    },
+    update: {},
+    create: {
+      organizationId: techCorpOrg.id,
+      userId: employer1.id,
+      role: 'OWNER',
+    },
+  });
+
+  await prisma.member.upsert({
+    where: {
+      organizationId_userId: {
+        organizationId: startupOrg.id,
+        userId: employer2.id,
+      },
+    },
+    update: {},
+    create: {
+      organizationId: startupOrg.id,
+      userId: employer2.id,
+      role: 'OWNER',
+    },
+  });
+
+  console.log('✓ Created organization members');
 
   // =============================================================================
   // CV UPLOAD (Demo Candidate)
@@ -173,7 +313,8 @@ async function main() {
     data: {
       id: 'job-1',
       title: 'Senior Full Stack Engineer',
-      company: 'TechCorp',
+      organizationId: techCorpOrg.id,
+      createdById: employer1.id,
       department: 'Engineering',
       location: 'San Francisco, CA',
       employmentType: 'Full-time',
@@ -198,7 +339,6 @@ Key Responsibilities:
       aiMatchingEnabled: true,
       aiMatchingThreshold: 75,
       aiMatchingStatus: 'COMPLETE',
-      employerId: employer1.id,
       questions: {
         create: [
           {
@@ -231,7 +371,8 @@ Key Responsibilities:
     data: {
       id: 'job-2',
       title: 'Backend Engineer',
-      company: 'Startup.io',
+      organizationId: startupOrg.id,
+      createdById: employer2.id,
       department: 'Engineering',
       location: 'Remote',
       employmentType: 'Full-time',
@@ -247,7 +388,6 @@ Key Responsibilities:
       ],
       status: 'ACTIVE',
       aiMatchingEnabled: false,
-      employerId: employer2.id,
       questions: {
         create: [
           {
@@ -356,6 +496,36 @@ Key Responsibilities:
     candidate: application.candidateName,
     job: seniorEngineerJob.title,
     matchScore: application.matchScore,
+  });
+
+  // Second application - candidate applied to Backend Engineer job (no interview yet)
+  const application2 = await prisma.candidateApplication.create({
+    data: {
+      jobId: backendEngineerJob.id,
+      cvUploadId: demoCV.id,
+      userId: demoCandidate.id,
+      candidateName: 'John Doe',
+      candidateEmail: 'demo@synchire.com',
+      matchScore: 85,
+      matchReasons: [
+        'Strong Node.js experience',
+        'Experience with RESTful APIs',
+        'PostgreSQL knowledge',
+        'Remote work experience',
+      ],
+      skillGaps: [
+        'Limited GraphQL experience',
+        'No explicit microservices experience mentioned',
+      ],
+      status: 'READY',
+      source: 'MANUAL_APPLY',
+    },
+  });
+
+  console.log('✓ Created application 2:', {
+    candidate: application2.candidateName,
+    job: backendEngineerJob.title,
+    matchScore: application2.matchScore,
   });
 
   // =============================================================================
@@ -467,15 +637,17 @@ John: I believe in hands-on mentoring. I conduct regular code reviews with detai
   console.log('\n✅ Database seeded successfully!');
   console.log('\nSummary:');
   console.log('- Users: 3 (1 candidate, 2 employers)');
+  console.log('- Organizations: 2 (TechCorp, Startup.io)');
+  console.log('- Organization Members: 2');
   console.log('- CV Uploads: 1');
   console.log('- Jobs: 2');
-  console.log('- Applications: 1');
+  console.log('- Applications: 2');
   console.log('- Interviews: 1 (completed)');
   console.log('- Notifications: 3');
-  console.log('\nDemo accounts:');
-  console.log('- Candidate: demo@synchire.com (demo-user)');
-  console.log('- Employer 1: hr@techcorp.com (employer-1)');
-  console.log('- Employer 2: talent@startup.io (employer-2)');
+  console.log('\n🔑 Login credentials:');
+  console.log(`- Candidate: demo@synchire.com / ${TEST_PASSWORDS.candidate}`);
+  console.log(`- Employer 1: hr@techcorp.com / ${TEST_PASSWORDS.employer1} (Owner of TechCorp)`);
+  console.log(`- Employer 2: talent@startup.io / ${TEST_PASSWORDS.employer2} (Owner of Startup.io)`);
 }
 
 main()

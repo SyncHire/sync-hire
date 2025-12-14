@@ -86,15 +86,19 @@ set_secret() {
     return
   fi
 
+  # Write to temp file to avoid stdin conflicts with interactive prompts
+  local tmpfile=$(mktemp)
+  printf '%s' "$value" > "$tmpfile"
+
   if secret_exists "$name"; then
     if [ "$DRY_RUN" = true ]; then
       echo "  ✅ $name exists"
     elif [ "$OVERRIDE" = true ]; then
       echo "  Updating $name..."
-      echo -n "$value" | firebase apphosting:secrets:set "$name" \
+      firebase apphosting:secrets:set "$name" \
         --project "$PROJECT_ID" \
-        --data-file - \
-        --force 2>/dev/null && echo "    ✅ $name updated" || echo "    ❌ Failed to update $name"
+        --data-file "$tmpfile" \
+        --force && echo "    ✅ $name updated" || echo "    ❌ Failed to update $name"
     else
       echo "  ✅ $name exists"
     fi
@@ -103,12 +107,14 @@ set_secret() {
       echo "  [DRY-RUN] Would create secret: $name"
     else
       echo "  Creating $name..."
-      echo -n "$value" | firebase apphosting:secrets:set "$name" \
+      firebase apphosting:secrets:set "$name" \
         --project "$PROJECT_ID" \
-        --data-file - \
-        --force 2>/dev/null && echo "    ✅ $name created" || echo "    ❌ Failed to create $name"
+        --data-file "$tmpfile" \
+        --force && echo "    ✅ $name created" || echo "    ❌ Failed to create $name"
     fi
   fi
+
+  rm -f "$tmpfile"
 }
 
 echo "🪣 Checking Cloud Storage bucket..."
@@ -137,9 +143,16 @@ echo ""
 echo "🔑 Checking secrets..."
 
 # Set secrets from .env.production
-set_secret "API_SECRET_KEY" "$API_SECRET_KEY"
-set_secret "STREAM_API_SECRET" "$STREAM_API_SECRET"
+# AI & Video
 set_secret "GEMINI_API_KEY" "$GEMINI_API_KEY"
+set_secret "STREAM_API_SECRET" "$STREAM_API_SECRET"
+
+# Better Auth
+set_secret "BETTER_AUTH_SECRET" "$BETTER_AUTH_SECRET"
+
+# Google OAuth
+set_secret "GOOGLE_CLIENT_ID" "$GOOGLE_CLIENT_ID"
+set_secret "GOOGLE_CLIENT_SECRET" "$GOOGLE_CLIENT_SECRET"
 
 echo ""
 echo "🔐 Checking backend access to secrets..."
@@ -150,7 +163,10 @@ BACKEND_NAME="${BACKEND_NAME:-synchire}"
 # Get backend service account for checking existing access
 BACKEND_SA="firebase-app-hosting-compute@${PROJECT_ID}.iam.gserviceaccount.com"
 
-for secret in API_SECRET_KEY STREAM_API_SECRET GEMINI_API_KEY; do
+# List of all secrets to grant access
+SECRETS="GEMINI_API_KEY STREAM_API_SECRET BETTER_AUTH_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET"
+
+for secret in $SECRETS; do
   # Check if secret exists first
   if ! secret_exists "$secret"; then
     if [ "$DRY_RUN" = true ]; then
@@ -235,7 +251,7 @@ echo ""
 if [ "$DRY_RUN" = true ]; then
   echo "📋 DRY-RUN Summary:"
   echo "  Bucket: gs://$GCS_BUCKET"
-  echo "  Secrets: API_SECRET_KEY, STREAM_API_SECRET, GEMINI_API_KEY"
+  echo "  Secrets: GEMINI_API_KEY, STREAM_API_SECRET, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET"
   echo "  VPC: $VPC_NETWORK / $VPC_SUBNET"
   echo ""
   echo "To create these resources, run:"

@@ -1,29 +1,49 @@
 /**
  * Custom hook for current user data
- * Uses react-query for data fetching with automatic caching
+ *
+ * Uses Better Auth's useSession hook for authentication.
+ * Provides a backwards-compatible interface with the old API-based approach.
  */
 
-import { useQuery } from "@tanstack/react-query";
-import type { User } from "@/lib/mock-data";
+import { useSession } from "@/lib/auth-client";
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  image?: string | null;
+}
 
 interface UserResponse {
   success: boolean;
-  data: User;
+  data: User | null;
 }
 
 /**
- * Hook for fetching current user
+ * Hook for fetching current user using Better Auth session
  */
 export function useCurrentUser() {
-  return useQuery<UserResponse>({
-    queryKey: ["/api/users/me"],
-    queryFn: async () => {
-      const response = await fetch("/api/users/me");
-      if (!response.ok) {
-        throw new Error("Failed to fetch user");
+  const session = useSession();
+
+  // Transform session data to match the old response format
+  const data: UserResponse | undefined = session.data
+    ? {
+        success: true,
+        data: {
+          id: session.data.user.id,
+          name: session.data.user.name,
+          email: session.data.user.email,
+          image: session.data.user.image,
+        },
       }
-      return response.json();
-    },
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
-  });
+    : session.isPending
+      ? undefined
+      : { success: false, data: null };
+
+  return {
+    data,
+    isLoading: session.isPending,
+    isError: !session.isPending && !session.data,
+    error: session.error,
+  };
 }

@@ -1,21 +1,35 @@
 /**
  * GET /api/users/me
  *
- * Retrieves the current user (demo user for now)
- * In future: integrate with authentication system
+ * Retrieves the current authenticated user from Better Auth session
  */
 
 import { NextResponse } from "next/server";
-import { getStorage } from "@/lib/storage/storage-factory";
+import { getServerSession } from "@/lib/auth-server";
 
 export async function GET() {
   try {
-    const storage = getStorage();
-    const user = await storage.getCurrentUser();
+    const session = await getServerSession();
+
+    if (!session) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Not authenticated",
+        },
+        { status: 401 },
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      data: user,
+      data: {
+        id: session.user.id,
+        name: session.user.name,
+        email: session.user.email,
+        image: session.user.image,
+        emailVerified: session.user.emailVerified,
+      },
     });
   } catch (error) {
     console.error("Failed to fetch current user:", error);

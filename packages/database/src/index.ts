@@ -15,7 +15,9 @@ export type {
   User,
   Account,
   Session,
-  VerificationToken,
+  Verification,
+  Organization,
+  Member,
   CVUpload,
   Job,
   JobQuestion,
@@ -27,7 +29,7 @@ export type {
 
 // Re-export enums (as values, usable at runtime)
 export {
-  UserRole,
+  OrgMemberRole,
   JobStatus,
   MatchingStatus,
   QuestionType as PrismaQuestionType,

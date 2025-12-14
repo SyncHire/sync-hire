@@ -56,10 +56,6 @@ export async function POST(request: NextRequest) {
       file.name,
     );
 
-    // Link CV to current user for persistence
-    const user = await storage.getCurrentUser();
-    await storage.saveUserCVId(user.id, hash);
-
     return NextResponse.json(
       {
         success: true,

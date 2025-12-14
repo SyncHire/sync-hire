@@ -15,11 +15,10 @@ import type {
   EmploymentType,
   WorkArrangement,
   ExtractedJobData,
-  User,
   Interview as PrismaInterview,
 } from "@sync-hire/database";
-import { UserRole, InterviewStatus } from "@sync-hire/database";
-import type { User as MockUser, Interview as MockInterview } from "@/lib/mock-data";
+import { InterviewStatus } from "@sync-hire/database";
+import type { Interview as MockInterview } from "@/lib/mock-data";
 
 // Valid employment types for ExtractedJobData
 const VALID_EMPLOYMENT_TYPES: EmploymentType[] = ['Full-time', 'Part-time', 'Contract', 'Internship'];
@@ -50,11 +49,11 @@ export function toWorkArrangement(value: string | null | undefined): WorkArrange
 }
 
 /**
- * Creates ExtractedJobData from a Prisma Job record
+ * Creates ExtractedJobData from a Prisma Job record with organization
  */
 export function jobToExtractedJobData(job: {
   title: string;
-  company: string;
+  organization: { name: string };
   location: string;
   employmentType: string;
   workArrangement: string | null;
@@ -64,29 +63,13 @@ export function jobToExtractedJobData(job: {
 }): ExtractedJobData {
   return {
     title: job.title,
-    company: job.company,
+    company: job.organization.name,
     location: job.location,
     employmentType: toEmploymentType(job.employmentType),
     workArrangement: toWorkArrangement(job.workArrangement),
     seniority: job.department || "",
     requirements: job.requirements,
     responsibilities: job.description ? [job.description] : [],
-  };
-}
-
-/**
- * Converts a mock User to the Prisma User type
- */
-export function mockUserToUser(mockUser: MockUser): User {
-  return {
-    id: mockUser.id,
-    name: mockUser.name,
-    email: mockUser.email,
-    emailVerified: null,
-    image: null,
-    role: mockUser.role === "EMPLOYER" ? UserRole.EMPLOYER : UserRole.CANDIDATE,
-    createdAt: mockUser.createdAt,
-    updatedAt: mockUser.createdAt, // Use createdAt as fallback
   };
 }
 

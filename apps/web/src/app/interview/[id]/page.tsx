@@ -99,7 +99,7 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
         candidateId={demoUser.id}
         candidateName={demoUser.name}
         jobTitle={job.title}
-        company={job.company}
+        company={job.organization.name}
         durationMinutes={calculatedDuration}
         questions={questions}
       />

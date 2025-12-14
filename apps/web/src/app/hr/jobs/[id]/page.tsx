@@ -60,7 +60,7 @@ export default function HRJDDetail() {
   useEffect(() => {
     if (forcePolling) {
       // Stop if scanning completed
-      if (job?.aiMatchingStatus === "complete") {
+      if (job?.aiMatchingStatus === "COMPLETE") {
         setForcePolling(false);
         return;
       }
@@ -96,7 +96,7 @@ export default function HRJDDetail() {
       setAiMatchingEnabled(job.aiMatchingEnabled ?? true);
 
       // Show toast when scanning completes
-      if (prevStatus === "scanning" && job.aiMatchingStatus === "complete") {
+      if (prevStatus === "SCANNING" && job.aiMatchingStatus === "COMPLETE") {
         toast.success(`Scanning complete! Found ${job.applicantsCount || 0} matching candidates.`, { duration: 4000 });
       }
       setPrevStatus(job.aiMatchingStatus);
@@ -273,7 +273,7 @@ export default function HRJDDetail() {
               >
                 Active
               </Badge>
-              {job.aiMatchingStatus === "scanning" && (
+              {job.aiMatchingStatus === "SCANNING" && (
                 <Badge
                   variant="secondary"
                   className="bg-accent/10 text-accent-foreground border-accent/20 font-normal px-2.5 py-0.5 animate-pulse flex items-center gap-1.5"
@@ -285,7 +285,7 @@ export default function HRJDDetail() {
             </div>
             <p className="text-lg text-muted-foreground mb-3 flex items-center gap-2">
               <Building2 className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-              {job.company}
+              {job.organization?.name}
             </p>
             <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
               <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/50 border border-border">
@@ -298,7 +298,7 @@ export default function HRJDDetail() {
               </span>
               <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/50 border border-border">
                 <Clock className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />{" "}
-                {job.type}
+                {job.employmentType}
               </span>
             </div>
           </div>
@@ -311,7 +311,7 @@ export default function HRJDDetail() {
             </Button>
             <Link href={`/hr/applicants/${job.id}`}>
               <Button className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 border-0">
-                {job.aiMatchingStatus === "scanning" ? (
+                {job.aiMatchingStatus === "SCANNING" ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Scanning...

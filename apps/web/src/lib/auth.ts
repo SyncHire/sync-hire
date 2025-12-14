@@ -1,0 +1,101 @@
+/**
+ * Better Auth Configuration
+ *
+ * Server-side auth configuration with:
+ * - Email/password authentication with email verification
+ * - Google OAuth
+ * - Organization plugin with custom roles
+ * - Session caching for performance
+ */
+
+import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import { organization } from "better-auth/plugins";
+import { nextCookies } from "better-auth/next-js";
+import { prisma } from "@sync-hire/database";
+
+export const auth = betterAuth({
+  baseURL: process.env.BETTER_AUTH_URL,
+  secret: process.env.BETTER_AUTH_SECRET,
+
+  database: prismaAdapter(prisma, { provider: "postgresql" }),
+
+  // Email/Password with best practices
+  emailAndPassword: {
+    enabled: true,
+    minPasswordLength: 8,
+    maxPasswordLength: 128,
+    requireEmailVerification: true,
+    sendVerificationEmail: async ({
+      user,
+      url,
+    }: {
+      user: { email: string };
+      url: string;
+    }) => {
+      // TODO: Implement email sending (Resend, SendGrid, etc.)
+      // For now, log to console in development
+      console.log(`[Auth] Verify email for ${user.email}: ${url}`);
+    },
+    sendResetPassword: async ({
+      user,
+      url,
+    }: {
+      user: { email: string };
+      url: string;
+    }) => {
+      // TODO: Implement password reset email
+      console.log(`[Auth] Reset password for ${user.email}: ${url}`);
+    },
+  },
+
+  // Google OAuth (optional - only enabled if credentials provided)
+  socialProviders: {
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? {
+          google: {
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          },
+        }
+      : {}),
+  },
+
+  // Session configuration
+  session: {
+    expiresIn: 60 * 60 * 24 * 7, // 7 days
+    updateAge: 60 * 60 * 24, // Refresh daily
+    cookieCache: {
+      enabled: true, // Reduce DB queries
+      maxAge: 60 * 5, // 5 min cache
+    },
+  },
+
+  plugins: [
+    nextCookies(), // Required for server actions
+    organization({
+      // Schema now matches Better Auth defaults
+      allowSetActive: true,
+      // Invitation settings
+      invitationExpiresIn: 60 * 60 * 48, // 48 hours
+      sendInvitationEmail: async ({
+        email,
+        organization: org,
+        inviter,
+      }: {
+        email: string;
+        organization: { name: string };
+        inviter: { user: { name: string } };
+      }) => {
+        // TODO: Implement invitation email
+        console.log(
+          `[Auth] Invite ${email} to ${org.name} by ${inviter.user.name}`,
+        );
+      },
+    }),
+  ],
+});
+
+// Export session type for use throughout the app
+export type Session = typeof auth.$Infer.Session;
+export type User = typeof auth.$Infer.Session.user;

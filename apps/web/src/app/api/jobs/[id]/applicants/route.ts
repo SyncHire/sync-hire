@@ -190,7 +190,7 @@ export async function GET(
         job: {
           id: job.id,
           title: job.title,
-          company: job.company,
+          company: job.organization.name,
         },
         applicants,
         stats: {

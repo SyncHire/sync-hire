@@ -74,7 +74,7 @@ Be realistic with scoring:
 async function generateAndSaveQuestions(
   storage: Awaited<ReturnType<typeof getStorage>>,
   cvData: ExtractedCVData,
-  job: { title: string; company: string; requirements: string[]; description: string; questions?: Array<{ id: string; content: string; type: string; duration: number; category: string | null }> },
+  job: { title: string; organization: { name: string }; requirements: string[]; description: string; questions?: Array<{ id: string; content: string; type: string; duration: number; category: string | null }> },
   questionsHash: string,
   cvId: string,
   jobId: string,
@@ -84,7 +84,7 @@ async function generateAndSaveQuestions(
     // Build JD data for question generator
     const jdData: ExtractedJobData = {
       title: job.title,
-      company: job.company,
+      company: job.organization.name,
       location: "",
       employmentType: "Full-time",
       workArrangement: "On-site",
@@ -184,7 +184,7 @@ export async function POST(
       );
     }
 
-    console.log(`📋 [match-candidates] Job: "${job.title}" at ${job.company}`);
+    console.log(`📋 [match-candidates] Job: "${job.title}" at ${job.organization.name}`);
 
     // Get all CVs
     const cvExtractions = await storage.getAllCVExtractions();

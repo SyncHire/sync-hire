@@ -5,9 +5,12 @@ set -e
 # Starts Cloud SQL Proxy, fetches credentials, and runs migrations
 #
 # Usage:
-#   ./scripts/migrate-cloud.sh              # Apply migrations
+#   ./scripts/migrate-cloud.sh              # Apply migrations (public IP)
+#   ./scripts/migrate-cloud.sh --private    # Use private IP (requires VPC access)
 #   ./scripts/migrate-cloud.sh --status     # Check migration status
 #   ./scripts/migrate-cloud.sh --seed       # Apply migrations + seed
+#   ./scripts/migrate-cloud.sh --enable-ip  # Enable public IP on Cloud SQL
+#   ./scripts/migrate-cloud.sh --disable-ip # Disable public IP on Cloud SQL
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -17,8 +20,40 @@ REGION="${GCP_REGION:-asia-southeast1}"
 INSTANCE="${DB_INSTANCE_NAME:-synchire-db}"
 PROXY_PORT="${PROXY_PORT:-5433}"
 
-# Parse arguments (pass through to migrate-production.sh)
-MIGRATE_ARGS="$@"
+# Parse arguments
+USE_PRIVATE_IP=""
+MIGRATE_ARGS=""
+for arg in "$@"; do
+  case $arg in
+    --enable-ip)
+      echo "🌐 Enabling public IP on $INSTANCE..."
+      gcloud sql instances patch "$INSTANCE" \
+        --project="$PROJECT_ID" \
+        --assign-ip \
+        --quiet
+      echo "✅ Public IP enabled. Wait ~1 minute for propagation."
+      exit 0
+      ;;
+    --disable-ip)
+      echo "🔒 Disabling public IP on $INSTANCE..."
+      gcloud sql instances patch "$INSTANCE" \
+        --project="$PROJECT_ID" \
+        --no-assign-ip \
+        --quiet
+      echo "✅ Public IP disabled."
+      exit 0
+      ;;
+    --private)
+      USE_PRIVATE_IP="--private-ip"
+      ;;
+    --public)
+      USE_PRIVATE_IP=""
+      ;;
+    *)
+      MIGRATE_ARGS="$MIGRATE_ARGS $arg"
+      ;;
+  esac
+done
 
 echo "🗄️  Cloud SQL Migration"
 echo "======================"
@@ -74,8 +109,12 @@ fi
 
 # Start Cloud SQL Proxy if not running
 if [ "$PROXY_RUNNING" = false ]; then
-  echo "🔌 Starting Cloud SQL Proxy on port $PROXY_PORT..."
-  cloud-sql-proxy ${PROJECT_ID}:${REGION}:${INSTANCE} --port $PROXY_PORT &
+  if [ -n "$USE_PRIVATE_IP" ]; then
+    echo "🔌 Starting Cloud SQL Proxy on port $PROXY_PORT (private IP)..."
+  else
+    echo "🔌 Starting Cloud SQL Proxy on port $PROXY_PORT (public IP)..."
+  fi
+  cloud-sql-proxy $USE_PRIVATE_IP ${PROJECT_ID}:${REGION}:${INSTANCE} --port $PROXY_PORT &
   PROXY_PID=$!
 
   # Wait for proxy to be ready

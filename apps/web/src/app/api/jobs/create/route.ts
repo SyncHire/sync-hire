@@ -15,6 +15,7 @@ import { generateStringHash } from "@/lib/utils/hash-utils";
 import { jobToExtractedJobData } from "@/lib/utils/type-adapters";
 import { geminiClient } from "@/lib/gemini-client";
 import { z } from "zod";
+import { requireOrgMembership } from "@/lib/auth-server";
 
 interface CreateJobRequest {
   title: string;
@@ -25,7 +26,7 @@ interface CreateJobRequest {
   requirements: string[];
   responsibilities: string[];
   seniority: string;
-  company?: string;
+  organizationId?: string; // ID of the organization posting the job
   department?: string;
   salary?: string;
   customQuestions?: Array<{
@@ -37,7 +38,7 @@ interface CreateJobRequest {
   }>;
   extractionHash?: string;
   originalJDText?: string;
-  employerId?: string;
+  createdById?: string; // ID of the user creating the job
   aiMatchingEnabled?: boolean;
   aiMatchingThreshold?: number;
 }
@@ -55,7 +56,7 @@ async function triggerCandidateMatching(jobId: string): Promise<{ matchedCount: 
     }
 
     console.log(`\n🤖 [auto-match] Starting automatic candidate matching for job: ${jobId}`);
-    console.log(`📋 [auto-match] Job: "${job.title}" at ${job.company}`);
+    console.log(`📋 [auto-match] Job: "${job.title}" at ${job.organization.name}`);
 
     // Get all CVs
     const cvExtractions = await storage.getAllCVExtractions();
@@ -255,6 +256,20 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authenticated user with active organization
+    let session;
+    try {
+      session = await requireOrgMembership();
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Authentication required with active organization",
+        },
+        { status: 401 },
+      );
+    }
+
     const body = (await request.json()) as CreateJobRequest;
 
     // Validate required fields
@@ -275,10 +290,41 @@ export async function POST(request: NextRequest) {
     // Generate job ID
     const jobId = `job-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+    // Get organization and user from authenticated session
+    const organizationId = session.session.activeOrganizationId;
+    const createdById = session.user.id;
+
+    // This should not happen due to requireOrgMembership, but TypeScript needs the check
+    if (!organizationId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "No active organization selected",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Fetch or create placeholder organization for the job response
+    const storage = getStorage();
+    const existingOrg = await storage.getOrganization(organizationId);
+    const organization = existingOrg || {
+      id: organizationId,
+      name: "Demo Company",
+      slug: "demo-company",
+      logo: null,
+      website: null,
+      description: null,
+      industry: null,
+      size: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
     // Build extracted data if original JD text provided
     const jdExtraction: ExtractedJobData | null = body.originalJDText ? {
       title: body.title,
-      company: body.company || "Company",
+      company: organization.name,
       responsibilities: body.responsibilities || [],
       requirements: body.requirements || [],
       seniority: body.seniority || "",
@@ -307,7 +353,9 @@ export async function POST(request: NextRequest) {
     const job: Job = {
       id: jobId,
       title: body.title,
-      company: body.company || "Company",
+      organizationId,
+      createdById,
+      organization, // Include organization relation
       department: body.department || null,
       location: body.location,
       employmentType: body.employmentType || "Full-time",
@@ -319,7 +367,6 @@ export async function POST(request: NextRequest) {
       aiMatchingEnabled,
       aiMatchingThreshold,
       aiMatchingStatus: aiMatchingEnabled ? MatchingStatus.SCANNING : MatchingStatus.DISABLED,
-      employerId: body.employerId || "demo-user",
       jdFileUrl: null,
       jdFileHash: null,
       jdExtraction,
@@ -330,8 +377,7 @@ export async function POST(request: NextRequest) {
       questions: dbQuestions,
     };
 
-    // Persist job to storage
-    const storage = getStorage();
+    // Persist job to storage (storage already initialized above)
     await storage.saveJob(job.id, job);
 
     // Trigger automatic candidate matching in background (don't wait)

@@ -14,7 +14,6 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: "EMPLOYER" | "CANDIDATE";
   createdAt: Date;
 }
 
@@ -34,29 +33,45 @@ export interface Question {
   keyPoints?: string[];
 }
 
+// Organization type for mock data (matches database relation)
+export interface MockOrganization {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export interface Job {
   id: string;
   title: string;
-  company: string;
-  department: string;
+  organizationId: string; // Which organization owns this job
+  createdById: string; // Who created this job
+  organization: MockOrganization; // Organization relation (for UI compatibility)
+  department?: string;
   location: string;
-  type: string; // Employment type (Full-time, Part-time, etc.)
-  workArrangement?: WorkArrangement; // Remote, Hybrid, On-site, etc.
-  salary: string;
-  postedAt: string;
-  applicantsCount: number;
+  employmentType: string; // Full-time, Part-time, Contract, etc.
+  workArrangement?: string | null; // Remote, Hybrid, On-site, Flexible
+  salary?: string | null;
   description: string;
   requirements: string[];
-  questions: Question[];
-  employerId: string;
-  createdAt: Date;
-  customQuestions?: CustomQuestion[];
-  jdVersion?: JobDescriptionVersion;
-  status?: "DRAFT" | "ACTIVE" | "CLOSED";
+  status: "DRAFT" | "ACTIVE" | "CLOSED";
   // AI Matching settings
-  aiMatchingEnabled?: boolean; // Auto-match candidates when enabled
-  aiMatchingThreshold?: number; // Minimum match % to auto-apply (default 80)
-  aiMatchingStatus?: "scanning" | "complete" | "disabled"; // Current scan status
+  aiMatchingEnabled?: boolean;
+  aiMatchingThreshold?: number;
+  aiMatchingStatus?: "DISABLED" | "SCANNING" | "COMPLETE" | "FAILED";
+  // JD extraction
+  jdFileUrl?: string | null;
+  jdFileHash?: string | null;
+  jdExtraction?: ExtractedJobData | null;
+  jdVersion?: JobDescriptionVersion | null;
+  // Timestamps
+  postedAt: Date;
+  createdAt: Date;
+  updatedAt?: Date;
+  // Relations (for convenience in mock data)
+  questions: Question[];
+  // Derived fields (not in Prisma but useful for UI)
+  applicantsCount?: number;
+  customQuestions?: CustomQuestion[];
 }
 
 export interface AIEvaluation {
@@ -301,28 +316,41 @@ const users: Record<string, User> = {
     id: "employer-1",
     name: "TechCorp HR",
     email: "hr@techcorp.com",
-    role: "EMPLOYER",
     createdAt: new Date("2025-01-01"),
   },
   [DEMO_USER_ID]: {
     id: DEMO_USER_ID,
     name: DEMO_USER_NAME,
     email: DEMO_USER_EMAIL,
-    role: "CANDIDATE",
     createdAt: new Date("2025-01-05"),
   },
+};
+
+// Organizations map - matches organizationId to organization details
+const organizations: Record<string, MockOrganization> = {
+  "org-stripe": { id: "org-stripe", name: "Stripe", slug: "stripe" },
+  "org-databricks": { id: "org-databricks", name: "Databricks", slug: "databricks" },
+  "org-vercel": { id: "org-vercel", name: "Vercel", slug: "vercel" },
+  "org-cloudflare": { id: "org-cloudflare", name: "Cloudflare", slug: "cloudflare" },
+  "org-google": { id: "org-google", name: "Google", slug: "google" },
+  "org-spotify": { id: "org-spotify", name: "Spotify", slug: "spotify" },
+  "org-meta": { id: "org-meta", name: "Meta", slug: "meta" },
+  "org-github": { id: "org-github", name: "GitHub", slug: "github" },
+  "org-notion": { id: "org-notion", name: "Notion", slug: "notion" },
 };
 
 const jobs: Record<string, Job> = {
   "job-1": {
     id: "job-1",
     title: "Senior Frontend Engineer",
-    company: "Stripe",
+    organizationId: "org-stripe",
+    createdById: "employer-1",
+    organization: organizations["org-stripe"],
     department: "Engineering",
     location: "San Francisco, CA",
-    type: "Full-time",
+    employmentType: "Full-time",
     salary: "$180k - $220k",
-    postedAt: "2 days ago",
+    status: "ACTIVE",
     applicantsCount: 24,
     description:
       "Build beautiful, performant user interfaces for millions of businesses. Work with React, TypeScript, and modern web technologies.",
@@ -375,18 +403,20 @@ const jobs: Record<string, Job> = {
         keyPoints: ["Communication", "Conflict resolution", "Outcome"],
       },
     ],
-    employerId: "employer-1",
+    postedAt: new Date("2025-01-06"),
     createdAt: new Date("2025-01-03"),
   },
   "job-2": {
     id: "job-2",
     title: "Backend Engineer",
-    company: "Databricks",
+    organizationId: "org-databricks",
+    createdById: "employer-1",
+    organization: organizations["org-databricks"],
     department: "Engineering",
     location: "Remote",
-    type: "Full-time",
+    employmentType: "Full-time",
     salary: "$160k - $200k",
-    postedAt: "5 days ago",
+    status: "ACTIVE",
     applicantsCount: 18,
     description:
       "Build scalable APIs and services powering data analytics at scale. Work with Python, Go, and distributed systems.",
@@ -431,18 +461,20 @@ const jobs: Record<string, Job> = {
         keyPoints: ["Time management", "Prioritization", "Communication"],
       },
     ],
-    employerId: "employer-1",
+    postedAt: new Date("2025-01-03"),
     createdAt: new Date("2025-01-04"),
   },
   "job-3": {
     id: "job-3",
     title: "Full Stack Engineer",
-    company: "Vercel",
+    organizationId: "org-vercel",
+    createdById: "employer-1",
+    organization: organizations["org-vercel"],
     department: "Engineering",
     location: "New York, NY",
-    type: "Full-time",
+    employmentType: "Full-time",
     salary: "$150k - $190k",
-    postedAt: "1 week ago",
+    status: "ACTIVE",
     applicantsCount: 32,
     description:
       "Build the platform that powers the modern web. Work across the stack with Next.js, Node.js, and edge computing.",
@@ -495,18 +527,20 @@ const jobs: Record<string, Job> = {
         ],
       },
     ],
-    employerId: "employer-1",
+    postedAt: new Date("2025-01-01"),
     createdAt: new Date("2025-01-05"),
   },
   "job-4": {
     id: "job-4",
     title: "DevOps Engineer",
-    company: "Cloudflare",
+    organizationId: "org-cloudflare",
+    createdById: "employer-1",
+    organization: organizations["org-cloudflare"],
     department: "Engineering",
     location: "Austin, TX",
-    type: "Full-time",
+    employmentType: "Full-time",
     salary: "$150k - $190k",
-    postedAt: "3 days ago",
+    status: "ACTIVE",
     applicantsCount: 15,
     description:
       "Build and maintain infrastructure serving millions of requests per second. Work with Kubernetes, Terraform, and global edge networks.",
@@ -551,18 +585,20 @@ const jobs: Record<string, Job> = {
         keyPoints: ["Trade-offs", "CI/CD", "Risk management"],
       },
     ],
-    employerId: "employer-1",
+    postedAt: new Date("2025-01-05"),
     createdAt: new Date("2025-01-06"),
   },
   "job-5": {
     id: "job-5",
     title: "ML Engineer",
-    company: "Google",
+    organizationId: "org-google",
+    createdById: "employer-1",
+    organization: organizations["org-google"],
     department: "Engineering",
     location: "San Francisco, CA",
-    type: "Full-time",
+    employmentType: "Full-time",
     salary: "$200k - $280k",
-    postedAt: "1 day ago",
+    status: "ACTIVE",
     applicantsCount: 47,
     description:
       "Build and deploy machine learning systems at scale. Work on cutting-edge AI infrastructure and model deployment.",
@@ -607,18 +643,20 @@ const jobs: Record<string, Job> = {
         keyPoints: ["Communication", "Translation", "Iteration"],
       },
     ],
-    employerId: "employer-1",
+    postedAt: new Date("2025-01-07"),
     createdAt: new Date("2025-01-08"),
   },
   "job-6": {
     id: "job-6",
     title: "Mobile Engineer",
-    company: "Spotify",
+    organizationId: "org-spotify",
+    createdById: "employer-1",
+    organization: organizations["org-spotify"],
     department: "Engineering",
     location: "Stockholm, Sweden",
-    type: "Full-time",
+    employmentType: "Full-time",
     salary: "$130k - $170k",
-    postedAt: "4 days ago",
+    status: "ACTIVE",
     applicantsCount: 21,
     description:
       "Build mobile experiences for hundreds of millions of users. Work with React Native, Swift, and Kotlin.",
@@ -663,18 +701,20 @@ const jobs: Record<string, Job> = {
         keyPoints: ["Process", "Prioritization", "Iteration"],
       },
     ],
-    employerId: "employer-1",
+    postedAt: new Date("2025-01-04"),
     createdAt: new Date("2025-01-07"),
   },
   "job-7": {
     id: "job-7",
     title: "Senior React Developer",
-    company: "Meta",
+    organizationId: "org-meta",
+    createdById: "employer-1",
+    organization: organizations["org-meta"],
     department: "Engineering",
     location: "Menlo Park, CA",
-    type: "Full-time",
+    employmentType: "Full-time",
     salary: "$190k - $240k",
-    postedAt: "1 week ago",
+    status: "ACTIVE",
     applicantsCount: 35,
     description:
       "Build next-generation social products used by billions. Work with React, GraphQL, and cutting-edge web technologies.",
@@ -719,18 +759,20 @@ const jobs: Record<string, Job> = {
         keyPoints: ["Teaching", "Feedback", "Growth"],
       },
     ],
-    employerId: "employer-1",
+    postedAt: new Date("2025-01-01"),
     createdAt: new Date("2025-01-02"),
   },
   "job-8": {
     id: "job-8",
     title: "Software Engineer - Infrastructure",
-    company: "GitHub",
+    organizationId: "org-github",
+    createdById: "employer-1",
+    organization: organizations["org-github"],
     department: "Engineering",
     location: "Remote",
-    type: "Full-time",
+    employmentType: "Full-time",
     salary: "$170k - $210k",
-    postedAt: "3 days ago",
+    status: "ACTIVE",
     applicantsCount: 28,
     description:
       "Build the infrastructure that powers millions of developers. Work with Ruby, Go, and Kubernetes at massive scale.",
@@ -775,18 +817,20 @@ const jobs: Record<string, Job> = {
         keyPoints: ["Trade-offs", "Communication", "Process"],
       },
     ],
-    employerId: "employer-1",
+    postedAt: new Date("2025-01-05"),
     createdAt: new Date("2025-01-01"),
   },
   "job-9": {
     id: "job-9",
     title: "Senior Backend Engineer",
-    company: "Notion",
+    organizationId: "org-notion",
+    createdById: "employer-1",
+    organization: organizations["org-notion"],
     department: "Engineering",
     location: "San Francisco, CA",
-    type: "Full-time",
+    employmentType: "Full-time",
     salary: "$175k - $215k",
-    postedAt: "5 days ago",
+    status: "ACTIVE",
     applicantsCount: 42,
     description:
       "Build the collaborative workspace used by millions. Work with TypeScript, PostgreSQL, and real-time systems.",
@@ -831,7 +875,7 @@ const jobs: Record<string, Job> = {
         keyPoints: ["Prioritization", "Balance", "Strategy"],
       },
     ],
-    employerId: "employer-1",
+    postedAt: new Date("2024-12-30"),
     createdAt: new Date("2024-12-28"),
   },
 };
@@ -946,6 +990,11 @@ export function getJobById(id: string): Job | undefined {
 
 export function getAllJobs(): Job[] {
   return Object.values(jobs);
+}
+
+// Organizations
+export function getOrganizationById(id: string): MockOrganization | undefined {
+  return organizations[id];
 }
 
 // Interviews
@@ -1133,29 +1182,41 @@ export function updateJobDescriptionVersion(
 // Job Updates
 export function createJob(jobData: Partial<Job>): Job {
   const id = `job-${Date.now()}`;
+  const now = new Date();
+  const orgId = jobData.organizationId || "";
+  const org = jobData.organization || organizations[orgId] || { id: orgId, name: "Company", slug: "company" };
   const job: Job = {
     id,
     title: jobData.title || "Untitled Position",
-    company: jobData.company || "",
-    department: jobData.department || "",
+    organizationId: orgId,
+    createdById: jobData.createdById || "",
+    organization: org,
+    department: jobData.department,
     location: jobData.location || "",
-    type: jobData.type || "Full-time",
+    employmentType: jobData.employmentType || "Full-time",
     workArrangement: jobData.workArrangement,
-    salary: jobData.salary || "",
-    postedAt: jobData.postedAt || "Just now",
-    applicantsCount: jobData.applicantsCount || 0,
+    salary: jobData.salary,
     description: jobData.description || "",
     requirements: jobData.requirements || [],
-    questions: jobData.questions || [],
-    employerId: jobData.employerId || "",
-    createdAt: jobData.createdAt || new Date(),
     status: jobData.status || "DRAFT",
-    customQuestions: jobData.customQuestions || [],
-    jdVersion: jobData.jdVersion,
     // AI Matching settings
     aiMatchingEnabled: jobData.aiMatchingEnabled,
     aiMatchingThreshold: jobData.aiMatchingThreshold,
     aiMatchingStatus: jobData.aiMatchingStatus,
+    // JD extraction
+    jdFileUrl: jobData.jdFileUrl,
+    jdFileHash: jobData.jdFileHash,
+    jdExtraction: jobData.jdExtraction,
+    jdVersion: jobData.jdVersion,
+    // Timestamps
+    postedAt: jobData.postedAt || now,
+    createdAt: jobData.createdAt || now,
+    updatedAt: now,
+    // Relations
+    questions: jobData.questions || [],
+    // Derived fields
+    applicantsCount: jobData.applicantsCount || 0,
+    customQuestions: jobData.customQuestions || [],
   };
   jobs[id] = job;
   return job;

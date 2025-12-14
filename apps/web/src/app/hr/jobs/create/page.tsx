@@ -270,14 +270,14 @@ export default function JobCreationPage() {
 
       // Show toast based on AI matching status
       console.log("📊 Create job response:", { aiMatchingStatus: result.data.aiMatchingStatus, data: result.data });
-      if (result.data.aiMatchingStatus === "scanning") {
+      if (result.data.aiMatchingStatus === "SCANNING") {
         toast.success("Job created! Scanning for matching candidates...", { duration: 3000 });
       } else {
         toast.success("Job created!", { duration: 2000 });
       }
 
       // Add scanning param to trigger polling on the job page
-      const scanParam = result.data.aiMatchingStatus === "scanning" ? "?scanning=true" : "";
+      const scanParam = result.data.aiMatchingStatus === "SCANNING" ? "?scanning=true" : "";
       console.log("🔗 Navigating to:", `/hr/jobs/${result.data.id}${scanParam}`);
       router.push(`/hr/jobs/${result.data.id}${scanParam}`);
     } catch (error) {

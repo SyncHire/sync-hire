@@ -11,8 +11,9 @@ import type {
   ExtractedJobData,
   Interview,
   InterviewQuestions,
-  JobWithQuestions,
+  JobWithQuestionsAndOrg,
   Notification,
+  Organization,
   User,
 } from "@sync-hire/database";
 
@@ -24,11 +25,12 @@ export type {
   Interview,
   InterviewQuestions,
   Notification,
+  Organization,
   User,
 };
 
-// Export Job type as JobWithQuestions since we always need questions relation
-export type Job = JobWithQuestions;
+// Export Job type as JobWithQuestionsAndOrg since we need both questions and organization
+export type Job = JobWithQuestionsAndOrg;
 
 export interface StorageInterface {
   /**
@@ -137,6 +139,15 @@ export interface StorageInterface {
   getCurrentUser(): Promise<User>;
 
   // =============================================================================
+  // Organization Methods
+  // =============================================================================
+
+  /**
+   * Get organization by ID
+   */
+  getOrganization(id: string): Promise<Organization | null>;
+
+  // =============================================================================
   // User CV Methods
   // =============================================================================
 
@@ -182,6 +193,12 @@ export interface StorageInterface {
    * Get a specific application by ID
    */
   getApplication(applicationId: string): Promise<CandidateApplication | null>;
+
+  /**
+   * Get or create application for a CV and job combination
+   * Creates application if it doesn't exist for the current user
+   */
+  getOrCreateApplication(cvHash: string, jobId: string): Promise<CandidateApplication>;
 
   /**
    * Save/update a candidate application

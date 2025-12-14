@@ -58,21 +58,47 @@ env:
     availability:
       - RUNTIME
 
+  # Better Auth URL (public)
+  - variable: BETTER_AUTH_URL
+    value: https://sync-hire.com
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_BETTER_AUTH_URL
+    value: https://sync-hire.com
+    availability:
+      - BUILD
+      - RUNTIME
+
   # Database connection (needed at build time for Prisma generate)
   - variable: DATABASE_URL
     secret: DATABASE_URL
     availability:
       - BUILD
       - RUNTIME
-  - variable: API_SECRET_KEY
-    secret: API_SECRET_KEY
+
+  # AI & Video secrets
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
     availability:
       - RUNTIME
   - variable: STREAM_API_SECRET
     secret: STREAM_API_SECRET
     availability:
       - RUNTIME
-  - variable: GEMINI_API_KEY
-    secret: GEMINI_API_KEY
+
+  # Better Auth secret
+  - variable: BETTER_AUTH_SECRET
+    secret: BETTER_AUTH_SECRET
+    availability:
+      - RUNTIME
+
+  # Google OAuth credentials
+  - variable: GOOGLE_CLIENT_ID
+    secret: GOOGLE_CLIENT_ID
+    availability:
+      - RUNTIME
+  - variable: GOOGLE_CLIENT_SECRET
+    secret: GOOGLE_CLIENT_SECRET
     availability:
       - RUNTIME
