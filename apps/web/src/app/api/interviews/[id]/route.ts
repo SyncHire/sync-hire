@@ -38,7 +38,7 @@ export async function GET(
           ? {
               id: job.id,
               title: job.title,
-              company: job.company,
+              company: job.organization.name,
             }
           : null,
         candidate: user

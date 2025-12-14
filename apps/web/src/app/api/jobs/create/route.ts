@@ -55,7 +55,7 @@ async function triggerCandidateMatching(jobId: string): Promise<{ matchedCount: 
     }
 
     console.log(`\n🤖 [auto-match] Starting automatic candidate matching for job: ${jobId}`);
-    console.log(`📋 [auto-match] Job: "${job.title}" at ${job.company}`);
+    console.log(`📋 [auto-match] Job: "${job.title}" at ${job.organization.name}`);
 
     // Get all CVs
     const cvExtractions = await storage.getAllCVExtractions();

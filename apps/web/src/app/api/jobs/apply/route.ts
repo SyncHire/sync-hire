@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       // Build minimal JD data from job for question generation
       jdData = {
         title: job.title,
-        company: job.company,
+        company: job.organization.name,
         location: job.location,
         employmentType: toEmploymentType(job.employmentType),
         workArrangement: toWorkArrangement(job.workArrangement),

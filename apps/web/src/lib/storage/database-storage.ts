@@ -131,24 +131,24 @@ export class DatabaseStorage implements StorageInterface {
   async getJob(id: string): Promise<Job | null> {
     const job = await this.db.job.findUnique({
       where: { id },
-      include: { questions: true },
+      include: { questions: true, organization: true },
     });
 
     if (!job) {
       return null;
     }
 
-    // Return the job directly from Prisma - it already includes questions
+    // Return the job directly from Prisma - it already includes questions and organization
     return job;
   }
 
   async getAllStoredJobs(): Promise<Job[]> {
     const jobs = await this.db.job.findMany({
-      include: { questions: true },
+      include: { questions: true, organization: true },
       orderBy: { createdAt: 'desc' },
     });
 
-    // Return jobs directly from Prisma - they already include questions
+    // Return jobs directly from Prisma - they already include questions and organization
     return jobs;
   }
 

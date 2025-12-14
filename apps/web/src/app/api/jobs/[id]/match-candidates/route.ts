@@ -84,7 +84,7 @@ async function generateAndSaveQuestions(
     // Build JD data for question generator
     const jdData: ExtractedJobData = {
       title: job.title,
-      company: job.company,
+      company: job.organization.name,
       location: "",
       employmentType: "Full-time",
       workArrangement: "On-site",
@@ -184,7 +184,7 @@ export async function POST(
       );
     }
 
-    console.log(`📋 [match-candidates] Job: "${job.title}" at ${job.company}`);
+    console.log(`📋 [match-candidates] Job: "${job.title}" at ${job.organization.name}`);
 
     // Get all CVs
     const cvExtractions = await storage.getAllCVExtractions();

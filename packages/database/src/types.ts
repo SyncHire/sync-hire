@@ -83,6 +83,13 @@ export type JobWithOrganization = Prisma.JobGetPayload<{
   };
 }>;
 
+export type JobWithQuestionsAndOrg = Prisma.JobGetPayload<{
+  include: {
+    questions: true;
+    organization: true;
+  };
+}>;
+
 export type JobWithApplications = Prisma.JobGetPayload<{
   include: {
     organization: true;

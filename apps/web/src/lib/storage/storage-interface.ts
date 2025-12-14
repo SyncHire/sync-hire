@@ -11,7 +11,7 @@ import type {
   ExtractedJobData,
   Interview,
   InterviewQuestions,
-  JobWithQuestions,
+  JobWithQuestionsAndOrg,
   Notification,
   User,
 } from "@sync-hire/database";
@@ -27,8 +27,8 @@ export type {
   User,
 };
 
-// Export Job type as JobWithQuestions since we always need questions relation
-export type Job = JobWithQuestions;
+// Export Job type as JobWithQuestionsAndOrg since we need both questions and organization
+export type Job = JobWithQuestionsAndOrg;
 
 export interface StorageInterface {
   /**
