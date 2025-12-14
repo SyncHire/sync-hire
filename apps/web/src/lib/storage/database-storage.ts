@@ -5,7 +5,8 @@
  * File uploads are stored in GCP Cloud Storage (production) or local filesystem (development).
  */
 
-import { prisma, ApplicationStatus, ApplicationSource, Prisma } from '@sync-hire/database';
+import { prisma, ApplicationStatus, ApplicationSource } from '@sync-hire/database';
+import { Prisma } from '@prisma/client';
 import type { CloudStorageProvider } from './cloud/cloud-storage-provider';
 import {
   createStorageProvider,

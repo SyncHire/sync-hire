@@ -11,6 +11,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDemoApplicants } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
 
+import { InterviewStatus } from "@sync-hire/database";
+
 // Common applicant type for the response
 interface ApplicantResponse {
   id: string;
@@ -19,7 +21,7 @@ interface ApplicantResponse {
   cvId: string | null;
   name: string;
   email: string;
-  status: "PENDING" | "IN_PROGRESS" | "COMPLETED";
+  status: InterviewStatus | "PENDING" | "IN_PROGRESS" | "COMPLETED";
   score?: number;
   durationMinutes: number;
   createdAt: string;
