@@ -42,14 +42,14 @@ export interface StorageInterface {
   saveExtraction(hash: string, data: ExtractedJobData): Promise<void>;
 
   /**
-   * Save uploaded job description file and return path/URL
+   * Upload job description PDF file and return URL
    */
-  saveUpload(hash: string, buffer: Buffer): Promise<string>;
+  uploadJobDescription(hash: string, buffer: Buffer): Promise<string>;
 
   /**
-   * Get path to uploaded job description file
+   * Get path/URL to uploaded job description file
    */
-  getUploadPath(hash: string): string;
+  getJobDescriptionPath(hash: string): string;
 
   /**
    * Check if job extraction exists
@@ -87,14 +87,14 @@ export interface StorageInterface {
   saveCVExtraction(hash: string, data: ExtractedCVData): Promise<void>;
 
   /**
-   * Save uploaded CV file and return path/URL
+   * Upload CV PDF file and return URL
    */
-  saveCVUpload(hash: string, buffer: Buffer): Promise<string>;
+  uploadCV(hash: string, buffer: Buffer): Promise<string>;
 
   /**
-   * Get path to uploaded CV file
+   * Get path/URL to uploaded CV file
    */
-  getCVUploadPath(hash: string): string;
+  getCVPath(hash: string): string;
 
   /**
    * Check if CV extraction exists

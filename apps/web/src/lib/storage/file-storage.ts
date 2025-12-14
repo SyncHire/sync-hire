@@ -62,19 +62,19 @@ export class FileStorage implements StorageInterface {
     }
   }
 
-  async saveUpload(hash: string, buffer: Buffer): Promise<string> {
+  async uploadJobDescription(hash: string, buffer: Buffer): Promise<string> {
     try {
       await fs.mkdir(JD_UPLOADS_DIR, { recursive: true });
       const filePath = join(JD_UPLOADS_DIR, hash);
       await fs.writeFile(filePath, buffer);
       return filePath;
     } catch (error) {
-      console.error("Failed to save job upload:", error);
+      console.error("Failed to upload job description:", error);
       throw error;
     }
   }
 
-  getUploadPath(hash: string): string {
+  getJobDescriptionPath(hash: string): string {
     return join(JD_UPLOADS_DIR, hash);
   }
 
@@ -110,19 +110,19 @@ export class FileStorage implements StorageInterface {
     }
   }
 
-  async saveCVUpload(hash: string, buffer: Buffer): Promise<string> {
+  async uploadCV(hash: string, buffer: Buffer): Promise<string> {
     try {
       await fs.mkdir(CV_UPLOADS_DIR, { recursive: true });
       const filePath = join(CV_UPLOADS_DIR, hash);
       await fs.writeFile(filePath, buffer);
       return filePath;
     } catch (error) {
-      console.error("Failed to save CV upload:", error);
+      console.error("Failed to upload CV:", error);
       throw error;
     }
   }
 
-  getCVUploadPath(hash: string): string {
+  getCVPath(hash: string): string {
     return join(CV_UPLOADS_DIR, hash);
   }
 

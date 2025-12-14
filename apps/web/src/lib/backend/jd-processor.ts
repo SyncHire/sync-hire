@@ -157,7 +157,7 @@ export class JobDescriptionProcessor {
     await this.storage.saveExtraction(hash, extractedData);
 
     // Save original file
-    await this.storage.saveUpload(hash, buffer);
+    await this.storage.uploadJobDescription(hash, buffer);
 
     return { hash, extractedData, aiSuggestions, aiQuestions, cached: false };
   }

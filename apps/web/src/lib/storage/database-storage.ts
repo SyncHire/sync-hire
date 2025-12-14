@@ -5,14 +5,10 @@
  * File uploads are stored in GCP Cloud Storage (production) or local filesystem (development).
  */
 
-import { prisma, ApplicationStatus, ApplicationSource } from '@sync-hire/database';
+import { prisma } from '@sync-hire/database';
 import { Prisma } from '@prisma/client';
 import type { CloudStorageProvider } from './cloud/cloud-storage-provider';
-import {
-  createStorageProvider,
-  getCVBucket,
-  getJDBucket,
-} from './cloud/storage-provider-factory';
+import { getCVBucket, getJDBucket } from './cloud/storage-provider-factory';
 import type {
   CandidateApplication,
   ExtractedCVData,
@@ -26,11 +22,7 @@ import type {
 import type { StorageInterface, Job } from './storage-interface';
 
 export class DatabaseStorage implements StorageInterface {
-  private cloudStorage: CloudStorageProvider;
-
-  constructor() {
-    this.cloudStorage = createStorageProvider();
-  }
+  constructor(private readonly cloudStorage: CloudStorageProvider) {}
 
   // =============================================================================
   // Job Description Extraction Methods
@@ -63,7 +55,7 @@ export class DatabaseStorage implements StorageInterface {
     });
   }
 
-  async saveUpload(hash: string, buffer: Buffer): Promise<string> {
+  async uploadJobDescription(hash: string, buffer: Buffer): Promise<string> {
     const bucket = getJDBucket();
     const path = `jd/${hash}`;
     const contentType = 'application/pdf';
@@ -85,7 +77,7 @@ export class DatabaseStorage implements StorageInterface {
     return fileUrl;
   }
 
-  getUploadPath(hash: string): string {
+  getJobDescriptionPath(hash: string): string {
     return `/uploads/jd/${hash}`;
   }
 
@@ -220,7 +212,7 @@ export class DatabaseStorage implements StorageInterface {
     });
   }
 
-  async saveCVUpload(hash: string, buffer: Buffer): Promise<string> {
+  async uploadCV(hash: string, buffer: Buffer): Promise<string> {
     const bucket = getCVBucket();
     const path = `cv/${hash}`;
     const contentType = 'application/pdf';
@@ -246,7 +238,7 @@ export class DatabaseStorage implements StorageInterface {
     return fileUrl;
   }
 
-  getCVUploadPath(hash: string): string {
+  getCVPath(hash: string): string {
     return `/uploads/cv/${hash}`;
   }
 

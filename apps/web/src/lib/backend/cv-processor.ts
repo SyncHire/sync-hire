@@ -310,7 +310,7 @@ export class CVProcessor {
     await this.storage.saveCVExtraction(hash, extractedData);
 
     // Save original file
-    await this.storage.saveCVUpload(hash, buffer);
+    await this.storage.uploadCV(hash, buffer);
 
     return { hash, extractedData, cached: false };
   }
