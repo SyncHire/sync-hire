@@ -2,14 +2,20 @@
 set -e
 
 # Firebase App Hosting Setup Script
-# Sets up secrets from .env.production file
+# Sets up GCS bucket and secrets from .env.production file
 #
 # Usage:
-#   ./setup-apphosting.sh           # Only create missing secrets
+#   ./setup-apphosting.sh           # Only create missing resources
 #   ./setup-apphosting.sh --override # Update all secrets
+#
+# Environment variables (from .env.production):
+#   GCS_BUCKET     - Cloud Storage bucket name (default: synchire-uploads)
+#   GCS_LOCATION   - Bucket location (default: asia-southeast1)
+#   GCP_PROJECT_ID - GCP project ID (default: synchire-hackathon)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="${SCRIPT_DIR}/.env.production"
+APP_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+ENV_FILE="${APP_DIR}/.env.production"
 
 # Parse arguments
 OVERRIDE=false
@@ -81,6 +87,26 @@ set_secret() {
   fi
 }
 
+echo "Setting up Cloud Storage bucket..."
+echo ""
+
+# Set up GCS bucket for file uploads
+GCS_BUCKET="${GCS_BUCKET:-synchire-uploads}"
+GCS_LOCATION="${GCS_LOCATION:-asia-southeast1}"
+
+if gcloud storage buckets describe "gs://$GCS_BUCKET" --project="$PROJECT_ID" &>/dev/null; then
+  echo "✅ Bucket gs://$GCS_BUCKET already exists"
+else
+  echo "Creating bucket gs://$GCS_BUCKET..."
+  gcloud storage buckets create "gs://$GCS_BUCKET" \
+    --project="$PROJECT_ID" \
+    --location="$GCS_LOCATION" \
+    --uniform-bucket-level-access \
+    && echo "✅ Bucket created" \
+    || { echo "❌ Failed to create bucket"; exit 1; }
+fi
+
+echo ""
 echo "Setting up secrets..."
 echo ""
 
@@ -94,11 +120,38 @@ echo ""
 # Grant backend access to secrets (required for App Hosting)
 BACKEND_NAME="${BACKEND_NAME:-synchire}"
 echo "Granting backend '$BACKEND_NAME' access to secrets..."
+
+# Get backend service account for checking existing access
+BACKEND_SA="firebase-app-hosting-compute@${PROJECT_ID}.iam.gserviceaccount.com"
+
 for secret in API_SECRET_KEY STREAM_API_SECRET GEMINI_API_KEY; do
-  firebase apphosting:secrets:grantaccess "$secret" \
-    --project "$PROJECT_ID" \
-    --backend "$BACKEND_NAME" 2>/dev/null && echo "  ✅ $secret access granted" || echo "  ⚠️  $secret (may already have access or backend not created)"
+  # Check if backend already has access
+  if gcloud secrets get-iam-policy "$secret" --project="$PROJECT_ID" 2>/dev/null | grep -q "$BACKEND_SA"; then
+    echo "  ✅ $secret access already granted"
+  else
+    firebase apphosting:secrets:grantaccess "$secret" \
+      --project "$PROJECT_ID" \
+      --backend "$BACKEND_NAME" 2>/dev/null && echo "  ✅ $secret access granted" || echo "  ⚠️  $secret (backend may not exist yet)"
+  fi
 done
+
+echo ""
+echo "Granting App Hosting storage access..."
+
+# Firebase App Hosting uses a dedicated compute service account
+APP_HOSTING_SA="firebase-app-hosting-compute@${PROJECT_ID}.iam.gserviceaccount.com"
+
+# Check if permission already exists
+if gcloud storage buckets get-iam-policy "gs://$GCS_BUCKET" --project="$PROJECT_ID" 2>/dev/null | grep -q "$APP_HOSTING_SA"; then
+  echo "✅ Storage access already granted to $APP_HOSTING_SA"
+else
+  gcloud storage buckets add-iam-policy-binding "gs://$GCS_BUCKET" \
+    --member="serviceAccount:$APP_HOSTING_SA" \
+    --role="roles/storage.objectAdmin" \
+    --project="$PROJECT_ID" 2>/dev/null \
+    && echo "✅ Storage access granted to $APP_HOSTING_SA" \
+    || echo "⚠️  Could not grant storage access (SA may not exist yet)"
+fi
 
 echo ""
 echo "✅ Secrets setup complete!"

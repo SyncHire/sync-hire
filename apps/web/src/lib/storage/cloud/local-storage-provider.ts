@@ -21,11 +21,22 @@ export class LocalStorageProvider implements CloudStorageProvider {
   }
 
   async uploadCV(hash: string, buffer: Buffer): Promise<string> {
-    return this.uploadFile(CV_DIR, hash, buffer);
+    const path = `cv/${hash}`;
+    await this.uploadFile(CV_DIR, hash, buffer);
+    return path;
   }
 
   async uploadJobDescription(hash: string, buffer: Buffer): Promise<string> {
-    return this.uploadFile(JD_DIR, hash, buffer);
+    const path = `jd/${hash}`;
+    await this.uploadFile(JD_DIR, hash, buffer);
+    return path;
+  }
+
+  async getSignedUrl(type: 'cv' | 'jd', path: string): Promise<string> {
+    // In development, return a local file URL (no signing needed)
+    const dir = type === 'cv' ? CV_DIR : JD_DIR;
+    const filename = path.replace(`${type}/`, '');
+    return `/local-storage/${dir}/${filename}`;
   }
 
   async deleteCV(hash: string): Promise<void> {
@@ -48,7 +59,7 @@ export class LocalStorageProvider implements CloudStorageProvider {
     dir: string,
     filename: string,
     buffer: Buffer
-  ): Promise<string> {
+  ): Promise<void> {
     const fullPath = join(this.baseDir, dir, filename);
 
     // Ensure directory exists
@@ -56,9 +67,6 @@ export class LocalStorageProvider implements CloudStorageProvider {
 
     // Write file
     await fs.writeFile(fullPath, buffer);
-
-    // Return a local path URL format
-    return `/local-storage/${dir}/${filename}`;
   }
 
   private async deleteFile(dir: string, filename: string): Promise<void> {

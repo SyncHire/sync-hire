@@ -43,6 +43,16 @@ env:
     availability:
       - RUNTIME
 
+  # Cloud Storage configuration
+  - variable: USE_CLOUD_STORAGE
+    value: "true"
+    availability:
+      - RUNTIME
+  - variable: GCS_BUCKET
+    value: synchire-uploads
+    availability:
+      - RUNTIME
+
   # Database connection (needed at build time for Prisma generate)
   - variable: DATABASE_URL
     secret: DATABASE_URL
