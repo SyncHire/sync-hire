@@ -5,6 +5,7 @@
  * DatabaseStorage uses Prisma for metadata, CloudStorageProvider handles file uploads separately.
  */
 
+import { prisma } from "@sync-hire/database";
 import { DatabaseStorage } from "./database-storage";
 import { FileStorage } from "./file-storage";
 import type { StorageInterface } from "./storage-interface";
@@ -15,7 +16,7 @@ function createStorage(): StorageInterface {
 
   if (useDatabase) {
     console.log("Using DatabaseStorage (Prisma + PostgreSQL)");
-    return new DatabaseStorage();
+    return new DatabaseStorage(prisma);
   }
 
   console.log("Using FileStorage (local files)");

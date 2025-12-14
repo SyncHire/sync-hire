@@ -5,7 +5,6 @@
  * File uploads are handled separately by CloudStorageProvider.
  */
 
-import { prisma } from '@sync-hire/database';
 import { Prisma } from '@prisma/client';
 import type {
   CandidateApplication,
@@ -17,16 +16,18 @@ import type {
   Notification,
   User,
 } from '@sync-hire/database';
+import { prisma } from '@sync-hire/database';
 import type { StorageInterface, Job } from './storage-interface';
 
 export class DatabaseStorage implements StorageInterface {
+  constructor(private readonly db: typeof prisma) {}
 
   // =============================================================================
   // Job Description Extraction Methods
   // =============================================================================
 
   async getExtraction(hash: string): Promise<ExtractedJobData | null> {
-    const job = await prisma.job.findUnique({
+    const job = await this.db.job.findUnique({
       where: { id: hash },
     });
 
@@ -34,7 +35,7 @@ export class DatabaseStorage implements StorageInterface {
   }
 
   async saveExtraction(hash: string, data: ExtractedJobData): Promise<void> {
-    await prisma.job.upsert({
+    await this.db.job.upsert({
       where: { id: hash },
       update: { jdExtraction: data },
       create: {
@@ -53,7 +54,7 @@ export class DatabaseStorage implements StorageInterface {
   }
 
   async hasExtraction(hash: string): Promise<boolean> {
-    const count = await prisma.job.count({
+    const count = await this.db.job.count({
       where: {
         id: hash,
         jdExtraction: { not: Prisma.JsonNull },
@@ -67,7 +68,7 @@ export class DatabaseStorage implements StorageInterface {
   // =============================================================================
 
   async saveJob(id: string, job: Job): Promise<void> {
-    await prisma.$transaction(async (tx) => {
+    await this.db.$transaction(async (tx) => {
       // Upsert job
       await tx.job.upsert({
         where: { id },
@@ -128,7 +129,7 @@ export class DatabaseStorage implements StorageInterface {
   }
 
   async getJob(id: string): Promise<Job | null> {
-    const job = await prisma.job.findUnique({
+    const job = await this.db.job.findUnique({
       where: { id },
       include: { questions: true },
     });
@@ -142,7 +143,7 @@ export class DatabaseStorage implements StorageInterface {
   }
 
   async getAllStoredJobs(): Promise<Job[]> {
-    const jobs = await prisma.job.findMany({
+    const jobs = await this.db.job.findMany({
       include: { questions: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -152,7 +153,7 @@ export class DatabaseStorage implements StorageInterface {
   }
 
   async hasJob(id: string): Promise<boolean> {
-    const count = await prisma.job.count({ where: { id } });
+    const count = await this.db.job.count({ where: { id } });
     return count > 0;
   }
 
@@ -161,7 +162,7 @@ export class DatabaseStorage implements StorageInterface {
   // =============================================================================
 
   async getCVExtraction(hash: string): Promise<ExtractedCVData | null> {
-    const cv = await prisma.cVUpload.findUnique({
+    const cv = await this.db.cVUpload.findUnique({
       where: { fileHash: hash },
     });
 
@@ -169,7 +170,7 @@ export class DatabaseStorage implements StorageInterface {
   }
 
   async saveCVExtraction(hash: string, data: ExtractedCVData): Promise<void> {
-    await prisma.cVUpload.upsert({
+    await this.db.cVUpload.upsert({
       where: { fileHash: hash },
       update: { extraction: data },
       create: {
@@ -184,7 +185,7 @@ export class DatabaseStorage implements StorageInterface {
   }
 
   async hasCVExtraction(hash: string): Promise<boolean> {
-    const count = await prisma.cVUpload.count({
+    const count = await this.db.cVUpload.count({
       where: {
         fileHash: hash,
         extraction: { not: Prisma.JsonNull },
@@ -198,7 +199,7 @@ export class DatabaseStorage implements StorageInterface {
   // =============================================================================
 
   async getInterviewQuestions(hash: string): Promise<InterviewQuestions | null> {
-    const application = await prisma.candidateApplication.findFirst({
+    const application = await this.db.candidateApplication.findFirst({
       where: {
         OR: [
           { id: hash },
@@ -216,7 +217,7 @@ export class DatabaseStorage implements StorageInterface {
 
   async saveInterviewQuestions(hash: string, data: InterviewQuestions): Promise<void> {
     // Find application by combining cvId and jobId from metadata
-    const application = await prisma.candidateApplication.findFirst({
+    const application = await this.db.candidateApplication.findFirst({
       where: {
         cvUploadId: data.metadata.cvId,
         jobId: data.metadata.jobId,
@@ -230,14 +231,14 @@ export class DatabaseStorage implements StorageInterface {
       );
     }
 
-    await prisma.candidateApplication.update({
+    await this.db.candidateApplication.update({
       where: { id: application.id },
       data: { questionsData: data },
     });
   }
 
   async hasInterviewQuestions(hash: string): Promise<boolean> {
-    const count = await prisma.candidateApplication.count({
+    const count = await this.db.candidateApplication.count({
       where: {
         id: hash,
         questionsData: { not: Prisma.JsonNull },
@@ -251,26 +252,26 @@ export class DatabaseStorage implements StorageInterface {
   // =============================================================================
 
   async getInterview(id: string): Promise<Interview | null> {
-    return prisma.interview.findUnique({
+    return this.db.interview.findUnique({
       where: { id },
     });
   }
 
   async getAllInterviews(): Promise<Interview[]> {
-    return prisma.interview.findMany({
+    return this.db.interview.findMany({
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async getInterviewsForUser(userId: string): Promise<Interview[]> {
-    return prisma.interview.findMany({
+    return this.db.interview.findMany({
       where: { candidateId: userId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async saveInterview(id: string, interview: Interview): Promise<void> {
-    await prisma.interview.upsert({
+    await this.db.interview.upsert({
       where: { id },
       update: {
         status: interview.status,
@@ -301,7 +302,7 @@ export class DatabaseStorage implements StorageInterface {
   // =============================================================================
 
   async getUser(id: string): Promise<User | null> {
-    return prisma.user.findUnique({
+    return this.db.user.findUnique({
       where: { id },
     });
   }
@@ -309,7 +310,7 @@ export class DatabaseStorage implements StorageInterface {
   async getCurrentUser(): Promise<User> {
     // TODO: Get from auth session
     // For now, return demo user
-    const user = await prisma.user.findUnique({
+    const user = await this.db.user.findUnique({
       where: { id: 'demo-user' },
     });
 
@@ -325,7 +326,7 @@ export class DatabaseStorage implements StorageInterface {
   // =============================================================================
 
   async getUserCVId(userId: string): Promise<string | null> {
-    const cv = await prisma.cVUpload.findFirst({
+    const cv = await this.db.cVUpload.findFirst({
       where: { userId },
       orderBy: { uploadedAt: 'desc' },
     });
@@ -335,7 +336,7 @@ export class DatabaseStorage implements StorageInterface {
 
   async saveUserCVId(userId: string, cvId: string): Promise<void> {
     // Link CV to user by updating userId
-    await prisma.cVUpload.updateMany({
+    await this.db.cVUpload.updateMany({
       where: { fileHash: cvId },
       data: { userId },
     });
@@ -346,14 +347,14 @@ export class DatabaseStorage implements StorageInterface {
   // =============================================================================
 
   async getNotifications(userId: string): Promise<Notification[]> {
-    return prisma.notification.findMany({
+    return this.db.notification.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async saveNotification(notification: Notification): Promise<void> {
-    await prisma.notification.create({
+    await this.db.notification.create({
       data: {
         id: notification.id,
         userId: notification.userId,
@@ -367,7 +368,7 @@ export class DatabaseStorage implements StorageInterface {
   }
 
   async markNotificationRead(notificationId: string): Promise<void> {
-    await prisma.notification.update({
+    await this.db.notification.update({
       where: { id: notificationId },
       data: { read: true },
     });
@@ -378,20 +379,20 @@ export class DatabaseStorage implements StorageInterface {
   // =============================================================================
 
   async getApplicationsForJob(jobId: string): Promise<CandidateApplication[]> {
-    return prisma.candidateApplication.findMany({
+    return this.db.candidateApplication.findMany({
       where: { jobId },
       orderBy: { matchScore: 'desc' },
     });
   }
 
   async getApplication(applicationId: string): Promise<CandidateApplication | null> {
-    return prisma.candidateApplication.findUnique({
+    return this.db.candidateApplication.findUnique({
       where: { id: applicationId },
     });
   }
 
   async saveApplication(application: CandidateApplication): Promise<void> {
-    await prisma.candidateApplication.upsert({
+    await this.db.candidateApplication.upsert({
       where: { id: application.id },
       update: {
         matchScore: application.matchScore,
@@ -420,7 +421,7 @@ export class DatabaseStorage implements StorageInterface {
   }
 
   async getAllCVExtractions(): Promise<Array<{ cvId: string; userId: string; data: ExtractedCVData }>> {
-    const cvs = await prisma.cVUpload.findMany({
+    const cvs = await this.db.cVUpload.findMany({
       where: { extraction: { not: Prisma.JsonNull } },
     });
 
