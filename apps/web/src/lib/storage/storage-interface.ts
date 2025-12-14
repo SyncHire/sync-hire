@@ -10,38 +10,23 @@ import type {
   ExtractedCVData,
   ExtractedJobData,
   Interview,
+  InterviewQuestions,
   Job,
   Notification,
   User,
-} from "@/lib/mock-data";
+} from "@sync-hire/database";
 
-/**
- * Interview questions storage format with both custom HR questions and AI-generated suggested questions
- */
-export interface InterviewQuestions {
-  metadata: {
-    cvId: string;
-    jobId: string;
-    generatedAt: string; // ISO timestamp
-    questionCount: number;
-    customQuestionCount: number;
-    suggestedQuestionCount: number;
-  };
-  customQuestions: Array<{
-    id: string;
-    type: "SHORT_ANSWER" | "LONG_ANSWER" | "MULTIPLE_CHOICE" | "SCORED";
-    content: string;
-    options?: Array<{ label: string }>;
-    scoringConfig?: { type: string; min: number; max: number };
-    required: boolean;
-    order: number;
-  }>;
-  suggestedQuestions: Array<{
-    content: string;
-    reason: string;
-    category?: "technical" | "behavioral" | "experience" | "problem-solving";
-  }>;
-}
+// Re-export types for convenience
+export type {
+  CandidateApplication,
+  ExtractedCVData,
+  ExtractedJobData,
+  Interview,
+  InterviewQuestions,
+  Job,
+  Notification,
+  User,
+};
 
 export interface StorageInterface {
   /**

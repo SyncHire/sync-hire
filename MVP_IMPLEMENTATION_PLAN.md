@@ -13,9 +13,10 @@
 - Hardcoded API key in source code
 
 **Target State**: Production MVP with:
-- PostgreSQL database (Prisma ORM)
+- PostgreSQL database (Prisma ORM on GCP Cloud SQL)
 - NextAuth.js authentication (Google OAuth + Email)
-- Supabase cloud storage for files
+- GCP Cloud Storage for files
+- Firebase Hosting for deployment
 - 350+ tests (75% coverage)
 - Structured logging + Sentry monitoring
 - Rate limiting + caching
@@ -87,10 +88,42 @@
 - Migrate JSON files from `/data` to PostgreSQL
 - Preserve all existing data
 
+#### 4. Database Setup
+
+**Development (Local PostgreSQL)**:
+```bash
+# Option 1: Docker
+docker run --name synchire-postgres \
+  -e POSTGRES_PASSWORD=synchire \
+  -e POSTGRES_DB=synchire \
+  -p 5432:5432 \
+  -d postgres:16
+
+# Option 2: Local PostgreSQL installation
+# Install via Homebrew (macOS): brew install postgresql@16
+# Or use existing PostgreSQL installation
+```
+
 **Environment Variables**:
 ```bash
-DATABASE_URL="postgresql://..."
+# Development (.env.local)
+DATABASE_URL="postgresql://postgres:synchire@localhost:5432/synchire"
 USE_DATABASE=true
+
+# Production (.env.production)
+DATABASE_URL="postgresql://user:password@/dbname?host=/cloudsql/project:region:instance"
+USE_DATABASE=true
+```
+
+**Prisma Commands**:
+```bash
+# Development
+pnpm prisma db push          # Push schema to local DB
+pnpm prisma studio           # Open Prisma Studio UI
+pnpm data:migrate            # Migrate JSON to local DB
+
+# Production
+pnpm prisma migrate deploy   # Run migrations on Cloud SQL
 ```
 
 ---
@@ -184,32 +217,89 @@ test = ["pytest>=8.3.0", "pytest-asyncio>=0.24.0", "pytest-cov>=6.0.0"]
 
 ## Week 3: Cloud Storage + Core Testing
 
-### Phase 3A: Supabase Storage (Days 1-2)
+### Phase 3A: GCP Cloud Storage (Days 1-2)
 
-#### 1. Supabase Setup
+#### 1. GCP Cloud Storage Setup
 **Create Files**:
-- `/apps/web/src/lib/cloud-storage/storage-client.ts` - Supabase wrapper
+- `/apps/web/src/lib/cloud-storage/gcs-client.ts` - GCP Storage wrapper
 - `/apps/web/src/lib/cloud-storage/upload-handler.ts` - Upload utilities
 
-**Buckets to Create**:
-- `cvs` (private) - CV PDFs
-- `job-descriptions` (private) - JD uploads
-- `interview-recordings` (private) - Interview transcripts
+**GCP Setup**:
+1. Create GCP project (if not exists)
+2. Enable Cloud Storage API
+3. Create service account with Storage Admin role
+4. Download service account key JSON
+5. Create buckets:
+   - `synchire-cvs` (private) - CV PDFs
+   - `synchire-job-descriptions` (private) - JD uploads
+   - `synchire-interview-recordings` (private) - Interview transcripts
+
+**Add Dependencies** (`/apps/web/package.json`):
+```json
+{
+  "dependencies": {
+    "@google-cloud/storage": "^7.14.0"
+  }
+}
+```
 
 **Environment Variables**:
 ```bash
-NEXT_PUBLIC_SUPABASE_URL="..."
-SUPABASE_SERVICE_ROLE_KEY="..."
+GCP_PROJECT_ID="your-project-id"
+GCP_STORAGE_BUCKET_CVS="synchire-cvs"
+GCP_STORAGE_BUCKET_JDS="synchire-job-descriptions"
+GCP_STORAGE_BUCKET_RECORDINGS="synchire-interview-recordings"
+# Service account key (base64 encoded or path)
+GCP_SERVICE_ACCOUNT_KEY="base64-encoded-json-key"
+# Or use Application Default Credentials in production
+```
+
+**Implementation Example**:
+```typescript
+// gcs-client.ts
+import { Storage } from '@google-cloud/storage';
+
+const storage = new Storage({
+  projectId: process.env.GCP_PROJECT_ID,
+  credentials: JSON.parse(
+    Buffer.from(process.env.GCP_SERVICE_ACCOUNT_KEY!, 'base64').toString()
+  ),
+});
+
+export async function uploadFile(
+  bucketName: string,
+  filePath: string,
+  buffer: Buffer,
+  contentType: string
+): Promise<string> {
+  const bucket = storage.bucket(bucketName);
+  const file = bucket.file(filePath);
+
+  await file.save(buffer, {
+    contentType,
+    metadata: {
+      cacheControl: 'public, max-age=31536000',
+    },
+  });
+
+  // Generate signed URL or make public
+  const [url] = await file.getSignedUrl({
+    action: 'read',
+    expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+
+  return url;
+}
 ```
 
 #### 2. Update Upload Routes
 **Files to Modify**:
-- `/apps/web/src/app/api/cv/extract/route.ts` - Upload to Supabase, store URL in DB
+- `/apps/web/src/app/api/cv/extract/route.ts` - Upload to GCS, store URL in DB
 - `/apps/web/src/app/api/jobs/extract-jd/route.ts` - Same pattern
 
 #### 3. File Migration Script
-**Create**: `/apps/web/scripts/migrate-files-to-cloud.ts`
-- Upload existing files from `/data/cv-uploads/` and `/data/jd-uploads/` to Supabase
+**Create**: `/apps/web/scripts/migrate-files-to-gcs.ts`
+- Upload existing files from `/data/cv-uploads/` and `/data/jd-uploads/` to GCS
 
 ### Phase 3B: Unit + Integration Tests (Days 3-5)
 
@@ -409,7 +499,10 @@ NEXT_PUBLIC_DEMO_MODE=false  # Disable in production
 
 ```bash
 # Database
-DATABASE_URL="postgresql://user:pass@host:5432/synchire"
+# Development:
+DATABASE_URL="postgresql://postgres:synchire@localhost:5432/synchire"
+# Production (GCP Cloud SQL):
+DATABASE_URL="postgresql://user:password@/dbname?host=/cloudsql/project:region:instance"
 USE_DATABASE=true
 
 # Authentication
@@ -418,9 +511,12 @@ NEXTAUTH_SECRET="generate-random-32-chars"
 GOOGLE_CLIENT_ID="..."
 GOOGLE_CLIENT_SECRET="..."
 
-# Cloud Storage
-NEXT_PUBLIC_SUPABASE_URL="..."
-SUPABASE_SERVICE_ROLE_KEY="..."
+# Cloud Storage (GCP)
+GCP_PROJECT_ID="your-project-id"
+GCP_STORAGE_BUCKET_CVS="synchire-cvs"
+GCP_STORAGE_BUCKET_JDS="synchire-job-descriptions"
+GCP_STORAGE_BUCKET_RECORDINGS="synchire-interview-recordings"
+GCP_SERVICE_ACCOUNT_KEY="base64-encoded-json-key"
 
 # AI Services
 GEMINI_API_KEY="..."
@@ -464,7 +560,7 @@ WEBHOOK_SECRET="generate-random-string"
 8. `/apps/web/vitest.config.ts` + test files
 
 ### Week 3
-9. `/apps/web/src/lib/cloud-storage/storage-client.ts` - Supabase integration
+9. `/apps/web/src/lib/cloud-storage/gcs-client.ts` - GCP Cloud Storage integration
 10. `/apps/web/src/lib/backend/cv-processor.test.ts` - Critical unit tests
 11. `/apps/web/src/app/api/cv/extract/route.test.ts` - Integration tests
 
@@ -491,9 +587,9 @@ WEBHOOK_SECRET="generate-random-string"
 - ✅ CI/CD pipeline running
 
 ### Week 3 Checkpoint
-- ✅ Files migrated to Supabase
+- ✅ Files migrated to GCP Cloud Storage
 - ✅ 250+ tests total (75% coverage)
-- ✅ Database storage fully functional
+- ✅ Database storage fully functional (Cloud SQL)
 - ✅ Python agent tested
 
 ### Week 4 Checkpoint (MVP READY)
@@ -508,21 +604,38 @@ WEBHOOK_SECRET="generate-random-string"
 
 ## Third-Party Services Required
 
-### Week 1
-- **PostgreSQL Database**: Supabase (free tier) or Railway ($5/mo)
+### Week 1 (Development)
+- **Local PostgreSQL**: Free (Docker or local install)
+- **GCP Project**: Setup only (no charges during development)
 
 ### Week 2
 - **Google OAuth**: Free (setup in Google Cloud Console)
+- **Firebase Hosting**: Free tier (10GB storage, 360MB/day transfer)
 
 ### Week 3
-- **Supabase Storage**: Free tier (1GB)
+- **GCP Cloud Storage**: $0.02/GB/month (~$1-5/mo for MVP)
 - **Upstash Redis**: Free tier → $10/mo
 
 ### Week 4
 - **Sentry**: Developer plan ($29/mo)
 - **Better Stack**: Startup plan ($29/mo) - Optional
 
-**Total Monthly Cost**: ~$40-70/mo
+**Development Costs**: ~$0-40/mo
+- Local PostgreSQL: Free
+- GCP Cloud Storage (dev): ~$0-1/mo
+- Firebase Hosting (dev): Free
+- Upstash Redis: Free tier
+- Sentry (optional during dev): Free tier or $29/mo
+
+**Production Costs** (with ~$2k GCP credits): ~$0-40/mo until credits expire
+- GCP Cloud SQL: ~$10-25/mo (covered by credits)
+- GCP Cloud Storage: $1-5/mo (covered by credits)
+- Firebase Hosting: Free tier
+- Upstash Redis: $0-10/mo
+- Sentry: $29/mo
+- Better Stack (optional): $29/mo
+
+**Post-Credits Production**: ~$50-80/mo
 
 ---
 
@@ -551,6 +664,130 @@ WEBHOOK_SECRET="generate-random-string"
 
 ---
 
+---
+
+## Firebase Hosting Deployment
+
+### Setup (Week 2-3)
+
+#### 1. Firebase CLI Installation
+```bash
+npm install -g firebase-tools
+firebase login
+firebase init hosting
+```
+
+#### 2. Firebase Configuration
+**Create**: `firebase.json`
+```json
+{
+  "hosting": {
+    "public": "apps/web/out",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(jpg|jpeg|gif|png|svg|webp)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "max-age=31536000"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+#### 3. Next.js Static Export Configuration
+**Update**: `/apps/web/next.config.ts`
+```typescript
+const nextConfig = {
+  output: 'export', // Enable static export for Firebase
+  images: {
+    unoptimized: true, // Firebase doesn't support Next.js Image Optimization
+  },
+  // ... other config
+};
+```
+
+#### 4. Build & Deploy Scripts
+**Update**: `/apps/web/package.json`
+```json
+{
+  "scripts": {
+    "build": "next build",
+    "export": "next export",
+    "deploy": "pnpm build && firebase deploy --only hosting"
+  }
+}
+```
+
+#### 5. Deployment
+```bash
+# Build Next.js app
+cd apps/web
+pnpm build
+
+# Deploy to Firebase
+firebase deploy --only hosting
+```
+
+### Environment Variables in Firebase
+Use Firebase Functions config or GitHub Actions secrets:
+```bash
+firebase functions:config:set \
+  database.url="postgresql://..." \
+  gemini.api_key="..." \
+  stream.api_key="..."
+```
+
+### CI/CD with GitHub Actions
+**Create**: `.github/workflows/deploy.yml`
+```yaml
+name: Deploy to Firebase
+
+on:
+  push:
+    branches: [master, main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build Next.js app
+        run: cd apps/web && pnpm build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Deploy to Firebase
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          channelId: live
+          projectId: your-project-id
+```
+
+---
+
 ## Post-MVP (Future Enhancements)
 
 ### Month 2
@@ -558,12 +795,14 @@ WEBHOOK_SECRET="generate-random-string"
 - Email notifications (SendGrid)
 - Bulk candidate operations
 - Video recording storage
+- Firebase Functions for serverless API routes
 
 ### Month 3
 - Payment integration (Stripe)
 - Multi-tenancy support
 - Advanced AI features
 - Mobile responsive improvements
+- Cloud Run for Python agent
 
 ---
 

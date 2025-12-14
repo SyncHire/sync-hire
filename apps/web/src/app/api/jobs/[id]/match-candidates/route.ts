@@ -8,7 +8,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
 import { geminiClient } from "@/lib/gemini-client";
-import type { ApplicationStatus, CandidateApplication, ExtractedCVData, ExtractedJobData } from "@/lib/mock-data";
+import type { ApplicationStatus, CandidateApplication, ExtractedCVData, ExtractedJobData, Question } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
 import type { InterviewQuestions } from "@/lib/storage/storage-interface";
 import { generateStringHash } from "@/lib/utils/hash-utils";
@@ -92,11 +92,17 @@ async function generateAndSaveQuestions(
       responsibilities: [job.description],
     };
 
+    // Map job questions to include required category field
+    const questionsWithCategory: Question[] = (job.questions || []).map(q => ({
+      ...q,
+      category: q.category || "Technical Skills",
+    }));
+
     // Generate smart merged questions
     const mergedQuestions = await generateSmartMergedQuestions(
       cvData,
       jdData,
-      (job.questions || []) as any
+      questionsWithCategory
     );
 
     // Build interview questions structure
@@ -105,9 +111,6 @@ async function generateAndSaveQuestions(
         cvId,
         jobId,
         generatedAt: new Date().toISOString(),
-        questionCount: mergedQuestions.length,
-        customQuestionCount: mergedQuestions.filter(q => q.source === "job").length,
-        suggestedQuestionCount: mergedQuestions.filter(q => q.source === "ai-personalized").length,
       },
       customQuestions: mergedQuestions
         .filter(q => q.source === "job")
@@ -141,7 +144,14 @@ async function generateAndSaveQuestions(
     console.log(`Generated ${mergedQuestions.length} questions for application ${applicationId}`);
   } catch (error) {
     console.error("Failed to generate questions:", error);
-    // Update application status to indicate error (keep as generating_questions for retry)
+    // Update application status to indicate failure so it doesn't stay stuck
+    const application = await storage.getApplication(applicationId);
+    if (application) {
+      application.status = "rejected";
+      application.updatedAt = new Date();
+      await storage.saveApplication(application);
+      console.log(`Application ${applicationId} marked as rejected due to question generation failure`);
+    }
   }
 }
 
@@ -158,11 +168,15 @@ export async function POST(
     // Get job
     const job = await storage.getJob(jobId);
     if (!job) {
-      console.log(`❌ [match-candidates] Job not found: ${jobId}`);
-      return NextResponse.json({
-        success: true,
-        data: { matchedCount: 0, applications: [], message: "Job not found" },
-      });
+      console.error(`[match-candidates] Job not found: ${jobId}`);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Job not found",
+          message: `No job found with ID: ${jobId}`,
+        },
+        { status: 400 },
+      );
     }
 
     console.log(`📋 [match-candidates] Job: "${job.title}" at ${job.company}`);

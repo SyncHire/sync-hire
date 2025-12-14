@@ -2,24 +2,22 @@
  * Storage Factory
  *
  * Creates the appropriate storage implementation based on configuration.
- * Makes it easy to swap between file and database storage.
+ * Supports both file-based and database storage.
  */
 
+import { DatabaseStorage } from "./database-storage";
 import { FileStorage } from "./file-storage";
 import type { StorageInterface } from "./storage-interface";
 
 export function createStorage(): StorageInterface {
-  // In the future, this can check for environment variables
-  // to determine whether to use database or file storage
   const useDatabase = process.env.USE_DATABASE === "true";
 
   if (useDatabase) {
-    // Future: return new DatabaseStorage();
-    console.warn(
-      "DATABASE_STORAGE not yet implemented, falling back to FileStorage",
-    );
+    console.log("Using DatabaseStorage (Prisma + PostgreSQL)");
+    return new DatabaseStorage();
   }
 
+  console.log("Using FileStorage (local files)");
   return new FileStorage();
 }
 

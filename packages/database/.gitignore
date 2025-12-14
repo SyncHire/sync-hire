@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.turbo
+src/generated
+
+# Compiled files (prisma scripts run with tsx)
+prisma/*.js
+prisma/*.d.ts
+prisma/*.map

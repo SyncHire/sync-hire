@@ -1,0 +1,329 @@
+// Prisma Schema for SyncHire MVP
+// Database: PostgreSQL (Local for dev, GCP Cloud SQL for production)
+
+generator client {
+  provider = "prisma-client-js"
+  // Using default output location for better bundler compatibility
+}
+
+generator json {
+  provider = "prisma-json-types-generator"
+  namespace = "PrismaJson"
+  // clientOutput uses default Prisma client location
+}
+
+datasource db {
+  provider = "postgresql"
+  // URL is configured in prisma.config.ts (Prisma 7 requirement)
+}
+
+// =============================================================================
+// AUTHENTICATION (NextAuth.js v5 models)
+// =============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          UserRole  @default(CANDIDATE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  cvUploads     CVUpload[]
+  interviews    Interview[]
+  applications  CandidateApplication[]
+  notifications Notification[]
+  jobsPosted    Job[]     @relation("EmployerJobs")
+
+  @@map("users")
+}
+
+enum UserRole {
+  EMPLOYER
+  CANDIDATE
+  ADMIN
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// =============================================================================
+// CV MANAGEMENT
+// =============================================================================
+
+model CVUpload {
+  id          String   @id @default(cuid())
+  userId      String
+  fileName    String
+  fileUrl     String   // File URL (currently local path, will be migrated to GCP Cloud Storage)
+  fileHash    String   @unique // SHA-256 hash of file content for deduplication
+  fileSize    Int
+  uploadedAt  DateTime @default(now())
+
+  /// [ExtractedCVData]
+  extraction  Json?
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications CandidateApplication[]
+
+  @@index([userId])
+  @@index([fileHash])
+  @@map("cv_uploads")
+}
+
+// =============================================================================
+// JOBS
+// =============================================================================
+
+model Job {
+  id                   String    @id @default(cuid())
+  title                String
+  company              String
+  department           String?
+  location             String
+  employmentType       String    // Full-time, Part-time, Contract, etc.
+  workArrangement      String?   // Remote, Hybrid, On-site, Flexible
+  salary               String?
+  description          String    @db.Text
+  requirements         String[]
+  status               JobStatus @default(ACTIVE)
+
+  // AI Matching settings
+  aiMatchingEnabled    Boolean   @default(false)
+  aiMatchingThreshold  Int       @default(80)
+  aiMatchingStatus     MatchingStatus @default(DISABLED)
+
+  jdFileUrl            String?
+  jdFileHash           String?
+  /// [ExtractedJobData]
+  jdExtraction         Json?
+  jdVersion            Json?
+
+  employerId           String
+  postedAt             DateTime  @default(now())
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  employer             User      @relation("EmployerJobs", fields: [employerId], references: [id])
+  questions            JobQuestion[]
+  applications         CandidateApplication[]
+  interviews           Interview[]
+
+  @@index([employerId])
+  @@index([status])
+  @@index([aiMatchingStatus])
+  @@map("jobs")
+}
+
+enum JobStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum MatchingStatus {
+  DISABLED
+  SCANNING
+  COMPLETE
+}
+
+model JobQuestion {
+  id         String   @id @default(cuid())
+  jobId      String
+  content    String   @db.Text
+  type       QuestionType @default(SHORT_ANSWER)
+  options    String[] // For MULTIPLE_CHOICE
+  duration   Int      @default(2) // Duration in minutes
+  category   String?  // Optional category for grouping questions (e.g., "technical", "behavioral")
+  required   Boolean  @default(true)
+  order      Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  job        Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@map("job_questions")
+}
+
+enum QuestionType {
+  SHORT_ANSWER
+  LONG_ANSWER
+  MULTIPLE_CHOICE
+  SCORED
+}
+
+// =============================================================================
+// APPLICATIONS
+// =============================================================================
+
+model CandidateApplication {
+  id             String            @id @default(cuid())
+  jobId          String
+  cvUploadId     String
+  userId         String
+  candidateName  String
+  candidateEmail String
+
+  matchScore     Int
+  matchReasons   String[]
+  skillGaps      String[]
+  status         ApplicationStatus @default(READY)
+  source         ApplicationSource
+
+  /// [InterviewQuestions]
+  questionsData  Json?
+  questionsHash  String?  // Hash of questionsData JSON for change detection
+
+  interviewId    String?           @unique
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  job            Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  cvUpload       CVUpload          @relation(fields: [cvUploadId], references: [id])
+  user           User              @relation(fields: [userId], references: [id])
+  interview      Interview?        @relation(fields: [interviewId], references: [id])
+
+  @@unique([jobId, userId]) // One application per job per user
+  @@index([jobId])
+  @@index([userId])
+  @@index([status])
+  @@map("candidate_applications")
+}
+
+enum ApplicationStatus {
+  MATCHING
+  GENERATING_QUESTIONS
+  READY
+  INTERVIEWING
+  COMPLETED
+  REJECTED
+}
+
+enum ApplicationSource {
+  AI_MATCH
+  MANUAL_APPLY
+}
+
+// =============================================================================
+// INTERVIEWS
+// =============================================================================
+
+model Interview {
+  id              String          @id @default(cuid())
+  jobId           String
+  candidateId     String
+
+  status          InterviewStatus @default(PENDING)
+  callId          String?         @unique
+  transcript      String?         @db.Text
+  score           Int?
+  durationMinutes Int             @default(0)
+
+  /// [AIEvaluation]
+  aiEvaluation    Json?
+
+  createdAt       DateTime        @default(now())
+  completedAt     DateTime?
+
+  job             Job             @relation(fields: [jobId], references: [id])
+  candidate       User            @relation(fields: [candidateId], references: [id])
+  application     CandidateApplication?
+
+  @@index([jobId])
+  @@index([candidateId])
+  @@index([callId])
+  @@map("interviews")
+}
+
+enum InterviewStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+// =============================================================================
+// NOTIFICATIONS
+// =============================================================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType @default(INFO)
+  title     String
+  message   String           @db.Text
+  read      Boolean          @default(false)
+  actionUrl String?
+  createdAt DateTime         @default(now())
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+// =============================================================================
+// INTERVIEW CALL TRACKING (replaces in-memory Map)
+// =============================================================================
+
+model InterviewCall {
+  id                  String   @id @default(cuid())
+  callId              String   @unique
+  interviewId         String   @unique
+  videoAvatarEnabled  Boolean  @default(false)
+  agentInvited        Boolean  @default(false)
+  agentJoinedAt       DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([callId])
+  @@map("interview_calls")
+}

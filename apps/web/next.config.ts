@@ -14,6 +14,8 @@ const getCommitSha = (): string => {
 const nextConfig: NextConfig = {
   reactCompiler: true,
   output: 'standalone',
+  transpilePackages: ["@sync-hire/database"],
+  serverExternalPackages: ["@prisma/client", "@prisma/adapter-pg", "pg"],
 
   // Inject build info as public env vars
   env: {
