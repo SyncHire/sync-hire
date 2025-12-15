@@ -61,6 +61,36 @@ const stageIcons: Record<JDProcessingStage, React.ReactNode> = {
   error: <FileText className="w-4 h-4" />,
 };
 
+type StageStatus = "completed" | "current" | "pending";
+
+/**
+ * Get container classes based on stage status
+ */
+function getStageContainerClasses(status: StageStatus): string {
+  switch (status) {
+    case "current":
+      return "bg-blue-500/10 border border-blue-500/20";
+    case "completed":
+      return "bg-emerald-500/5 border border-emerald-500/10";
+    default:
+      return "bg-secondary/20 border border-transparent";
+  }
+}
+
+/**
+ * Get icon/text color classes based on stage status
+ */
+function getStageColorClasses(status: StageStatus): string {
+  switch (status) {
+    case "completed":
+      return "text-emerald-600 dark:text-emerald-400";
+    case "current":
+      return "text-blue-400";
+    default:
+      return "text-muted-foreground";
+  }
+}
+
 interface JDProcessingProgressProps {
   currentStage: JDProcessingStage;
   error?: string | null;
@@ -78,9 +108,7 @@ export function JDProcessingProgress({
   ];
   const currentIndex = stageOrder.indexOf(currentStage);
 
-  const getStageStatus = (
-    stage: JDProcessingStage,
-  ): "completed" | "current" | "pending" => {
+  function getStageStatus(stage: JDProcessingStage): StageStatus {
     const stageIndex = stageOrder.indexOf(stage);
     if (stageIndex < currentIndex) {
       return "completed";
@@ -89,26 +117,25 @@ export function JDProcessingProgress({
       return "current";
     }
     return "pending";
-  };
+  }
 
-  const getProgressPercentage = () => {
+  function getProgressPercentage(): number {
     if (error) {
       return 0;
     }
-    if (currentStage === "complete") {
-      return 100;
+    switch (currentStage) {
+      case "complete":
+        return 100;
+      case "uploading":
+        return 10;
+      case "extracting":
+        return 40;
+      case "analyzing":
+        return 70;
+      default:
+        return 0;
     }
-    if (currentStage === "uploading") {
-      return 10;
-    }
-    if (currentStage === "extracting") {
-      return 40;
-    }
-    if (currentStage === "analyzing") {
-      return 70;
-    }
-    return 0;
-  };
+  }
 
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -142,26 +169,15 @@ export function JDProcessingProgress({
             const isCurrent = status === "current";
             const isCompleted = status === "completed";
 
+            const containerClasses = getStageContainerClasses(status);
+            const colorClasses = getStageColorClasses(status);
+
             return (
               <div
                 key={stage}
-                className={`flex items-center gap-4 p-3 rounded-xl transition-all ${
-                  isCurrent
-                    ? "bg-blue-500/10 border border-blue-500/20"
-                    : isCompleted
-                      ? "bg-emerald-500/5 border border-emerald-500/10"
-                      : "bg-secondary/20 border border-transparent"
-                }`}
+                className={`flex items-center gap-4 p-3 rounded-xl transition-all ${containerClasses}`}
               >
-                <div
-                  className={`flex-shrink-0 ${
-                    isCompleted
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : isCurrent
-                        ? "text-blue-400"
-                        : "text-muted-foreground"
-                  }`}
-                >
+                <div className={`flex-shrink-0 ${colorClasses}`}>
                   {isCurrent ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
@@ -170,15 +186,7 @@ export function JDProcessingProgress({
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p
-                    className={`font-medium text-sm ${
-                      isCompleted
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : isCurrent
-                          ? "text-blue-400"
-                          : "text-muted-foreground"
-                    }`}
-                  >
+                  <p className={`font-medium text-sm ${colorClasses}`}>
                     {config.label}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">

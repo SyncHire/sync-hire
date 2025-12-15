@@ -16,6 +16,19 @@ import { geminiClient } from "@/lib/gemini-client";
 import { z } from "zod";
 import { requireOrgMembership } from "@/lib/auth-server";
 
+/**
+ * Determine the initial AI matching status based on configuration
+ */
+function getInitialMatchingStatus(aiMatchingEnabled: boolean, hasCVsToMatch: boolean): MatchingStatus {
+  if (!aiMatchingEnabled) {
+    return MatchingStatus.DISABLED;
+  }
+  if (hasCVsToMatch) {
+    return MatchingStatus.SCANNING;
+  }
+  return MatchingStatus.COMPLETE;
+}
+
 interface CreateJobRequest {
   title: string;
   description: string;
@@ -381,11 +394,7 @@ export async function POST(request: NextRequest) {
       aiMatchingEnabled,
       aiMatchingThreshold,
       // Set to COMPLETE immediately if no CVs to match, otherwise SCANNING
-      aiMatchingStatus: !aiMatchingEnabled
-        ? MatchingStatus.DISABLED
-        : hasCVsToMatch
-          ? MatchingStatus.SCANNING
-          : MatchingStatus.COMPLETE,
+      aiMatchingStatus: getInitialMatchingStatus(aiMatchingEnabled, hasCVsToMatch),
       jdFileUrl: null,
       jdFileHash: null,
       jdExtraction,
