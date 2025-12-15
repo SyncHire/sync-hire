@@ -173,7 +173,11 @@ export class FileStorage implements StorageInterface {
       const filePath = join(QUESTIONS_SET_DIR, `${hash}.json`);
       const data = await fs.readFile(filePath, "utf-8");
       return JSON.parse(data) as InterviewQuestions;
-    } catch {
+    } catch (error) {
+      // Only log if it's NOT a "file not found" error (expected case)
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.error(`[FileStorage.getInterviewQuestions] Unexpected error for cvId: ${cvId}, jobId: ${jobId}:`, error);
+      }
       return null;
     }
   }
@@ -200,7 +204,11 @@ export class FileStorage implements StorageInterface {
       const filePath = join(QUESTIONS_SET_DIR, `${hash}.json`);
       await fs.access(filePath);
       return true;
-    } catch {
+    } catch (error) {
+      // Only log if it's NOT a "file not found" error (expected case)
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.error(`[FileStorage.hasInterviewQuestions] Unexpected error for cvId: ${cvId}, jobId: ${jobId}:`, error);
+      }
       return false;
     }
   }

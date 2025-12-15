@@ -85,6 +85,7 @@ export async function POST(request: Request) {
     // Use generated questions if available, otherwise map job's questions to agent format
     let interviewQuestions: Question[] = questions;
     if (interviewQuestions.length === 0 && job.questions) {
+      console.warn(`[start-interview] No personalized questions found for interviewId: ${interviewId}, falling back to ${job.questions.length} job default questions`);
       // Map database JobQuestion to agent Question format
       interviewQuestions = job.questions.map((q) => ({
         id: q.id,

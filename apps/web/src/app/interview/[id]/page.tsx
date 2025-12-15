@@ -77,6 +77,7 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
   // Use generated questions if available, otherwise map job's questions to Question format
   let questions: Question[] = generatedQuestions;
   if (questions.length === 0 && job.questions) {
+    console.warn(`[interview-page] No personalized questions found for interviewId: ${id}, falling back to ${job.questions.length} job default questions`);
     // Map database JobQuestion to Question format
     questions = job.questions.map((q) => ({
       id: q.id,

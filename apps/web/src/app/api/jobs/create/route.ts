@@ -210,14 +210,15 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
           }
           console.log(`   ✅ Questions generated for ${candidateName}`);
         }).catch(async (err) => {
-          console.error(`   ❌ Question generation failed for ${candidateName}:`, err);
+          console.error(`[auto-match] SYSTEM FAILURE - Question generation failed for ${candidateName}:`, err);
           // Update application status to indicate failure
+          // TODO: Add GENERATION_FAILED status to ApplicationStatus enum to distinguish from human rejection
           const app = await storage.getApplication(applicationId);
           if (app) {
             app.status = ApplicationStatus.REJECTED; // Mark as rejected so it doesn't stay stuck
             app.updatedAt = new Date();
             await storage.saveApplication(app);
-            console.log(`   ⚠️ Application status updated to REJECTED due to question generation failure`);
+            console.warn(`[auto-match] Application ${applicationId} marked as REJECTED (due to SYSTEM FAILURE in question generation, not human rejection)`);
           }
         });
       } else {

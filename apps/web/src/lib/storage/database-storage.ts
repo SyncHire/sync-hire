@@ -214,6 +214,7 @@ export class DatabaseStorage implements StorageInterface {
     });
 
     if (!cvUpload) {
+      console.warn(`[DatabaseStorage.getInterviewQuestions] CV not found for cvId: ${cvId}, jobId: ${jobId}`);
       return null;
     }
 
@@ -281,6 +282,7 @@ export class DatabaseStorage implements StorageInterface {
     });
 
     if (!cvUpload) {
+      console.warn(`[DatabaseStorage.hasInterviewQuestions] CV not found for cvId: ${cvId}, jobId: ${jobId}`);
       return false;
     }
 
