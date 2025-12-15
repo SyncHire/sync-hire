@@ -102,3 +102,9 @@ env:
     secret: GOOGLE_CLIENT_SECRET
     availability:
       - RUNTIME
+
+  # Python Agent API Key
+  - variable: API_SECRET_KEY
+    secret: API_SECRET_KEY
+    availability:
+      - RUNTIME
