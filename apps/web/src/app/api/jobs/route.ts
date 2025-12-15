@@ -1,25 +1,16 @@
 /**
  * GET /api/jobs
  *
- * Retrieves jobs for the active organization
+ * Retrieves all active jobs for candidates to browse
+ * For org-specific jobs, use /api/orgs/:id/jobs
  */
 
 import { NextResponse } from "next/server";
-import { getActiveOrganizationId } from "@/lib/auth-server";
-import { getAllJobsData } from "@/lib/server-utils/get-jobs";
+import { getAllActiveJobsData } from "@/lib/server-utils/get-jobs";
 
 export async function GET() {
   try {
-    const organizationId = await getActiveOrganizationId();
-
-    if (!organizationId) {
-      return NextResponse.json({
-        success: true,
-        data: [],
-      });
-    }
-
-    const jobs = await getAllJobsData(organizationId);
+    const jobs = await getAllActiveJobsData();
     return NextResponse.json({
       success: true,
       data: jobs,

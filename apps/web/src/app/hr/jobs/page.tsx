@@ -16,10 +16,15 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useJobs } from "@/lib/hooks/use-job-questions";
+import { useActiveOrganization } from "@/lib/hooks/use-organizations";
 import { getCompanyLogoUrl } from "@/lib/logo-utils";
 
 export default function HRJDListings() {
-  const { data, isLoading } = useJobs({ pollWhileScanning: true });
+  const { data: activeOrg } = useActiveOrganization();
+  const { data, isLoading } = useJobs({
+    organizationId: activeOrg?.id,
+    pollWhileScanning: true,
+  });
   // Ensure jobs is always an array (safeguard against unexpected API responses)
   const jobs = Array.isArray(data) ? data : [];
 

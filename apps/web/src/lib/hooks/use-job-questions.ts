@@ -12,23 +12,27 @@ import { toast } from "sonner";
 // =============================================================================
 
 interface UseJobsOptions {
+  organizationId?: string | null;
   pollWhileScanning?: boolean;
 }
 
 /**
- * Hook for fetching all jobs with optional polling while any are scanning
+ * Hook for fetching jobs for an organization with optional polling while any are scanning
  */
 export function useJobs(options?: UseJobsOptions) {
+  const orgId = options?.organizationId;
+
   return useQuery({
-    queryKey: ["/api/jobs"],
+    queryKey: ["/api/orgs", orgId, "jobs"],
     queryFn: async () => {
-      const response = await fetch("/api/jobs");
+      const response = await fetch(`/api/orgs/${orgId}/jobs`);
       if (!response.ok) {
         throw new Error("Failed to fetch jobs");
       }
       const result = await response.json();
       return (result.data || []) as Job[];
     },
+    enabled: !!orgId,
     refetchInterval: (query) => {
       // Poll while any job is scanning
       if (options?.pollWhileScanning) {
