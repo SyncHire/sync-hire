@@ -11,6 +11,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { organization, useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ import { slugify } from "@/lib/utils/slugify";
 
 export default function CreateOrganizationPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: session, isPending: sessionPending } = useSession();
 
   const [name, setName] = useState("");
@@ -75,6 +77,9 @@ export default function CreateOrganizationPage() {
       setIsLoading(false);
       return;
     }
+
+    // Invalidate organizations list cache so dropdowns update
+    await queryClient.invalidateQueries({ queryKey: ["organizations", "list"] });
 
     // Set the new org as active
     if (result.data?.id) {

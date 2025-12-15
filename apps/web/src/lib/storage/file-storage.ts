@@ -52,7 +52,7 @@ export class FileStorage implements StorageInterface {
     }
   }
 
-  async saveExtraction(hash: string, data: ExtractedJobData): Promise<void> {
+  async saveExtraction(hash: string, data: ExtractedJobData, _organizationId: string, _createdById: string): Promise<void> {
     try {
       await fs.mkdir(JD_EXTRACTIONS_DIR, { recursive: true });
       const filePath = join(JD_EXTRACTIONS_DIR, `${hash}.json`);

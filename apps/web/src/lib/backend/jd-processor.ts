@@ -78,10 +78,16 @@ export class JobDescriptionProcessor {
 
   /**
    * Process a file (PDF, Markdown, or Text) and extract structured job data
+   * @param buffer - File content
+   * @param fileName - Original file name
+   * @param organizationId - Organization ID to associate with the job
+   * @param createdById - User ID who created this extraction
    */
   async processFile(
     buffer: Buffer,
     fileName: string,
+    organizationId: string,
+    createdById: string,
   ): Promise<{
     hash: string;
     extractedData: ExtractedJobData;
@@ -158,7 +164,7 @@ export class JobDescriptionProcessor {
     });
 
     // Save to cache
-    await this.storage.saveExtraction(hash, extractedData);
+    await this.storage.saveExtraction(hash, extractedData, organizationId, createdById);
 
     // Upload original file to cloud storage
     await this.cloudStorage.uploadJobDescription(hash, buffer);

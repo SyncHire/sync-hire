@@ -102,19 +102,13 @@ export function ContextSwitcher() {
           className="cursor-pointer"
         >
           <User className="h-4 w-4 mr-2" />
-          <div className="flex flex-col">
-            <span>Personal</span>
-            <span className="text-xs text-muted-foreground">Find jobs as a candidate</span>
-          </div>
+          <span className="flex-1">Personal</span>
           {isCandidate && (
             <span className="ml-auto text-xs text-primary">Active</span>
           )}
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-          Organizations
-        </DropdownMenuLabel>
 
         {/* Organization list */}
         {orgs?.map((org) => (

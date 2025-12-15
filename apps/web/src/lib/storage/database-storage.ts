@@ -36,15 +36,15 @@ export class DatabaseStorage implements StorageInterface {
     return job?.jdExtraction ?? null;
   }
 
-  async saveExtraction(hash: string, data: ExtractedJobData): Promise<void> {
+  async saveExtraction(hash: string, data: ExtractedJobData, organizationId: string, createdById: string): Promise<void> {
     await this.db.job.upsert({
       where: { id: hash },
       update: { jdExtraction: data },
       create: {
         id: hash,
         title: data.title || 'Untitled',
-        organizationId: 'org-techcorp', // TODO: Get from active organization context
-        createdById: 'demo-user', // TODO: Get from auth
+        organizationId,
+        createdById,
         location: data.location || '',
         employmentType: data.employmentType || 'Full-time',
         description: data.responsibilities?.join('\n') || '',

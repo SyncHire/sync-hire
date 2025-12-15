@@ -40,8 +40,10 @@ export interface StorageInterface {
 
   /**
    * Save job extraction data with hash key
+   * @param organizationId - The organization ID to associate with the job
+   * @param createdById - The user ID who created this extraction
    */
-  saveExtraction(hash: string, data: ExtractedJobData): Promise<void>;
+  saveExtraction(hash: string, data: ExtractedJobData, organizationId: string, createdById: string): Promise<void>;
 
   /**
    * Check if job extraction exists

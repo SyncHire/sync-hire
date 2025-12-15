@@ -24,6 +24,7 @@ import {
   type ExtractedJobData,
   type WorkArrangement,
 } from "@/lib/mock-data";
+import { useActiveOrganization } from "@/lib/hooks/use-organizations";
 
 // Unified question interface
 interface ScreeningQuestion {
@@ -48,6 +49,7 @@ interface JobCreationState {
 
 export default function JobCreationPage() {
   const router = useRouter();
+  const { data: activeOrg } = useActiveOrganization();
   const [isLoading, setIsLoading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -77,12 +79,18 @@ export default function JobCreationPage() {
   };
 
   const handleFileUpload = async (file: File) => {
+    if (!activeOrg?.id) {
+      toast.error("No organization selected. Please select an organization first.");
+      return;
+    }
+
     setIsLoading(true);
     setUploadError(null);
 
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("organizationId", activeOrg.id);
 
       const response = await fetch("/api/jobs/extract-jd", {
         method: "POST",
