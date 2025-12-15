@@ -362,7 +362,7 @@ export default function HRApplicantDetail() {
                       )}
                       {applicant.status === "COMPLETED" && (
                         <>
-                          <Link href={`/interview/${applicant.interviewId}/results`}>
+                          <Link href={`/candidate/interview/${applicant.interviewId}/results`}>
                             <Button
                               size="sm"
                               variant="secondary"

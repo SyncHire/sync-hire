@@ -2,10 +2,9 @@
  * Interview Results Page
  * Shows candidate's interview performance and feedback
  * Supports both mock interview IDs and application IDs
+ * URL: /candidate/interview/[id]/results
  */
 
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCompanyLogoUrl } from "@/lib/logo-utils";
 import {
@@ -80,28 +79,18 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
   const companyLogo = getCompanyLogoUrl(job.organization.name);
 
   return (
-    <div className="min-h-screen bg-background overflow-y-auto">
+    <>
       {/* Background Effects */}
-      <div className="fixed inset-0 bg-grid-pattern [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_80%)] pointer-events-none opacity-50" />
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-green-500/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="fixed inset-0 bg-grid-pattern [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_80%)] pointer-events-none opacity-50 -z-10" />
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-green-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
 
-      <div className="relative max-w-4xl mx-auto px-6 py-12 pb-24">
-        {/* Back Button */}
-        <Link
-          href="/candidate/history"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          To Interview History
-        </Link>
-
-        {/* Client component handles the rest with polling */}
+      <div className="max-w-4xl mx-auto pb-16">
         <ResultsContent
           interview={interview}
           job={job}
           companyLogo={companyLogo}
         />
       </div>
-    </div>
+    </>
   );
 }

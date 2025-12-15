@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { HRProvider } from "@/lib/context/hr-context";
+import { AppLayout } from "@/components/AppLayout";
 import { getValidatedSession } from "@/lib/auth-server";
 
 export default async function HRLayout({
@@ -16,5 +17,9 @@ export default async function HRLayout({
     redirect("/select-organization");
   }
 
-  return <HRProvider>{children}</HRProvider>;
+  return (
+    <HRProvider>
+      <AppLayout view="hr">{children}</AppLayout>
+    </HRProvider>
+  );
 }
