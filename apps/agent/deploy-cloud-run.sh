@@ -32,7 +32,7 @@ NC='\033[0m' # No Color
 # Configuration
 ENVIRONMENT=${1:-production}
 PROJECT_ID=${GCP_PROJECT_ID:-""}
-REGION=${GCP_REGION:-"us-central1"}
+REGION=${GCP_REGION:-"us-southeast1"}
 SERVICE_NAME="sync-hire-agent"
 REPOSITORY_NAME="sync-hire"
 
@@ -103,7 +103,7 @@ create_or_update_secret() {
 
     if [ -z "$SECRET_VALUE" ]; then
         print_warning "No value provided for $SECRET_NAME, skipping..."
-        return 1
+        return 0
     fi
 
     if gcloud secrets describe $SECRET_NAME --project=$PROJECT_ID &> /dev/null; then
@@ -136,6 +136,7 @@ setup_secrets_from_env() {
     create_or_update_secret "STREAM_API_SECRET" "${STREAM_API_SECRET:-}"
     create_or_update_secret "GEMINI_API_KEY" "${GEMINI_API_KEY:-}"
     create_or_update_secret "HEYGEN_API_KEY" "${HEYGEN_API_KEY:-}"
+    create_or_update_secret "DEEPGRAM_API_KEY" "${DEEPGRAM_API_KEY:-}"
 
     echo "  ✓ Secrets configured"
 }
@@ -278,6 +279,14 @@ check_secrets() {
 deploy_to_cloud_run() {
     print_step "Deploying to Cloud Run..."
 
+    # Build secrets string - required secrets
+    SECRETS_STRING="API_SECRET_KEY=API_SECRET_KEY:latest,STREAM_API_KEY=STREAM_API_KEY:latest,STREAM_API_SECRET=STREAM_API_SECRET:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest,HEYGEN_API_KEY=HEYGEN_API_KEY:latest"
+
+    # Add DEEPGRAM_API_KEY if the secret exists
+    if gcloud secrets describe DEEPGRAM_API_KEY --project=$PROJECT_ID &> /dev/null; then
+        SECRETS_STRING="${SECRETS_STRING},DEEPGRAM_API_KEY=DEEPGRAM_API_KEY:latest"
+    fi
+
     gcloud run deploy $SERVICE_NAME \
         --image=${IMAGE_NAME}:${IMAGE_TAG} \
         --platform=managed \
@@ -292,8 +301,8 @@ deploy_to_cloud_run() {
         --concurrency=$CONCURRENCY \
         --cpu-boost \
         --no-cpu-throttling \
-        --set-env-vars="ENVIRONMENT=${ENVIRONMENT}" \
-        --set-secrets="API_SECRET_KEY=API_SECRET_KEY:latest,STREAM_API_KEY=STREAM_API_KEY:latest,STREAM_API_SECRET=STREAM_API_SECRET:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest,HEYGEN_API_KEY=HEYGEN_API_KEY:latest" \
+        --set-env-vars="ENVIRONMENT=${ENVIRONMENT},GEMINI_USE_REALTIME=${GEMINI_USE_REALTIME:-true}" \
+        --set-secrets="${SECRETS_STRING}" \
         --quiet
 
     echo "  ✓ Deployed to Cloud Run"
