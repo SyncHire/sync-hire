@@ -8,8 +8,22 @@
 import { createAuthClient } from "better-auth/react";
 import { organizationClient } from "better-auth/client/plugins";
 
+/**
+ * Get the base URL for auth API calls.
+ * In browser: uses current origin (automatically handles any port)
+ * In SSR: uses NEXT_PUBLIC_BETTER_AUTH_URL or falls back to localhost with WEB_PORT
+ */
+function getBaseURL(): string {
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+  // Server-side: use env var or construct from WEB_PORT
+  const port = process.env.WEB_PORT || "3000";
+  return process.env.NEXT_PUBLIC_BETTER_AUTH_URL || `http://localhost:${port}`;
+}
+
 export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "http://localhost:3000",
+  baseURL: getBaseURL(),
   plugins: [organizationClient()],
 });
 

@@ -22,7 +22,8 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
-import { Building2, ChevronRight } from "lucide-react";
+import { Building2, ChevronRight, Plus, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Organization {
   id: string;
@@ -39,6 +40,7 @@ export default function SelectOrganizationPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectingId, setSelectingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasNoOrgs, setHasNoOrgs] = useState(false);
 
   useEffect(() => {
     async function loadOrganizations() {
@@ -52,9 +54,10 @@ export default function SelectOrganizationPage() {
 
       const orgs = result.data || [];
 
-      // No orgs = candidate user, redirect to candidate jobs
+      // No orgs - show choice to create org or continue as candidate
       if (orgs.length === 0) {
-        router.push("/candidate/jobs");
+        setHasNoOrgs(true);
+        setIsLoading(false);
         return;
       }
 
@@ -104,6 +107,58 @@ export default function SelectOrganizationPage() {
   if (!session) {
     router.push("/login");
     return null;
+  }
+
+  // User has no organizations - show choice
+  if (hasNoOrgs) {
+    return (
+      <Card>
+        <CardHeader className="text-center">
+          <Building2 className="h-12 w-12 text-primary mx-auto mb-2" />
+          <CardTitle className="text-2xl">Welcome to SyncHire</CardTitle>
+          <CardDescription>
+            How would you like to get started?
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <button
+            onClick={() => router.push("/create-organization")}
+            className="w-full flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <p className="font-medium">I want to hire</p>
+                <p className="text-sm text-muted-foreground">
+                  Create an organization to post jobs
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </button>
+
+          <button
+            onClick={() => router.push("/candidate/jobs")}
+            className="w-full flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="h-5 w-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <p className="font-medium">I&apos;m looking for a job</p>
+                <p className="text-sm text-muted-foreground">
+                  Upload your CV and find opportunities
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </button>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -156,12 +211,20 @@ export default function SelectOrganizationPage() {
           ))}
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col gap-2">
+      <CardFooter className="flex flex-col gap-3">
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => router.push("/create-organization")}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Create New Organization
+        </Button>
         <Link
-          href="/"
+          href="/candidate/jobs"
           className="text-sm text-muted-foreground hover:text-primary"
         >
-          Back to Home
+          Continue as candidate instead
         </Link>
       </CardFooter>
     </Card>

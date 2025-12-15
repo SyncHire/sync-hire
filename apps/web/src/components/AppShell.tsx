@@ -21,6 +21,7 @@ import { useCurrentUser } from "@/lib/hooks/use-current-user";
 import { useNotifications } from "@/lib/hooks/use-notifications";
 import { signOut } from "@/lib/auth-client";
 import { AboutDialog } from "./AboutDialog";
+import { ContextSwitcher } from "./ContextSwitcher";
 import { Logo } from "./Logo";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -217,12 +218,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   <div className="h-4 w-px bg-border/50" />
 
                   <div className="flex items-center gap-3">
-                    <Link
-                      href={isCandidate ? "/hr/jobs" : "/candidate/jobs"}
-                      className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1 hover:bg-secondary rounded"
-                    >
-                      {isCandidate ? "Switch to HR" : "Switch to Candidate"}
-                    </Link>
+                    <ContextSwitcher />
                     <Popover>
                       <PopoverTrigger asChild>
                         <button className="h-7 w-7 rounded-full overflow-hidden border border-border/50 bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors cursor-pointer">

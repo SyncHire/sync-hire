@@ -14,8 +14,12 @@ import { organization } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
 import { prisma } from "@sync-hire/database";
 
+// Derive base URL from BETTER_AUTH_URL or WEB_PORT
+const port = process.env.WEB_PORT || "3000";
+const baseURL = process.env.BETTER_AUTH_URL || `http://localhost:${port}`;
+
 export const auth = betterAuth({
-  baseURL: process.env.BETTER_AUTH_URL,
+  baseURL,
   secret: process.env.BETTER_AUTH_SECRET,
 
   database: prismaAdapter(prisma, { provider: "postgresql" }),
