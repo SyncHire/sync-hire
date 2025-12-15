@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "@/lib/auth-server";
 import { getStorage } from "@/lib/storage/storage-factory";
 
 export async function GET() {
   try {
+    const session = await getServerSession();
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, message: "Not authenticated" },
+        { status: 401 },
+      );
+    }
+
     const storage = getStorage();
-    const user = await storage.getCurrentUser();
-    const notifications = await storage.getNotifications(user.id);
+    const notifications = await storage.getNotifications(session.user.id);
 
     return NextResponse.json({
       success: true,
