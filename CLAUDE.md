@@ -198,6 +198,10 @@ const user: UserWithInterviews = await prisma.user.findFirst({
 - Use `Prisma.XGetPayload<{ include: {...} }>` for type-safe relations
 - Export from `@sync-hire/database` for reuse across apps
 
+## Next.js 16
+
+- **Middleware renamed to proxy**: Use `src/proxy.ts` with `export function proxy()` instead of `middleware.ts`
+
 ## Git
 
 - **Default branch**: `main` (use this as the base for PRs)

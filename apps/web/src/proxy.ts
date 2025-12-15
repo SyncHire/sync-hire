@@ -40,7 +40,9 @@ export function proxy(request: NextRequest) {
   // IMPORTANT: This only checks cookie existence, NOT validity
   // Real validation happens in pages/API routes via requireAuth()
   // Organization check also happens at page level (session.activeOrganizationId)
-  const sessionCookie = request.cookies.get("better-auth.session_token");
+  // Note: Cookie has __Secure- prefix in production (HTTPS)
+  const sessionCookie = request.cookies.get("better-auth.session_token")
+    || request.cookies.get("__Secure-better-auth.session_token");
   if (!sessionCookie) {
     // Redirect to login with callback URL
     const loginUrl = new URL("/login", request.url);
