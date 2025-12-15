@@ -1,15 +1,25 @@
 /**
  * GET /api/jobs
  *
- * Retrieves all jobs from file storage and memory, merged together
+ * Retrieves jobs for the active organization
  */
 
 import { NextResponse } from "next/server";
+import { getActiveOrganizationId } from "@/lib/auth-server";
 import { getAllJobsData } from "@/lib/server-utils/get-jobs";
 
 export async function GET() {
   try {
-    const jobs = await getAllJobsData();
+    const organizationId = await getActiveOrganizationId();
+
+    if (!organizationId) {
+      return NextResponse.json({
+        success: true,
+        data: [],
+      });
+    }
+
+    const jobs = await getAllJobsData(organizationId);
     return NextResponse.json({
       success: true,
       data: jobs,

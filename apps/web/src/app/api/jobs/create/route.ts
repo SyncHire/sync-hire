@@ -63,6 +63,13 @@ async function triggerCandidateMatching(jobId: string): Promise<{ matchedCount: 
 
     if (cvExtractions.length === 0) {
       console.log(`⚠️ [auto-match] No CVs to match against`);
+      // Update job status to complete even with no CVs
+      const noMatchJob = await storage.getJob(jobId);
+      if (noMatchJob) {
+        noMatchJob.aiMatchingStatus = MatchingStatus.COMPLETE;
+        await storage.saveJob(jobId, noMatchJob);
+        console.log(`✅ [auto-match] Job status updated to COMPLETE (no CVs)`);
+      }
       return { matchedCount: 0, candidateNames: [] };
     }
 
@@ -288,6 +295,16 @@ export async function POST(request: NextRequest) {
     // Generate job ID
     const jobId = `job-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+    // Check if there are any CVs to match against (only if AI matching enabled)
+    const storage = getStorage();
+    let hasCVsToMatch = false;
+    let cvCount = 0;
+    if (aiMatchingEnabled) {
+      const cvExtractions = await storage.getAllCVExtractions();
+      cvCount = cvExtractions.length;
+      hasCVsToMatch = cvCount > 0;
+    }
+
     // Get organization and user from authenticated session
     const organizationId = session.session.activeOrganizationId;
     const createdById = session.user.id;
@@ -304,7 +321,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch or create placeholder organization for the job response
-    const storage = getStorage();
     const existingOrg = await storage.getOrganization(organizationId);
     const organization = existingOrg || {
       id: organizationId,
@@ -364,7 +380,12 @@ export async function POST(request: NextRequest) {
       status: JobStatus.ACTIVE,
       aiMatchingEnabled,
       aiMatchingThreshold,
-      aiMatchingStatus: aiMatchingEnabled ? MatchingStatus.SCANNING : MatchingStatus.DISABLED,
+      // Set to COMPLETE immediately if no CVs to match, otherwise SCANNING
+      aiMatchingStatus: !aiMatchingEnabled
+        ? MatchingStatus.DISABLED
+        : hasCVsToMatch
+          ? MatchingStatus.SCANNING
+          : MatchingStatus.COMPLETE,
       jdFileUrl: null,
       jdFileHash: null,
       jdExtraction,
@@ -379,8 +400,9 @@ export async function POST(request: NextRequest) {
     await storage.saveJob(job.id, job);
 
     // Trigger automatic candidate matching in background (don't wait)
-    if (aiMatchingEnabled) {
-      console.log(`🚀 [create-job] AI Matching enabled - triggering automatic candidate matching`);
+    // Only trigger if AI matching enabled AND there are CVs to match
+    if (aiMatchingEnabled && hasCVsToMatch) {
+      console.log(`🚀 [create-job] AI Matching enabled - triggering automatic candidate matching (${cvCount} CVs)`);
       triggerCandidateMatching(job.id).catch(async (err) => {
         console.error("[create-job] Auto-match error:", err);
 

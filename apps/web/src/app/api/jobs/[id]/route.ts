@@ -5,6 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import { MatchingStatus } from "@sync-hire/database";
 import { getStorage } from "@/lib/storage/storage-factory";
 
 export async function GET(
@@ -60,6 +61,11 @@ export async function PUT(
       ...(body.aiMatchingThreshold !== undefined && { aiMatchingThreshold: body.aiMatchingThreshold }),
     };
 
+    // If AI matching is being disabled, update status to DISABLED (stops scanning)
+    if (body.aiMatchingEnabled === false) {
+      updatedJob.aiMatchingStatus = MatchingStatus.DISABLED;
+    }
+
     // Save updated job
     await storage.saveJob(jobId, updatedJob);
 
@@ -69,6 +75,7 @@ export async function PUT(
         id: jobId,
         aiMatchingEnabled: updatedJob.aiMatchingEnabled,
         aiMatchingThreshold: updatedJob.aiMatchingThreshold,
+        aiMatchingStatus: updatedJob.aiMatchingStatus,
       },
     });
   } catch (error) {

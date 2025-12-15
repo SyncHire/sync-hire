@@ -6,7 +6,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
-import { getAllJobsData } from "@/lib/server-utils/get-jobs";
+import { getAllActiveJobsData } from "@/lib/server-utils/get-jobs";
 import { getStorage } from "@/lib/storage/storage-factory";
 
 export async function POST(request: NextRequest) {
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     const storage = getStorage();
-    const allJobs = await getAllJobsData();
+    const allJobs = await getAllActiveJobsData();
 
     // Check which jobs have questions for this CV
     const questionsStatus = await Promise.all(

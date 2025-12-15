@@ -21,14 +21,49 @@ export async function getJobData(id: string): Promise<Job | null> {
 }
 
 /**
- * Get all jobs from storage with computed applicant counts
+ * Get jobs for an organization with computed applicant counts (HR view)
+ * @param organizationId - Filter jobs by organization ID (required)
  */
-export async function getAllJobsData(): Promise<JobWithApplicantCount[]> {
+export async function getAllJobsData(organizationId: string): Promise<JobWithApplicantCount[]> {
   const storage = getStorage();
   const storedJobs = await storage.getAllStoredJobs();
 
+  // Filter by organization
+  const orgJobs = storedJobs.filter((job) => job.organizationId === organizationId);
+
   // Sort by createdAt, newest first
-  const sortedJobs = storedJobs.sort((a, b) => {
+  const sortedJobs = orgJobs.sort((a, b) => {
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return dateB - dateA;
+  });
+
+  // Compute applicant counts from interviews
+  const allInterviews = await storage.getAllInterviews();
+  const jobsWithCounts = sortedJobs.map((job) => {
+    const jobInterviews = allInterviews.filter((i) => i.jobId === job.id);
+    return {
+      ...job,
+      applicantsCount: jobInterviews.length,
+    };
+  });
+
+  return jobsWithCounts;
+}
+
+/**
+ * Get all active jobs across all organizations (Candidate view)
+ * Used by candidates to browse available jobs
+ */
+export async function getAllActiveJobsData(): Promise<JobWithApplicantCount[]> {
+  const storage = getStorage();
+  const storedJobs = await storage.getAllStoredJobs();
+
+  // Filter to only active jobs
+  const activeJobs = storedJobs.filter((job) => job.status === "ACTIVE");
+
+  // Sort by createdAt, newest first
+  const sortedJobs = activeJobs.sort((a, b) => {
     const dateA = new Date(a.createdAt).getTime();
     const dateB = new Date(b.createdAt).getTime();
     return dateB - dateA;

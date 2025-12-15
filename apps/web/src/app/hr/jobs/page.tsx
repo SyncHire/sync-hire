@@ -19,7 +19,9 @@ import { useJobs } from "@/lib/hooks/use-job-questions";
 import { getCompanyLogoUrl } from "@/lib/logo-utils";
 
 export default function HRJDListings() {
-  const { data: jobs = [], isLoading } = useJobs({ pollWhileScanning: true });
+  const { data, isLoading } = useJobs({ pollWhileScanning: true });
+  // Ensure jobs is always an array (safeguard against unexpected API responses)
+  const jobs = Array.isArray(data) ? data : [];
 
   if (isLoading) {
     return (

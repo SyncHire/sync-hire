@@ -1,10 +1,14 @@
 "use client";
 
-import { AlertCircle, Check, Eye, Pencil, Plus, Sparkles, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, Eye, Pencil, Plus, Sparkles, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { DocumentUploadSection } from "@/components/job-creation/DocumentUploadSection";
+import {
+  JDProcessingProgress,
+  type JDProcessingStage,
+} from "@/components/job-creation/JDProcessingProgress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -25,6 +29,8 @@ import {
   type WorkArrangement,
 } from "@/lib/mock-data";
 import { useActiveOrganization } from "@/lib/hooks/use-organizations";
+
+type WorkflowStage = "upload" | "processing" | "results";
 
 // Unified question interface
 interface ScreeningQuestion {
@@ -50,14 +56,20 @@ interface JobCreationState {
 export default function JobCreationPage() {
   const router = useRouter();
   const { data: activeOrg } = useActiveOrganization();
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Workflow stages
+  const [workflowStage, setWorkflowStage] = useState<WorkflowStage>("upload");
+  const [processingStage, setProcessingStage] = useState<JDProcessingStage>("uploading");
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // UI state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newQuestionContent, setNewQuestionContent] = useState("");
   const [editingResponsibilities, setEditingResponsibilities] = useState(false);
   const [editingRequirements, setEditingRequirements] = useState(false);
   const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(null);
   const [skippedRequirements, setSkippedRequirements] = useState<Set<number>>(new Set());
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const [state, setState] = useState<JobCreationState>({
     extractedData: null,
@@ -84,13 +96,18 @@ export default function JobCreationPage() {
       return;
     }
 
-    setIsLoading(true);
     setUploadError(null);
+    setWorkflowStage("processing");
+    setProcessingStage("uploading");
 
     try {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("organizationId", activeOrg.id);
+
+      // Simulate upload stage briefly
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setProcessingStage("extracting");
 
       const response = await fetch("/api/jobs/extract-jd", {
         method: "POST",
@@ -101,6 +118,9 @@ export default function JobCreationPage() {
         const error = await response.json();
         throw new Error(error.error || "Failed to extract job description");
       }
+
+      // Move to analyzing stage while parsing response
+      setProcessingStage("analyzing");
 
       const result = await response.json();
 
@@ -122,15 +142,33 @@ export default function JobCreationPage() {
         questions: aiQuestions,
       }));
 
-      toast.success("Job description extracted successfully!");
+      // Show complete stage briefly
+      setProcessingStage("complete");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Move to results
+      setWorkflowStage("results");
+      toast.success("Job description processed successfully!");
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Upload failed";
       setUploadError(errorMessage);
+      setProcessingStage("error");
       toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
     }
+  };
+
+  const handleStartOver = () => {
+    setWorkflowStage("upload");
+    setProcessingStage("uploading");
+    setUploadError(null);
+    setState({
+      extractedData: null,
+      aiSuggestions: [],
+      questions: [],
+      acceptedSuggestions: [],
+    });
+    setSkippedRequirements(new Set());
   };
 
   const handleExtractedDataChange = (
@@ -235,7 +273,7 @@ export default function JobCreationPage() {
       return;
     }
 
-    setIsLoading(true);
+    setIsPublishing(true);
 
     // Filter to only included questions with content and format for the API
     const includedQuestions = state.questions
@@ -293,7 +331,7 @@ export default function JobCreationPage() {
         error instanceof Error ? error.message : "Failed to create job";
       toast.error(errorMessage);
     } finally {
-      setIsLoading(false);
+      setIsPublishing(false);
     }
   };
 
@@ -362,8 +400,7 @@ export default function JobCreationPage() {
           </p>
         </div>
 
-        {!state.extractedData ? (
-          // Upload step
+        {workflowStage === "upload" && (
           <Card className="p-8">
             <div className="space-y-6">
               <div>
@@ -371,18 +408,41 @@ export default function JobCreationPage() {
                   Upload Job Description
                 </h2>
                 <p className="text-muted-foreground">
-                  Upload a PDF file with your job description to get started
+                  Upload a PDF, Markdown, or text file with your job description
                 </p>
               </div>
 
               <DocumentUploadSection
                 onFileSelect={handleFileUpload}
-                isProcessing={isLoading}
+                isProcessing={false}
                 error={uploadError}
               />
             </div>
           </Card>
-        ) : (
+        )}
+
+        {workflowStage === "processing" && (
+          <div className="space-y-6">
+            <JDProcessingProgress
+              currentStage={processingStage}
+              error={uploadError}
+            />
+            {uploadError && (
+              <div className="flex justify-center">
+                <Button
+                  onClick={handleStartOver}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Try Again
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {workflowStage === "results" && state.extractedData && (
           // Unified Extracted Data view
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Main content area */}
@@ -843,24 +903,33 @@ export default function JobCreationPage() {
               </Card>
 
               {/* Actions */}
-              <Card className="p-6">
+              <Card className="p-6 space-y-3">
                 <Button
                   onClick={handlePublish}
                   disabled={
-                    isLoading ||
+                    isPublishing ||
                     !state.extractedData.title ||
                     !state.extractedData.location
                   }
                   className="w-full"
                 >
-                  {isLoading ? "Creating Job..." : "Create Job Posting"}
+                  {isPublishing ? "Creating Job..." : "Create Job Posting"}
                 </Button>
                 {!state.extractedData.title || !state.extractedData.location ? (
-                  <p className="text-xs text-muted-foreground mt-2">
+                  <p className="text-xs text-muted-foreground">
                     <AlertCircle className="w-3 h-3 inline mr-1" />
                     Title and location are required
                   </p>
                 ) : null}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleStartOver}
+                  className="w-full text-muted-foreground"
+                >
+                  <ArrowLeft className="w-3 h-3 mr-1" />
+                  Upload Different File
+                </Button>
               </Card>
             </div>
           </div>
