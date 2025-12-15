@@ -138,7 +138,6 @@ export interface CandidateApplication {
   matchReasons: string[];    // Why this candidate matches
   skillGaps?: string[];      // Skills candidate is missing
   status: ApplicationStatus;
-  questionsHash?: string;    // Link to questions-set file (cvId + jobId hash)
   interviewId?: string;      // Link to interview once started
   source: "ai_match" | "manual_apply"; // How the application was created
   createdAt: Date;

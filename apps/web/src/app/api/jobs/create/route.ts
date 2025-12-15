@@ -11,7 +11,6 @@ import type { Question } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
 import type { Job } from "@/lib/storage/storage-interface";
 import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
-import { generateStringHash } from "@/lib/utils/hash-utils";
 import { jobToExtractedJobData } from "@/lib/utils/type-adapters";
 import { geminiClient } from "@/lib/gemini-client";
 import { z } from "zod";
@@ -139,7 +138,6 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
         console.log(`   🎉 MATCHED!`);
 
         const applicationId = `app-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        const questionsHash = generateStringHash(cvId + jobId);
 
         const application = {
           id: applicationId,
@@ -154,7 +152,6 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
           status: ApplicationStatus.GENERATING_QUESTIONS,
           source: ApplicationSource.AI_MATCH,
           questionsData: null,
-          questionsHash,
           interviewId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -202,7 +199,7 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
               })),
           };
 
-          await storage.saveInterviewQuestions(questionsHash, interviewQuestions);
+          await storage.saveInterviewQuestions(cvId, jobId, interviewQuestions);
 
           // Update application status to ready
           const app = await storage.getApplication(applicationId);

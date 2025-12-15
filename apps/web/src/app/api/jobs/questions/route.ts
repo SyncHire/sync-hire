@@ -8,7 +8,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getAllJobsData } from "@/lib/server-utils/get-jobs";
 import { getStorage } from "@/lib/storage/storage-factory";
-import { generateStringHash } from "@/lib/utils/hash-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,13 +31,11 @@ export async function POST(request: NextRequest) {
     // Check which jobs have questions for this CV
     const questionsStatus = await Promise.all(
       allJobs.map(async (job) => {
-        const combinedHash = generateStringHash(cvId + job.id);
-        const hasQuestions = await storage.hasInterviewQuestions(combinedHash);
+        const hasQuestions = await storage.hasInterviewQuestions(cvId, job.id);
 
         return {
           jobId: job.id,
           hasQuestions,
-          hash: combinedHash,
         };
       }),
     );

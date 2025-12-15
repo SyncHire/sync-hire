@@ -32,9 +32,8 @@ export function useJobs(options?: UseJobsOptions) {
     refetchInterval: (query) => {
       // Poll while any job is scanning
       if (options?.pollWhileScanning) {
-        const jobs = query.state.data || [];
-        const hasScanning = jobs.some((job: Job) => job.aiMatchingStatus === "SCANNING");
-        if (hasScanning) {
+        const jobs = query.state.data;
+        if (Array.isArray(jobs) && jobs.some((job: Job) => job.aiMatchingStatus === "SCANNING")) {
           return 2000;
         }
       }

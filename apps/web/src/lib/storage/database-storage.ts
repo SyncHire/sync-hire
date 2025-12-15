@@ -202,13 +202,25 @@ export class DatabaseStorage implements StorageInterface {
   // Interview Questions Methods
   // =============================================================================
 
-  async getInterviewQuestions(hash: string): Promise<InterviewQuestions | null> {
-    const application = await this.db.candidateApplication.findFirst({
+  async getInterviewQuestions(cvId: string, jobId: string): Promise<InterviewQuestions | null> {
+    // cvId might be fileHash or cvUploadId - look up CVUpload first
+    const cvUpload = await this.db.cVUpload.findFirst({
       where: {
         OR: [
-          { id: hash },
-          // Generate hash from cvUploadId + jobId if stored that way
+          { id: cvId },
+          { fileHash: cvId },
         ],
+      },
+    });
+
+    if (!cvUpload) {
+      return null;
+    }
+
+    const application = await this.db.candidateApplication.findFirst({
+      where: {
+        cvUploadId: cvUpload.id,
+        jobId,
       },
     });
 
@@ -219,20 +231,20 @@ export class DatabaseStorage implements StorageInterface {
     return application.questionsData;
   }
 
-  async saveInterviewQuestions(hash: string, data: InterviewQuestions): Promise<void> {
+  async saveInterviewQuestions(cvId: string, jobId: string, data: InterviewQuestions): Promise<void> {
     // cvId might be fileHash or cvUploadId - look up CVUpload first
     const cvUpload = await this.db.cVUpload.findFirst({
       where: {
         OR: [
-          { id: data.metadata.cvId },
-          { fileHash: data.metadata.cvId },
+          { id: cvId },
+          { fileHash: cvId },
         ],
       },
     });
 
     if (!cvUpload) {
       throw new Error(
-        `Cannot save interview questions: CV not found for ${data.metadata.cvId}.`
+        `Cannot save interview questions: CV not found for ${cvId}.`
       );
     }
 
@@ -240,13 +252,13 @@ export class DatabaseStorage implements StorageInterface {
     const application = await this.db.candidateApplication.findFirst({
       where: {
         cvUploadId: cvUpload.id,
-        jobId: data.metadata.jobId,
+        jobId,
       },
     });
 
     if (!application) {
       throw new Error(
-        `Cannot save interview questions: No application found for CV ${data.metadata.cvId} and job ${data.metadata.jobId}. ` +
+        `Cannot save interview questions: No application found for CV ${cvId} and job ${jobId}. ` +
         `The application must be created before saving questions.`
       );
     }
@@ -257,10 +269,25 @@ export class DatabaseStorage implements StorageInterface {
     });
   }
 
-  async hasInterviewQuestions(hash: string): Promise<boolean> {
+  async hasInterviewQuestions(cvId: string, jobId: string): Promise<boolean> {
+    // cvId might be fileHash or cvUploadId - look up CVUpload first
+    const cvUpload = await this.db.cVUpload.findFirst({
+      where: {
+        OR: [
+          { id: cvId },
+          { fileHash: cvId },
+        ],
+      },
+    });
+
+    if (!cvUpload) {
+      return false;
+    }
+
     const count = await this.db.candidateApplication.count({
       where: {
-        id: hash,
+        cvUploadId: cvUpload.id,
+        jobId,
         questionsData: { not: Prisma.JsonNull },
       },
     });

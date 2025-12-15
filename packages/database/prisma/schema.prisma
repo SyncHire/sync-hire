@@ -292,7 +292,6 @@ model CandidateApplication {
 
   /// [InterviewQuestions]
   questionsData Json?
-  questionsHash String? // Hash of questionsData JSON for change detection
 
   interviewId String?  @unique
   createdAt   DateTime @default(now())

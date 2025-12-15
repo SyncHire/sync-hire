@@ -32,7 +32,6 @@ export async function GET(
           matchReasons: app.matchReasons,
           skillGaps: app.skillGaps,
           status: app.status,
-          questionsHash: app.questionsHash,
           source: app.source,
           createdAt: app.createdAt,
         })),

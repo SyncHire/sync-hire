@@ -32,7 +32,6 @@ interface ApplicantResponse {
   source: "interview" | "ai_match" | "demo";
   matchReasons?: string[];
   skillGaps?: string[];
-  questionsHash?: string;
 }
 
 export async function GET(
@@ -137,7 +136,6 @@ export async function GET(
             source: "ai_match" as const,
             matchReasons: app.matchReasons,
             skillGaps: app.skillGaps,
-            questionsHash: app.questionsHash ?? undefined,
           };
         }),
     );
