@@ -11,10 +11,17 @@ interface NotificationsResponse {
   data: Notification[];
 }
 
+interface UseNotificationsOptions {
+  enabled?: boolean;
+}
+
 /**
  * Hook for fetching user notifications
+ * Only fetches when enabled (user is authenticated)
  */
-export function useNotifications() {
+export function useNotifications(options?: UseNotificationsOptions) {
+  const { enabled = true } = options ?? {};
+
   return useQuery<NotificationsResponse>({
     queryKey: ["/api/notifications"],
     queryFn: async () => {
@@ -25,5 +32,6 @@ export function useNotifications() {
       return response.json();
     },
     staleTime: 30 * 1000, // Consider data fresh for 30 seconds
+    enabled,
   });
 }

@@ -11,7 +11,6 @@ import type { Question } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
 import type { Job } from "@/lib/storage/storage-interface";
 import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
-import { generateStringHash } from "@/lib/utils/hash-utils";
 import { jobToExtractedJobData } from "@/lib/utils/type-adapters";
 import { geminiClient } from "@/lib/gemini-client";
 import { z } from "zod";
@@ -139,7 +138,6 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
         console.log(`   🎉 MATCHED!`);
 
         const applicationId = `app-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        const questionsHash = generateStringHash(cvId + jobId);
 
         const application = {
           id: applicationId,
@@ -154,7 +152,6 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
           status: ApplicationStatus.GENERATING_QUESTIONS,
           source: ApplicationSource.AI_MATCH,
           questionsData: null,
-          questionsHash,
           interviewId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -202,7 +199,7 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
               })),
           };
 
-          await storage.saveInterviewQuestions(questionsHash, interviewQuestions);
+          await storage.saveInterviewQuestions(cvId, jobId, interviewQuestions);
 
           // Update application status to ready
           const app = await storage.getApplication(applicationId);
@@ -213,14 +210,15 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
           }
           console.log(`   ✅ Questions generated for ${candidateName}`);
         }).catch(async (err) => {
-          console.error(`   ❌ Question generation failed for ${candidateName}:`, err);
+          console.error(`[auto-match] SYSTEM FAILURE - Question generation failed for ${candidateName}:`, err);
           // Update application status to indicate failure
+          // TODO: Add GENERATION_FAILED status to ApplicationStatus enum to distinguish from human rejection
           const app = await storage.getApplication(applicationId);
           if (app) {
             app.status = ApplicationStatus.REJECTED; // Mark as rejected so it doesn't stay stuck
             app.updatedAt = new Date();
             await storage.saveApplication(app);
-            console.log(`   ⚠️ Application status updated to REJECTED due to question generation failure`);
+            console.warn(`[auto-match] Application ${applicationId} marked as REJECTED (due to SYSTEM FAILURE in question generation, not human rejection)`);
           }
         });
       } else {

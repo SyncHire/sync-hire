@@ -27,6 +27,7 @@ import {
   getUserById,
 } from "@/lib/mock-data";
 import { mockInterviewToInterview } from "@/lib/utils/type-adapters";
+import { generateStringHash } from "@/lib/utils/hash-utils";
 
 const DATA_DIR = join(process.cwd(), "data");
 const JD_EXTRACTIONS_DIR = join(DATA_DIR, "jd-extractions");
@@ -164,22 +165,30 @@ export class FileStorage implements StorageInterface {
 
   // Interview Questions methods
   async getInterviewQuestions(
-    hash: string,
+    cvId: string,
+    jobId: string,
   ): Promise<InterviewQuestions | null> {
     try {
+      const hash = generateStringHash(cvId + jobId);
       const filePath = join(QUESTIONS_SET_DIR, `${hash}.json`);
       const data = await fs.readFile(filePath, "utf-8");
       return JSON.parse(data) as InterviewQuestions;
-    } catch {
+    } catch (error) {
+      // Only log if it's NOT a "file not found" error (expected case)
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.error(`[FileStorage.getInterviewQuestions] Unexpected error for cvId: ${cvId}, jobId: ${jobId}:`, error);
+      }
       return null;
     }
   }
 
   async saveInterviewQuestions(
-    hash: string,
+    cvId: string,
+    jobId: string,
     data: InterviewQuestions,
   ): Promise<void> {
     try {
+      const hash = generateStringHash(cvId + jobId);
       await fs.mkdir(QUESTIONS_SET_DIR, { recursive: true });
       const filePath = join(QUESTIONS_SET_DIR, `${hash}.json`);
       await fs.writeFile(filePath, JSON.stringify(data, null, 2));
@@ -189,12 +198,17 @@ export class FileStorage implements StorageInterface {
     }
   }
 
-  async hasInterviewQuestions(hash: string): Promise<boolean> {
+  async hasInterviewQuestions(cvId: string, jobId: string): Promise<boolean> {
     try {
+      const hash = generateStringHash(cvId + jobId);
       const filePath = join(QUESTIONS_SET_DIR, `${hash}.json`);
       await fs.access(filePath);
       return true;
-    } catch {
+    } catch (error) {
+      // Only log if it's NOT a "file not found" error (expected case)
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.error(`[FileStorage.hasInterviewQuestions] Unexpected error for cvId: ${cvId}, jobId: ${jobId}:`, error);
+      }
       return false;
     }
   }
@@ -531,7 +545,6 @@ export class FileStorage implements StorageInterface {
       source: "MANUAL_APPLY",
       interviewId: null,
       questionsData: null,
-      questionsHash: null,
       createdAt: now,
       updatedAt: now,
     };

@@ -12,7 +12,6 @@ import { ApplicationStatus, ApplicationSource } from "@sync-hire/database";
 import type { ExtractedCVData, ExtractedJobData, CandidateApplication, InterviewQuestions } from "@sync-hire/database";
 import type { Question } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
-import { generateStringHash } from "@/lib/utils/hash-utils";
 import { z } from "zod";
 
 const matchResultSchema = z.object({
@@ -75,7 +74,6 @@ async function generateAndSaveQuestions(
   storage: Awaited<ReturnType<typeof getStorage>>,
   cvData: ExtractedCVData,
   job: { title: string; organization: { name: string }; requirements: string[]; description: string; questions?: Array<{ id: string; content: string; type: string; duration: number; category: string | null }> },
-  questionsHash: string,
   cvId: string,
   jobId: string,
   applicationId: string
@@ -136,7 +134,7 @@ async function generateAndSaveQuestions(
     };
 
     // Save questions
-    await storage.saveInterviewQuestions(questionsHash, interviewQuestions);
+    await storage.saveInterviewQuestions(cvId, jobId, interviewQuestions);
 
     // Update application status to ready
     const application = await storage.getApplication(applicationId);
@@ -148,14 +146,15 @@ async function generateAndSaveQuestions(
 
     console.log(`Generated ${mergedQuestions.length} questions for application ${applicationId}`);
   } catch (error) {
-    console.error("Failed to generate questions:", error);
+    console.error(`[generateAndSaveQuestions] SYSTEM FAILURE - Question generation failed for application ${applicationId}:`, error);
     // Update application status to indicate failure so it doesn't stay stuck
+    // TODO: Add GENERATION_FAILED status to ApplicationStatus enum to distinguish from human rejection
     const application = await storage.getApplication(applicationId);
     if (application) {
       application.status = ApplicationStatus.REJECTED;
       application.updatedAt = new Date();
       await storage.saveApplication(application);
-      console.log(`Application ${applicationId} marked as rejected due to question generation failure`);
+      console.warn(`[generateAndSaveQuestions] Application ${applicationId} marked as REJECTED (due to SYSTEM FAILURE in question generation, not human rejection)`);
     }
   }
 }
@@ -257,7 +256,6 @@ export async function POST(
       if (matchScore >= matchThreshold) {
         console.log(`   🎉 MATCHED! Creating application...`);
         const applicationId = `app-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        const questionsHash = generateStringHash(cvId + jobId);
 
         const application: CandidateApplication = {
           id: applicationId,
@@ -272,7 +270,6 @@ export async function POST(
           status: ApplicationStatus.GENERATING_QUESTIONS,
           source: ApplicationSource.AI_MATCH,
           questionsData: null,
-          questionsHash,
           interviewId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -290,7 +287,6 @@ export async function POST(
           storage,
           cvData,
           job,
-          questionsHash,
           cvId,
           jobId,
           application.id

@@ -30,11 +30,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const { data: notificationsData, isLoading: notificationsLoading } =
-    useNotifications();
-  const notifications = notificationsData?.data ?? [];
   const { data: userData } = useCurrentUser();
   const user = userData?.data;
+
+  // Only fetch notifications when user is authenticated
+  const { data: notificationsData, isLoading: notificationsLoading } =
+    useNotifications({ enabled: !!user });
+  const notifications = notificationsData?.data ?? [];
 
   async function handleSignOut() {
     setIsSigningOut(true);
@@ -158,60 +160,60 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
               <AboutDialog open={showAbout} onOpenChange={setShowAbout} />
 
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground relative"
-                  >
-                    <Bell className="h-4 w-4" />
-                    {notifications.length > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground flex items-center justify-center">
-                        {notifications.length}
-                      </span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-80 p-0">
-                  <div className="border-b border-border px-4 py-3">
-                    <h4 className="text-sm font-semibold">Notifications</h4>
-                  </div>
-                  <div className="max-h-80 overflow-y-auto">
-                    {notificationsLoading ? (
-                      <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                        Loading...
-                      </div>
-                    ) : notifications.length === 0 ? (
-                      <div className="px-4 py-8 text-center">
-                        <Inbox className="mx-auto h-8 w-8 text-muted-foreground/50 mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          No notifications yet
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="divide-y divide-border">
-                        {notifications.map((notification) => (
-                          <div
-                            key={notification.id}
-                            className="px-4 py-3 hover:bg-muted/50 transition-colors"
-                          >
-                            <p className="text-sm font-medium">
-                              {notification.title}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {notification.message}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
-
               {user ? (
                 <>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground relative"
+                      >
+                        <Bell className="h-4 w-4" />
+                        {notifications.length > 0 && (
+                          <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground flex items-center justify-center">
+                            {notifications.length}
+                          </span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-80 p-0">
+                      <div className="border-b border-border px-4 py-3">
+                        <h4 className="text-sm font-semibold">Notifications</h4>
+                      </div>
+                      <div className="max-h-80 overflow-y-auto">
+                        {notificationsLoading ? (
+                          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                            Loading...
+                          </div>
+                        ) : notifications.length === 0 ? (
+                          <div className="px-4 py-8 text-center">
+                            <Inbox className="mx-auto h-8 w-8 text-muted-foreground/50 mb-2" />
+                            <p className="text-sm text-muted-foreground">
+                              No notifications yet
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-border">
+                            {notifications.map((notification) => (
+                              <div
+                                key={notification.id}
+                                className="px-4 py-3 hover:bg-muted/50 transition-colors"
+                              >
+                                <p className="text-sm font-medium">
+                                  {notification.title}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {notification.message}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
                   <div className="h-4 w-px bg-border/50" />
 
                   <div className="flex items-center gap-3">

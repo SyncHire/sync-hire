@@ -8,10 +8,8 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { generateInterviewQuestions } from "@/lib/backend/question-generator";
-import type { ExtractedJobData } from "@sync-hire/database";
 import { getStorage } from "@/lib/storage/storage-factory";
 import type { InterviewQuestions } from "@/lib/storage/storage-interface";
-import { generateStringHash } from "@/lib/utils/hash-utils";
 import { getQuestionCounts } from "@sync-hire/database";
 import { toEmploymentType, toWorkArrangement } from "@/lib/utils/type-adapters";
 
@@ -88,19 +86,15 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    // Generate combined hash for questions file (cvId + jobId)
-    const combinedHash = generateStringHash(cvId + jobId);
-
     // Check if questions already exist (caching)
-    const existingQuestions = await storage.hasInterviewQuestions(combinedHash);
+    const existingQuestions = await storage.hasInterviewQuestions(cvId, jobId);
     if (existingQuestions) {
-      const questions = await storage.getInterviewQuestions(combinedHash);
+      const questions = await storage.getInterviewQuestions(cvId, jobId);
       if (questions) {
         const counts = getQuestionCounts(questions);
         return NextResponse.json(
           {
             data: {
-              id: combinedHash,
               cvId,
               jobId,
               questionCount: counts.total,
@@ -137,13 +131,12 @@ export async function POST(request: NextRequest) {
     };
 
     // Save questions to storage
-    await storage.saveInterviewQuestions(combinedHash, interviewQuestions);
+    await storage.saveInterviewQuestions(cvId, jobId, interviewQuestions);
 
     const counts = getQuestionCounts(interviewQuestions);
     return NextResponse.json(
       {
         data: {
-          id: combinedHash,
           cvId,
           jobId,
           questionCount: counts.total,

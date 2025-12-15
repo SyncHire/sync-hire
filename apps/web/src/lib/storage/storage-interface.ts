@@ -84,21 +84,19 @@ export interface StorageInterface {
   hasCVExtraction(hash: string): Promise<boolean>;
 
   /**
-   * Get interview questions by combined hash (cvId + jobId)
-   * Questions are stored in /data/questions-set/ directory
+   * Get interview questions by cvId and jobId
    */
-  getInterviewQuestions(hash: string): Promise<InterviewQuestions | null>;
+  getInterviewQuestions(cvId: string, jobId: string): Promise<InterviewQuestions | null>;
 
   /**
-   * Save interview questions with combined hash key
-   * Questions are stored in /data/questions-set/{hash}.json
+   * Save interview questions for a CV/job combination
    */
-  saveInterviewQuestions(hash: string, data: InterviewQuestions): Promise<void>;
+  saveInterviewQuestions(cvId: string, jobId: string, data: InterviewQuestions): Promise<void>;
 
   /**
-   * Check if interview questions exist in questions-set storage
+   * Check if interview questions exist for a CV/job combination
    */
-  hasInterviewQuestions(hash: string): Promise<boolean>;
+  hasInterviewQuestions(cvId: string, jobId: string): Promise<boolean>;
 
   // =============================================================================
   // Interview Methods

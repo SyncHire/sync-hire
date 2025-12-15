@@ -13,7 +13,6 @@ import {
 import type { Job } from "@/lib/storage/storage-interface";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { getStreamClient } from "@/lib/stream-token";
-import { generateStringHash } from "@/lib/utils/hash-utils";
 import { mergeInterviewQuestions } from "@/lib/utils/question-utils";
 import { getAgentEndpoint, getAgentHeaders } from "@/lib/agent-config";
 
@@ -55,9 +54,7 @@ export async function POST(request: Request) {
           // Try to load generated questions
           const userCvId = await storage.getUserCVId(demoUser.id);
           if (userCvId) {
-            const combinedHash = generateStringHash(userCvId + jobId);
-            const questionSet =
-              await storage.getInterviewQuestions(combinedHash);
+            const questionSet = await storage.getInterviewQuestions(userCvId, jobId);
 
             if (questionSet) {
               // Use utility to merge custom questions (from JD) and AI-personalized questions
@@ -88,6 +85,7 @@ export async function POST(request: Request) {
     // Use generated questions if available, otherwise map job's questions to agent format
     let interviewQuestions: Question[] = questions;
     if (interviewQuestions.length === 0 && job.questions) {
+      console.warn(`[start-interview] No personalized questions found for interviewId: ${interviewId}, falling back to ${job.questions.length} job default questions`);
       // Map database JobQuestion to agent Question format
       interviewQuestions = job.questions.map((q) => ({
         id: q.id,
