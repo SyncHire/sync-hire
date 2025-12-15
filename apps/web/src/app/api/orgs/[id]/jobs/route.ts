@@ -1,10 +1,14 @@
 /**
  * GET /api/orgs/:id/jobs
  *
- * Retrieves jobs for a specific organization
+ * Retrieves jobs for a specific organization.
+ * Requires authentication and organization membership.
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
+import { prisma } from "@sync-hire/database";
+import { requireAuth } from "@/lib/auth-server";
 import { getAllJobsData } from "@/lib/server-utils/get-jobs";
 
 export async function GET(
@@ -12,7 +16,26 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Require authentication
+    const session = await requireAuth();
+    const userId = session.user.id;
+
     const { id: organizationId } = await params;
+
+    // Validate user is a member of the organization
+    const membership = await prisma.member.findFirst({
+      where: {
+        userId,
+        organizationId,
+      },
+    });
+
+    if (!membership) {
+      return NextResponse.json(
+        { success: false, error: "You are not a member of this organization" },
+        { status: 403 },
+      );
+    }
 
     const jobs = await getAllJobsData(organizationId);
     return NextResponse.json({
@@ -20,6 +43,9 @@ export async function GET(
       data: jobs,
     });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { api: "orgs/jobs", operation: "fetch" },
+    });
     console.error("Failed to fetch jobs:", error);
     return NextResponse.json(
       {

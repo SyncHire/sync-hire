@@ -6,6 +6,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { prisma } from "@sync-hire/database";
 import { JobDescriptionProcessor } from "@/lib/backend/jd-processor";
 import { getStorage } from "@/lib/storage/storage-factory";
@@ -101,6 +102,9 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { api: "jobs/extract-jd", operation: "extract" },
+    });
     console.error("Extract JD error:", error);
     return NextResponse.json(
       {

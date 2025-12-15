@@ -5,6 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { MatchingStatus } from "@sync-hire/database";
 import { getStorage } from "@/lib/storage/storage-factory";
 
@@ -18,7 +19,10 @@ export async function GET(
 
     const job = await storage.getJob(jobId);
     if (!job) {
-      return NextResponse.json({ success: true, data: null });
+      return NextResponse.json(
+        { success: false, error: "Job not found" },
+        { status: 404 }
+      );
     }
 
     // Compute accurate applicant count from interviews
@@ -31,6 +35,9 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: jobWithCount });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { api: "jobs/[id]", operation: "get" },
+    });
     console.error("Get job error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to get job" },
@@ -51,7 +58,10 @@ export async function PUT(
     // Get existing job
     const job = await storage.getJob(jobId);
     if (!job) {
-      return NextResponse.json({ success: true, data: null });
+      return NextResponse.json(
+        { success: false, error: "Job not found" },
+        { status: 404 }
+      );
     }
 
     // Update job with new settings
@@ -79,6 +89,9 @@ export async function PUT(
       },
     });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { api: "jobs/[id]", operation: "update" },
+    });
     console.error("Update job error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to update job" },

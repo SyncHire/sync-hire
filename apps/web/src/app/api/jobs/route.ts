@@ -6,6 +6,7 @@
  */
 
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { getAllActiveJobsData } from "@/lib/server-utils/get-jobs";
 
 export async function GET() {
@@ -16,6 +17,9 @@ export async function GET() {
       data: jobs,
     });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { api: "jobs", operation: "fetch-active" },
+    });
     console.error("Failed to fetch jobs:", error);
     return NextResponse.json(
       {
