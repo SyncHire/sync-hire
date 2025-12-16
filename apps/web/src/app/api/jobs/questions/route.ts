@@ -6,6 +6,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { getAllActiveJobsData } from "@/lib/server-utils/get-jobs";
 import { getStorage } from "@/lib/storage/storage-factory";
 
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Check questions error:", error);
+    logger.error(error, { api: "jobs/questions", operation: "check" });
     return NextResponse.json(
       {
         success: false,

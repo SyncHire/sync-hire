@@ -6,6 +6,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
 import { geminiClient } from "@/lib/gemini-client";
 import { ApplicationStatus, ApplicationSource } from "@sync-hire/database";
@@ -146,7 +147,13 @@ async function generateAndSaveQuestions(
 
     console.log(`Generated ${mergedQuestions.length} questions for application ${applicationId}`);
   } catch (error) {
-    console.error(`[generateAndSaveQuestions] SYSTEM FAILURE - Question generation failed for application ${applicationId}:`, error);
+    logger.error(error, {
+      api: "jobs/[id]/match-candidates",
+      operation: "generateQuestions",
+      jobId,
+      cvId,
+      applicationId,
+    });
     // Update application status to indicate failure so it doesn't stay stuck
     // TODO: Add GENERATION_FAILED status to ApplicationStatus enum to distinguish from human rejection
     const application = await storage.getApplication(applicationId);
@@ -154,7 +161,6 @@ async function generateAndSaveQuestions(
       application.status = ApplicationStatus.REJECTED;
       application.updatedAt = new Date();
       await storage.saveApplication(application);
-      console.warn(`[generateAndSaveQuestions] Application ${applicationId} marked as REJECTED (due to SYSTEM FAILURE in question generation, not human rejection)`);
     }
   }
 }
@@ -241,7 +247,13 @@ export async function POST(
         matchReasons = result.matchReasons;
         skillGaps = result.skillGaps;
       } catch (error) {
-        console.error(`   ❌ Match calculation failed for ${candidateName}:`, error);
+        logger.error(error, {
+          api: "jobs/[id]/match-candidates",
+          operation: "calculateMatchScore",
+          jobId,
+          cvId,
+          candidateName,
+        });
         failedCount++;
         continue;
       }
@@ -290,7 +302,15 @@ export async function POST(
           cvId,
           jobId,
           application.id
-        ).catch(err => console.error("Question generation failed:", err));
+        ).catch((err) =>
+          logger.error(err, {
+            api: "jobs/[id]/match-candidates",
+            operation: "generateQuestions",
+            jobId,
+            cvId,
+            applicationId: application.id,
+          })
+        );
       } else {
         console.log(`   ❌ Below threshold (${matchScore}% < ${matchThreshold}%) - not matched`);
         belowThresholdCount++;
@@ -320,7 +340,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error("Match candidates error:", error);
+    logger.error(error, { api: "jobs/[id]/match-candidates", operation: "match" });
     return NextResponse.json(
       {
         success: false,

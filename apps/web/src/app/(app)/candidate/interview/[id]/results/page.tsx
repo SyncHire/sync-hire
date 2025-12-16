@@ -43,7 +43,8 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
 
   // If still not found, try to parse as application ID (format: application-{jobId}-{userId})
   if (!interview && id.startsWith("application-")) {
-    const jobIdMatch = id.match(/^application-(job-\d+)-/);
+    // Format: application-job-{timestamp}-{random}-{userId} -> jobId = job-{timestamp}-{random}
+    const jobIdMatch = id.match(/^application-(job-\d+-[a-z0-9]+)-/);
     if (jobIdMatch) {
       const jobId = jobIdMatch[1];
       job = await storage.getJob(jobId);

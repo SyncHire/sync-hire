@@ -175,13 +175,18 @@ export default function JobCreationPage() {
     field: keyof ExtractedJobData,
     value: unknown,
   ) => {
-    setState((prev) => ({
-      ...prev,
-      extractedData: {
-        ...prev.extractedData!,
-        [field]: value,
-      },
-    }));
+    setState((prev) => {
+      if (!prev.extractedData) {
+        return prev;
+      }
+      return {
+        ...prev,
+        extractedData: {
+          ...prev.extractedData,
+          [field]: value,
+        },
+      };
+    });
   };
 
   // Find suggestion for a specific item (matches by original text)
@@ -210,14 +215,19 @@ export default function JobCreationPage() {
 
     if (itemIndex !== -1) {
       items[itemIndex] = suggestion.improved;
-      setState((prev) => ({
-        ...prev,
-        extractedData: {
-          ...prev.extractedData!,
-          [field]: items,
-        },
-        acceptedSuggestions: [...prev.acceptedSuggestions, suggestion.improved],
-      }));
+      setState((prev) => {
+        if (!prev.extractedData) {
+          return prev;
+        }
+        return {
+          ...prev,
+          extractedData: {
+            ...prev.extractedData,
+            [field]: items,
+          },
+          acceptedSuggestions: [...prev.acceptedSuggestions, suggestion.improved],
+        };
+      });
       setExpandedSuggestion(null);
       toast.success("Suggestion applied!");
     }

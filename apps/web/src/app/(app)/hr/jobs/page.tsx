@@ -33,7 +33,7 @@ function CompanyLogo({ name }: { name: string }) {
   }
 
   return (
-    <Building2 className="h-6 w-6 text-muted-foreground group-hover:text-blue-400 transition-colors" />
+    <Building2 className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
   );
 }
 
@@ -64,7 +64,7 @@ export default function HRJDListings() {
             Job Listings
             <Badge
               variant="secondary"
-              className="bg-blue-500/10 text-blue-500 border-blue-500/20 gap-1 font-normal"
+              className="bg-primary/10 text-primary border-primary/20 gap-1 font-normal"
             >
               <Sparkles className="h-3 w-3" /> AI Active
             </Badge>
@@ -74,7 +74,7 @@ export default function HRJDListings() {
           </p>
         </div>
         <Link href="/hr/jobs/create">
-          <Button className="gap-2 h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-lg shadow-blue-500/20 transition-all">
+          <Button className="gap-2 h-10 px-6 bg-primary hover:bg-primary/90 text-primary-foreground border-0 shadow-lg shadow-primary/20 transition-all">
             <Plus className="h-4 w-4" /> Post New Job
           </Button>
         </Link>
@@ -83,14 +83,14 @@ export default function HRJDListings() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {jobs.map((job) => (
           <Link key={job.id} href={`/hr/jobs/${job.id}`}>
-            <div className="group relative flex flex-col justify-between p-6 rounded-2xl border border-border bg-card hover:bg-card/80 hover:border-blue-500/30 transition-all cursor-pointer h-full overflow-hidden">
+            <div className="group relative flex flex-col justify-between p-6 rounded-2xl border border-border bg-card hover:bg-card/80 hover:border-primary/30 transition-all cursor-pointer h-full overflow-hidden">
               {/* Hover Glow */}
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
               <div className="relative z-10 space-y-5">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center border border-border group-hover:border-blue-500/30 transition-colors overflow-hidden">
+                    <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center border border-border group-hover:border-primary/30 transition-colors overflow-hidden">
                       <CompanyLogo name={job.organization?.name || ""} />
                     </div>
                     <span className="text-lg font-bold text-foreground">
@@ -110,7 +110,7 @@ export default function HRJDListings() {
                   <div className="flex items-center gap-2 mb-2">
                     <Badge
                       variant="outline"
-                      className="bg-green-500/5 text-green-500 border-green-500/20 text-[10px] px-2 h-5"
+                      className="bg-accent/10 text-accent-foreground border-accent/20 text-[10px] px-2 h-5"
                     >
                       <Zap className="h-3 w-3 mr-1 fill-current" /> AI MATCHING
                       ON
@@ -119,7 +119,7 @@ export default function HRJDListings() {
                       <Clock className="h-3 w-3" /> {job.postedAt instanceof Date ? job.postedAt.toLocaleDateString() : job.postedAt}
                     </span>
                   </div>
-                  <h3 className="font-semibold text-xl text-foreground group-hover:text-blue-400 transition-colors">
+                  <h3 className="font-semibold text-xl text-foreground group-hover:text-primary transition-colors">
                     {job.title}
                   </h3>
                   <p className="text-sm text-muted-foreground mt-1">
@@ -148,7 +148,7 @@ export default function HRJDListings() {
                     ))}
                   </div>
                   {job.aiMatchingStatus === "SCANNING" ? (
-                    <span className="text-xs font-medium text-blue-400 flex items-center gap-1.5 animate-pulse">
+                    <span className="text-xs font-medium text-primary flex items-center gap-1.5 animate-pulse">
                       <Loader2 className="h-3 w-3 animate-spin" />
                       Scanning CVs...
                     </span>
@@ -162,7 +162,7 @@ export default function HRJDListings() {
                   )}
                 </div>
 
-                <span className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-all duration-300">
+                <span className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
                   <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
                 </span>
               </div>

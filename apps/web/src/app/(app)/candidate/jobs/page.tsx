@@ -36,6 +36,7 @@ import {
   simulateJobMatching,
 } from "@/lib/job-matching";
 import { getCompanyLogoUrl } from "@/lib/logo-utils";
+import { useHasOrganization } from "@/lib/hooks/use-organizations";
 import type { JobApplication } from "@/lib/mock-data";
 
 type WorkflowStage = "upload" | "processing" | "results";
@@ -50,6 +51,9 @@ export default function CandidateJobListings() {
     cv: savedCV,
     isLoading,
   } = useCandidateContext();
+
+  // Check if user has an organization (to hide hiring CTA)
+  const { hasOrganization } = useHasOrganization();
 
   // Local state for job applications (can be modified by CV processing)
   const [jobApplications, setJobApplications] = useState<JobApplication[]>([]);
@@ -420,30 +424,32 @@ export default function CandidateJobListings() {
                         );
                       })()}
 
-                      {/* Hiring CTA Banner */}
-                      <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-xl p-5 mb-6">
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                          <div className="text-center sm:text-left">
-                            <h3 className="font-semibold text-base">
-                              Hiring for your company?
-                            </h3>
-                            <p className="text-muted-foreground text-sm">
-                              Post jobs and find great candidates with AI-powered
-                              interviews
-                            </p>
+                      {/* Hiring CTA Banner - only show if user doesn't have an organization */}
+                      {!hasOrganization && (
+                        <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-xl p-5 mb-6">
+                          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="text-center sm:text-left">
+                              <h3 className="font-semibold text-base">
+                                Hiring for your company?
+                              </h3>
+                              <p className="text-muted-foreground text-sm">
+                                Post jobs and find great candidates with AI-powered
+                                interviews
+                              </p>
+                            </div>
+                            <Link href="/create-organization">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="whitespace-nowrap"
+                              >
+                                <Building2 className="h-4 w-4 mr-2" />
+                                Post a Job
+                              </Button>
+                            </Link>
                           </div>
-                          <Link href="/create-organization">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="whitespace-nowrap"
-                            >
-                              <Building2 className="h-4 w-4 mr-2" />
-                              Post a Job
-                            </Button>
-                          </Link>
                         </div>
-                      </div>
+                      )}
 
                       {/* Job Application Cards */}
                       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

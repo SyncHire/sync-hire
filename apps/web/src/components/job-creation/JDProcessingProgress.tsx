@@ -69,9 +69,9 @@ type StageStatus = "completed" | "current" | "pending";
 function getStageContainerClasses(status: StageStatus): string {
   switch (status) {
     case "current":
-      return "bg-blue-500/10 border border-blue-500/20";
+      return "bg-primary/10 border border-primary/20";
     case "completed":
-      return "bg-emerald-500/5 border border-emerald-500/10";
+      return "bg-accent/10 border border-accent/20";
     default:
       return "bg-secondary/20 border border-transparent";
   }
@@ -83,9 +83,9 @@ function getStageContainerClasses(status: StageStatus): string {
 function getStageColorClasses(status: StageStatus): string {
   switch (status) {
     case "completed":
-      return "text-emerald-600 dark:text-emerald-400";
+      return "text-accent-foreground";
     case "current":
-      return "text-blue-400";
+      return "text-primary";
     default:
       return "text-muted-foreground";
   }
@@ -152,7 +152,7 @@ export function JDProcessingProgress({
           </div>
           <div className="relative h-2 w-full overflow-hidden rounded-full bg-primary/20">
             <div
-              className="h-full w-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500 ease-out"
+              className="h-full w-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-500 ease-out"
               style={{
                 transform: `translateX(-${100 - getProgressPercentage()}%)`,
               }}
@@ -195,7 +195,7 @@ export function JDProcessingProgress({
                 </div>
 
                 {isCompleted && (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                  <CheckCircle2 className="w-5 h-5 text-accent-foreground flex-shrink-0" />
                 )}
               </div>
             );
@@ -204,9 +204,9 @@ export function JDProcessingProgress({
 
         {/* Success State */}
         {currentStage === "complete" && (
-          <div className="mt-6 text-center p-4 bg-emerald-50 border border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/30 rounded-xl">
-            <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 mx-auto mb-2" />
-            <p className="text-emerald-600 dark:text-emerald-400 font-medium">
+          <div className="mt-6 text-center p-4 bg-accent/10 border border-accent/20 rounded-xl">
+            <CheckCircle2 className="w-8 h-8 text-accent-foreground mx-auto mb-2" />
+            <p className="text-accent-foreground font-medium">
               Job description processed successfully!
             </p>
           </div>
@@ -214,8 +214,8 @@ export function JDProcessingProgress({
 
         {/* Error State */}
         {error && (
-          <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-            <p className="text-red-400 text-sm">{error}</p>
+          <div className="mt-6 p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
+            <p className="text-destructive text-sm">{error}</p>
           </div>
         )}
       </div>

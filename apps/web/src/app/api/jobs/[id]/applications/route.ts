@@ -5,6 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
 
 export async function GET(
@@ -38,7 +39,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Get applications error:", error);
+    logger.error(error, { api: "jobs/[id]/applications", operation: "fetch" });
     return NextResponse.json(
       { success: false, error: "Failed to get applications" },
       { status: 500 }
