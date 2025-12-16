@@ -63,10 +63,12 @@ export const JDExtractionState = Annotation.Root({
   // Validation
   validation: Annotation<{
     isValid: boolean;
+    overallConfidence: number;
     issues: string[];
+    warnings: string[];
   }>({
-    ...lastValue<{ isValid: boolean; issues: string[] }>(),
-    default: () => ({ isValid: false, issues: [] }),
+    ...lastValue<{ isValid: boolean; overallConfidence: number; issues: string[]; warnings: string[] }>(),
+    default: () => ({ isValid: false, overallConfidence: 0, issues: [], warnings: [] }),
   }),
 
   // Messages for conversation/debugging history

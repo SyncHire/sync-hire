@@ -17,13 +17,17 @@ const SUPPORTED_MIME_TYPES = [
   "text/markdown"
 ] as const;
 
+function isSupportedMimeType(mime: string): mime is typeof SUPPORTED_MIME_TYPES[number] {
+  return (SUPPORTED_MIME_TYPES as readonly string[]).includes(mime);
+}
+
 export async function fileToGeminiPart(filePath: string, mimeType: string): Promise<GeminiPart> {
   try {
     // 1. Validate File Existence
     await fs.access(filePath);
     
     // 2. Validate MIME Type
-    if (!SUPPORTED_MIME_TYPES.includes(mimeType as any)) {
+    if (!isSupportedMimeType(mimeType)) {
       throw new Error(`Unsupported MIME type: ${mimeType}. Supported: ${SUPPORTED_MIME_TYPES.join(", ")}`);
     }
 
