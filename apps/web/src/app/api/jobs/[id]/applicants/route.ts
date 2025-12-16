@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { getDemoApplicants } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
 
@@ -210,6 +211,9 @@ export async function GET(
       },
     });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { api: "jobs/[id]/applicants", operation: "fetch" },
+    });
     console.error("Failed to fetch job applicants:", error);
     return NextResponse.json(
       { success: false, message: "Failed to fetch applicants" },

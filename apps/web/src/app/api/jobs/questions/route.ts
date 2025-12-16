@@ -6,6 +6,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { getAllActiveJobsData } from "@/lib/server-utils/get-jobs";
 import { getStorage } from "@/lib/storage/storage-factory";
 
@@ -48,6 +49,9 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { api: "jobs/questions", operation: "check" },
+    });
     console.error("Check questions error:", error);
     return NextResponse.json(
       {

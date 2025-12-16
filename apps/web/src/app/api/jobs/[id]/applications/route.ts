@@ -5,6 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { getStorage } from "@/lib/storage/storage-factory";
 
 export async function GET(
@@ -38,6 +39,9 @@ export async function GET(
       },
     });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { api: "jobs/[id]/applications", operation: "fetch" },
+    });
     console.error("Get applications error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to get applications" },

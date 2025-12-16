@@ -6,6 +6,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
 import { geminiClient } from "@/lib/gemini-client";
 import { ApplicationStatus, ApplicationSource } from "@sync-hire/database";
@@ -320,6 +321,9 @@ export async function POST(
       },
     });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { api: "jobs/[id]/match-candidates", operation: "match" },
+    });
     console.error("Match candidates error:", error);
     return NextResponse.json(
       {

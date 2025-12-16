@@ -7,6 +7,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { generateInterviewQuestions } from "@/lib/backend/question-generator";
 import { getStorage } from "@/lib/storage/storage-factory";
 import type { InterviewQuestions } from "@/lib/storage/storage-interface";
@@ -148,6 +149,9 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { api: "jobs/apply", operation: "apply" },
+    });
     console.error("Apply to job error:", error);
 
     const errorMessage =
