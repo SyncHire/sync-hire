@@ -4,6 +4,7 @@
  * POST /api/start-interview
  * Supports both mock interview IDs and application IDs
  */
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import {
@@ -16,6 +17,21 @@ import { getStorage } from "@/lib/storage/storage-factory";
 import { getStreamClient } from "@/lib/stream-token";
 import { mergeInterviewQuestions } from "@/lib/utils/question-utils";
 import { getAgentEndpoint, getAgentHeaders } from "@/lib/agent-config";
+
+/**
+ * Generate a short, deterministic call ID from an application or interview ID.
+ * Stream has a 64 character limit for call IDs.
+ * Uses MD5 hash (truncated) for determinism - same ID always gets same call.
+ */
+function generateCallId(applicationId: string): string {
+  // Short IDs (like "interview-1") can be used directly
+  if (applicationId.length <= 64) {
+    return applicationId;
+  }
+  // For longer application IDs, create a deterministic hash-based short ID
+  const hash = crypto.createHash("md5").update(applicationId).digest("hex").slice(0, 16);
+  return `call-${hash}`;
+}
 
 // Track which calls have had agents invited (in-memory cache)
 // This prevents duplicate invitations on page refreshes
@@ -45,8 +61,8 @@ export async function POST(request: Request) {
       // For mock interviews, get job from storage (no more mock job fallback)
       job = await storage.getJob(interview.jobId);
     } else if (interviewId.startsWith("application-")) {
-      // Parse application ID: application-job-5-demo-user -> jobId = job-5
-      const jobIdMatch = interviewId.match(/^application-(job-\d+)-/);
+      // Parse application ID: application-job-{timestamp}-{random}-{userId} -> jobId = job-{timestamp}-{random}
+      const jobIdMatch = interviewId.match(/^application-(job-\d+-[a-z0-9]+)-/);
       if (jobIdMatch) {
         const jobId = jobIdMatch[1];
         job = await storage.getJob(jobId);
@@ -97,8 +113,8 @@ export async function POST(request: Request) {
       }));
     }
 
-    // Use interview ID directly as call ID (already formatted as "interview-1", etc.)
-    const callId = interviewId;
+    // Generate a short call ID (Stream has 64 char limit)
+    const callId = generateCallId(interviewId);
 
     // Create the Stream call (getOrCreate returns existing call if it exists)
     const streamClient = getStreamClient();
