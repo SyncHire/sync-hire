@@ -150,7 +150,6 @@ async function generateAndSaveQuestions(
     logger.error(error, {
       api: "jobs/[id]/match-candidates",
       operation: "generateQuestions",
-      background: true,
       jobId,
       cvId,
       applicationId,
@@ -307,7 +306,6 @@ export async function POST(
           logger.error(err, {
             api: "jobs/[id]/match-candidates",
             operation: "generateQuestions",
-            background: true,
             jobId,
             cvId,
             applicationId: application.id,

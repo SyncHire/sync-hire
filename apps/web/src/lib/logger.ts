@@ -8,11 +8,8 @@
  * ```ts
  * import { logger } from "@/lib/logger";
  *
- * // API errors
- * logger.error(error, { api: "jobs/apply", operation: "create" });
- *
- * // Background task errors
- * logger.error(error, { api: "jobs/match", operation: "generate", background: true });
+ * // API errors with context
+ * logger.error(error, { api: "jobs/apply", operation: "create", jobId: "123" });
  *
  * // Warnings
  * logger.warn("Rate limit approaching", { api: "gemini", remaining: 10 });
@@ -29,8 +26,6 @@ interface LogContext {
   api?: string;
   /** Operation being performed */
   operation?: string;
-  /** Whether this is a background/async operation */
-  background?: boolean;
   /** Additional context data */
   [key: string]: unknown;
 }
@@ -65,9 +60,6 @@ function extractTags(context?: LogContext): Record<string, string> {
   if (context?.operation) {
     tags.operation = context.operation;
   }
-  if (context?.background) {
-    tags.background = "true";
-  }
   return tags;
 }
 
@@ -75,7 +67,7 @@ function extractExtra(context?: LogContext): Record<string, unknown> {
   if (!context) {
     return {};
   }
-  const { api, operation, background, ...extra } = context;
+  const { api, operation, ...extra } = context;
   return extra;
 }
 
