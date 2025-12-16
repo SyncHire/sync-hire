@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import * as Sentry from "@sentry/nextjs";
+import { logger } from "@/lib/logger";
 import { getServerSession } from "@/lib/auth-server";
 import { getStorage } from "@/lib/storage/storage-factory";
 
@@ -22,10 +22,7 @@ export async function GET() {
       data: notifications,
     });
   } catch (error) {
-    Sentry.captureException(error, {
-      tags: { api: "notifications", operation: "fetch" },
-    });
-    console.error("Failed to fetch notifications:", error);
+    logger.error(error, { api: "notifications", operation: "fetch" });
     return NextResponse.json(
       { success: false, message: "Failed to fetch notifications" },
       { status: 500 },

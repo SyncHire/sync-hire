@@ -5,7 +5,7 @@
  * Supports both mock interview IDs and application IDs
  */
 import { NextResponse } from "next/server";
-import * as Sentry from "@sentry/nextjs";
+import { logger } from "@/lib/logger";
 import {
   getDemoUser,
   mockInterviews,
@@ -215,10 +215,7 @@ export async function POST(request: Request) {
       message: "Interview started and AI agent invited",
     });
   } catch (error) {
-    Sentry.captureException(error, {
-      tags: { api: "start-interview", operation: "start" },
-    });
-    console.error("Error starting interview:", error);
+    logger.error(error, { api: "start-interview", operation: "start" });
     return NextResponse.json(
       { error: "Failed to start interview" },
       { status: 500 },
