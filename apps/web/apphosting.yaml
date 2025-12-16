@@ -108,3 +108,15 @@ env:
     secret: API_SECRET_KEY
     availability:
       - RUNTIME
+
+  # Sentry error tracking (enabled by default in production)
+  - variable: NEXT_PUBLIC_SENTRY_DSN
+    secret: SENTRY_DSN
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: SENTRY_TRACES_SAMPLE_RATE
+    value: "0.1"
+    availability:
+      - BUILD
+      - RUNTIME
