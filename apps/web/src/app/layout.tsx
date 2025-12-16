@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "@/index.css";
 import { ThemeProvider } from "next-themes";
-import AppShell from "@/components/AppShell";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryProvider } from "@/lib/query-provider";
@@ -39,7 +38,7 @@ export default function RootLayout({
           <QueryProvider>
             <TooltipProvider>
               <Toaster />
-              <AppShell>{children}</AppShell>
+              {children}
             </TooltipProvider>
           </QueryProvider>
         </ThemeProvider>

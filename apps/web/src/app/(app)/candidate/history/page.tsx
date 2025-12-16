@@ -268,7 +268,7 @@ export default function InterviewHistory() {
                   key={interview.id}
                   className="group hover:bg-secondary/30 border-border transition-colors cursor-pointer"
                   onClick={() =>
-                    router.push(`/interview/${interview.id}/results`)
+                    router.push(`/candidate/interview/${interview.id}/results`)
                   }
                 >
                   <TableCell className="pl-6 py-4">

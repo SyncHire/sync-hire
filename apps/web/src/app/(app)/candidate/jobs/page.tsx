@@ -622,7 +622,7 @@ export default function CandidateJobListings() {
                                         <Link
                                           href={
                                             application.status === "COMPLETED"
-                                              ? `/interview/${application.id}/results`
+                                              ? `/candidate/interview/${application.id}/results`
                                               : `/interview/${application.id}`
                                           }
                                           className="flex-1"

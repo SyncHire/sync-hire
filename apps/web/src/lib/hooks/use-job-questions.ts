@@ -4,8 +4,13 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Job } from "@/lib/mock-data";
+import type { Job as BaseJob } from "@/lib/storage/storage-interface";
 import { toast } from "sonner";
+
+// Extend base Job type with computed fields from API
+export type Job = BaseJob & {
+  applicantsCount?: number;
+};
 
 // =============================================================================
 // Job Query Hooks

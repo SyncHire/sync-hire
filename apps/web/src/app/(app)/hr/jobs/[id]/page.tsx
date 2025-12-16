@@ -32,8 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { useSaveJobQuestions, useGenerateJobQuestions, useUpdateJobSettings, useMatchCandidates, useJob } from "@/lib/hooks/use-job-questions";
-import type { Job } from "@/lib/mock-data";
+import { useSaveJobQuestions, useGenerateJobQuestions, useUpdateJobSettings, useMatchCandidates, useJob, type Job } from "@/lib/hooks/use-job-questions";
 
 interface Question {
   id: string;
@@ -91,7 +90,15 @@ export default function HRJDDetail() {
   useEffect(() => {
     if (job) {
       if (job.questions) {
-        setQuestions(job.questions);
+        // Map database questions (content) to frontend format (text)
+        setQuestions(
+          job.questions.map((q) => ({
+            id: q.id,
+            text: q.content,
+            type: "text" as const, // DB uses SHORT_ANSWER, frontend uses text
+            duration: q.duration,
+          }))
+        );
       }
       setAiMatchingEnabled(job.aiMatchingEnabled ?? true);
 
