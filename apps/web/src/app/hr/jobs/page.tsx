@@ -16,10 +16,35 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useJobs } from "@/lib/hooks/use-job-questions";
+import { useActiveOrganization } from "@/lib/hooks/use-organizations";
 import { getCompanyLogoUrl } from "@/lib/logo-utils";
 
+function CompanyLogo({ name }: { name: string }) {
+  const logoUrl = getCompanyLogoUrl(name);
+
+  if (logoUrl) {
+    return (
+      <img
+        src={logoUrl}
+        alt={`${name} logo`}
+        className="h-8 w-8 object-contain"
+      />
+    );
+  }
+
+  return (
+    <Building2 className="h-6 w-6 text-muted-foreground group-hover:text-blue-400 transition-colors" />
+  );
+}
+
 export default function HRJDListings() {
-  const { data: jobs = [], isLoading } = useJobs({ pollWhileScanning: true });
+  const { data: activeOrg } = useActiveOrganization();
+  const { data, isLoading } = useJobs({
+    organizationId: activeOrg?.id,
+    pollWhileScanning: true,
+  });
+  // Ensure jobs is always an array (safeguard against unexpected API responses)
+  const jobs = Array.isArray(data) ? data : [];
 
   if (isLoading) {
     return (
@@ -66,15 +91,7 @@ export default function HRJDListings() {
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
                     <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center border border-border group-hover:border-blue-500/30 transition-colors overflow-hidden">
-                      {getCompanyLogoUrl(job.organization?.name || "") ? (
-                        <img
-                          src={getCompanyLogoUrl(job.organization?.name || "")!}
-                          alt={`${job.organization?.name} logo`}
-                          className="h-8 w-8 object-contain"
-                        />
-                      ) : (
-                        <Building2 className="h-6 w-6 text-muted-foreground group-hover:text-blue-400 transition-colors" />
-                      )}
+                      <CompanyLogo name={job.organization?.name || ""} />
                     </div>
                     <span className="text-lg font-bold text-foreground">
                       {job.organization?.name}

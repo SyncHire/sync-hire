@@ -59,6 +59,11 @@ Always use pnpm workspace commands targeting specific apps or packages.
 - Bad: `const { toast } = await import('@/lib/hooks/use-toast');`
 - Good: `import { toast } from '@/lib/hooks/use-toast';` at the top of the file
 
+### IIFEs (Anti-pattern)
+- **Never use Immediately Invoked Function Expressions (IIFEs)** - extract into named functions or sub-components
+- Bad: `{(() => { const x = compute(); return <div>{x}</div>; })()}`
+- Good: Extract into a named sub-component or compute the value before JSX
+
 ### Barrel Files (Anti-pattern)
 - **Never create barrel files (index.ts)** - import directly from the source file
 - Barrel files cause circular dependency issues, slow down builds, and make tree-shaking less effective

@@ -142,7 +142,7 @@ model Member {
   id             String        @id @default(cuid())
   organizationId String
   userId         String
-  role           OrgMemberRole @default(RECRUITER)
+  role           OrgMemberRole @default(member)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -155,12 +155,11 @@ model Member {
   @@map("member")
 }
 
+// Lowercase to match Better Auth's organization plugin
 enum OrgMemberRole {
-  OWNER // Full control, billing, can delete org
-  ADMIN // Manage members, all jobs
-  RECRUITER // Create/manage jobs, view candidates
-  HIRING_MANAGER // View assigned jobs/candidates only
-  VIEWER // Read-only access
+  owner
+  admin
+  member
 }
 
 // =============================================================================

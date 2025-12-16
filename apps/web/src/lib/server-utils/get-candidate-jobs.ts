@@ -3,7 +3,7 @@
  */
 
 import "server-only";
-import { getAllJobsData, JobWithApplicantCount } from "./get-jobs";
+import { getAllActiveJobsData, JobWithApplicantCount } from "./get-jobs";
 
 /**
  * Candidate-facing job application type (uses database Job type)
@@ -26,7 +26,7 @@ export interface CandidateJobApplication {
 export async function getCandidateJobApplications(
   userId: string,
 ): Promise<CandidateJobApplication[]> {
-  const jobs = await getAllJobsData();
+  const jobs = await getAllActiveJobsData();
 
   return jobs.map((job) => ({
     id: `application-${job.id}-${userId}`,

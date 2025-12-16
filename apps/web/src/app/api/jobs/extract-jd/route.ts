@@ -2,24 +2,55 @@
  * POST /api/jobs/extract-jd
  *
  * Handles file upload and AI extraction with intelligent caching.
+ * Requires organizationId from frontend, validates user membership.
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
+import { prisma } from "@sync-hire/database";
 import { JobDescriptionProcessor } from "@/lib/backend/jd-processor";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { getCloudStorageProvider } from "@/lib/storage/cloud/storage-provider-factory";
+import { requireAuth } from "@/lib/auth-server";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication
+    const session = await requireAuth();
+    const userId = session.user.id;
+
     const formData = await request.formData();
     const file = formData.get("file") as File;
+    const organizationId = formData.get("organizationId") as string;
 
     if (!file) {
       return NextResponse.json(
         { success: false, error: "No file provided" },
         { status: 400 },
+      );
+    }
+
+    if (!organizationId) {
+      return NextResponse.json(
+        { success: false, error: "Organization ID is required" },
+        { status: 400 },
+      );
+    }
+
+    // Validate user is a member of the organization
+    const membership = await prisma.member.findFirst({
+      where: {
+        userId,
+        organizationId,
+      },
+    });
+
+    if (!membership) {
+      return NextResponse.json(
+        { success: false, error: "You are not a member of this organization" },
+        { status: 403 },
       );
     }
 
@@ -55,7 +86,7 @@ export async function POST(request: NextRequest) {
     const processor = new JobDescriptionProcessor(storage, cloudStorage);
 
     const { hash, extractedData, aiSuggestions, aiQuestions, cached } =
-      await processor.processFile(buffer, file.name);
+      await processor.processFile(buffer, file.name, organizationId, userId);
 
     return NextResponse.json(
       {
@@ -71,6 +102,9 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { api: "jobs/extract-jd", operation: "extract" },
+    });
     console.error("Extract JD error:", error);
     return NextResponse.json(
       {

@@ -5,11 +5,36 @@
 
 import "server-only";
 import type { Job } from "@/lib/storage/storage-interface";
+import type { Interview } from "@/lib/storage/storage-interface";
 import { getStorage } from "@/lib/storage/storage-factory";
 
 // Extended Job type with computed applicantsCount
 export interface JobWithApplicantCount extends Job {
   applicantsCount: number;
+}
+
+/**
+ * Sort jobs by creation date, newest first
+ */
+function sortJobsByCreatedAt(jobs: Job[]): Job[] {
+  return [...jobs].sort((a, b) => {
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return dateB - dateA;
+  });
+}
+
+/**
+ * Add applicant counts to jobs based on interviews
+ */
+function addApplicantCounts(jobs: Job[], interviews: Interview[]): JobWithApplicantCount[] {
+  return jobs.map((job) => {
+    const jobInterviews = interviews.filter((interview) => interview.jobId === job.id);
+    return {
+      ...job,
+      applicantsCount: jobInterviews.length,
+    };
+  });
 }
 
 /**
@@ -21,28 +46,31 @@ export async function getJobData(id: string): Promise<Job | null> {
 }
 
 /**
- * Get all jobs from storage with computed applicant counts
+ * Get jobs for an organization with computed applicant counts (HR view)
+ * @param organizationId - Filter jobs by organization ID (required)
  */
-export async function getAllJobsData(): Promise<JobWithApplicantCount[]> {
+export async function getAllJobsData(organizationId: string): Promise<JobWithApplicantCount[]> {
   const storage = getStorage();
   const storedJobs = await storage.getAllStoredJobs();
-
-  // Sort by createdAt, newest first
-  const sortedJobs = storedJobs.sort((a, b) => {
-    const dateA = new Date(a.createdAt).getTime();
-    const dateB = new Date(b.createdAt).getTime();
-    return dateB - dateA;
-  });
-
-  // Compute applicant counts from interviews
   const allInterviews = await storage.getAllInterviews();
-  const jobsWithCounts = sortedJobs.map((job) => {
-    const jobInterviews = allInterviews.filter((i) => i.jobId === job.id);
-    return {
-      ...job,
-      applicantsCount: jobInterviews.length,
-    };
-  });
 
-  return jobsWithCounts;
+  const orgJobs = storedJobs.filter((job) => job.organizationId === organizationId);
+  const sortedJobs = sortJobsByCreatedAt(orgJobs);
+
+  return addApplicantCounts(sortedJobs, allInterviews);
+}
+
+/**
+ * Get all active jobs across all organizations (Candidate view)
+ * Used by candidates to browse available jobs
+ */
+export async function getAllActiveJobsData(): Promise<JobWithApplicantCount[]> {
+  const storage = getStorage();
+  const storedJobs = await storage.getAllStoredJobs();
+  const allInterviews = await storage.getAllInterviews();
+
+  const activeJobs = storedJobs.filter((job) => job.status === "ACTIVE");
+  const sortedJobs = sortJobsByCreatedAt(activeJobs);
+
+  return addApplicantCounts(sortedJobs, allInterviews);
 }

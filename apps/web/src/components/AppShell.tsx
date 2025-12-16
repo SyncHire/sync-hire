@@ -21,6 +21,7 @@ import { useCurrentUser } from "@/lib/hooks/use-current-user";
 import { useNotifications } from "@/lib/hooks/use-notifications";
 import { signOut } from "@/lib/auth-client";
 import { AboutDialog } from "./AboutDialog";
+import { ContextSwitcher } from "./ContextSwitcher";
 import { Logo } from "./Logo";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -83,8 +84,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {!isInterview && (
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md transition-colors duration-300">
           <div className="container mx-auto flex h-14 items-center justify-between px-4">
-            <div className="flex items-center gap-8">
+            <div className="flex items-center gap-6">
               <Logo size="sm" />
+
+              {user && <ContextSwitcher />}
 
               <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
                 {!isCandidate ? (
@@ -217,12 +220,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   <div className="h-4 w-px bg-border/50" />
 
                   <div className="flex items-center gap-3">
-                    <Link
-                      href={isCandidate ? "/hr/jobs" : "/candidate/jobs"}
-                      className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1 hover:bg-secondary rounded"
-                    >
-                      {isCandidate ? "Switch to HR" : "Switch to Candidate"}
-                    </Link>
                     <Popover>
                       <PopoverTrigger asChild>
                         <button className="h-7 w-7 rounded-full overflow-hidden border border-border/50 bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors cursor-pointer">

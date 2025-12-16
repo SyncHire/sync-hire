@@ -1,20 +1,25 @@
 /**
  * GET /api/jobs
  *
- * Retrieves all jobs from file storage and memory, merged together
+ * Retrieves all active jobs for candidates to browse
+ * For org-specific jobs, use /api/orgs/:id/jobs
  */
 
 import { NextResponse } from "next/server";
-import { getAllJobsData } from "@/lib/server-utils/get-jobs";
+import * as Sentry from "@sentry/nextjs";
+import { getAllActiveJobsData } from "@/lib/server-utils/get-jobs";
 
 export async function GET() {
   try {
-    const jobs = await getAllJobsData();
+    const jobs = await getAllActiveJobsData();
     return NextResponse.json({
       success: true,
       data: jobs,
     });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { api: "jobs", operation: "fetch-active" },
+    });
     console.error("Failed to fetch jobs:", error);
     return NextResponse.json(
       {
