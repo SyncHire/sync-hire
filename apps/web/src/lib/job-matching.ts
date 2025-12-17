@@ -1,4 +1,4 @@
-import type { Job } from "./mock-data";
+import type { Job } from "@/lib/storage/storage-interface";
 
 export interface JobWithMatch extends Job {
   matchPercentage: number;

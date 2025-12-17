@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { geminiClient } from "@/lib/gemini-client";
 import { z } from "zod";
-import type { AIEvaluation } from "@/lib/mock-data";
+import type { AIEvaluation } from "@/lib/types/interview-types";
 
 const EvaluationSchema = z.object({
   overallScore: z.number().min(0).max(100),

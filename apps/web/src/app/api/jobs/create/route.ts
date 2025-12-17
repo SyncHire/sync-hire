@@ -7,7 +7,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { ApplicationStatus, ApplicationSource, MatchingStatus, JobStatus } from "@sync-hire/database";
 import type { ExtractedCVData, ExtractedJobData } from "@sync-hire/database";
-import type { Question } from "@/lib/mock-data";
+import type { Question } from "@/lib/types/interview-types";
 import { getStorage } from "@/lib/storage/storage-factory";
 import type { Job } from "@/lib/storage/storage-interface";
 import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";

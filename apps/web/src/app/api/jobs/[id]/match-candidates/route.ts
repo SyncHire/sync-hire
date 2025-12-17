@@ -11,7 +11,7 @@ import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
 import { geminiClient } from "@/lib/gemini-client";
 import { ApplicationStatus, ApplicationSource } from "@sync-hire/database";
 import type { ExtractedCVData, ExtractedJobData, CandidateApplication, InterviewQuestions } from "@sync-hire/database";
-import type { Question } from "@/lib/mock-data";
+import type { Question } from "@/lib/types/interview-types";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { z } from "zod";
 

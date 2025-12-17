@@ -1,20 +1,17 @@
 /**
  * Interview Room Page
  * Dynamic route for interview sessions: /interview/[id]
- * Supports both mock interview IDs (interview-1) and application IDs (application-job-5-demo-user)
+ * Supports both interview IDs and application IDs (application-job-5-user-id)
  */
 
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { InterviewRoom } from "@/components/InterviewRoom";
 import { StreamVideoProvider } from "@/components/StreamVideoProvider";
-import {
-  getDemoUser,
-  mockInterviews,
-  type Question,
-} from "@/lib/mock-data";
-import type { Job } from "@/lib/storage/storage-interface";
+import type { Question } from "@/lib/types/interview-types";
+import type { Job, Interview } from "@/lib/storage/storage-interface";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { mergeInterviewQuestions } from "@/lib/utils/question-utils";
+import { getServerSession } from "@/lib/auth-server";
 
 interface InterviewPageProps {
   params: Promise<{
@@ -24,11 +21,18 @@ interface InterviewPageProps {
 
 export default async function InterviewPage({ params }: InterviewPageProps) {
   const { id } = await params;
-  const demoUser = getDemoUser();
+  const session = await getServerSession();
+
+  // Redirect to login if not authenticated
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  const user = session.user;
   const storage = getStorage();
 
-  // Try to get interview from mock data first
-  let interview = mockInterviews[id];
+  // Try to get interview from database
+  let interview: Interview | null = await storage.getInterview(id);
   let job: Job | null = interview ? await storage.getJob(interview.jobId) : null;
   let generatedQuestions: Question[] = [];
   let jobId: string | null = null;
@@ -42,14 +46,19 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
       job = await storage.getJob(jobId);
 
       if (job) {
-        // Create a synthetic interview object
+        // Create a synthetic interview object for starting interview from application
         interview = {
           id,
           jobId,
-          candidateId: demoUser.id,
+          candidateId: user.id,
           status: "PENDING" as const,
           durationMinutes: 30,
           createdAt: new Date(),
+          completedAt: null,
+          callId: null,
+          transcript: null,
+          score: null,
+          aiEvaluation: null,
         };
       }
     }
@@ -63,7 +72,7 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
 
   // Try to load generated questions from storage
   if (jobId) {
-    const userCvId = await storage.getUserCVId(demoUser.id);
+    const userCvId = await storage.getUserCVId(user.id);
     if (userCvId) {
       const questionSet = await storage.getInterviewQuestions(userCvId, jobId);
 
@@ -92,11 +101,11 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
   const calculatedDuration = Math.max(15, Math.ceil(questions.length * 3));
 
   return (
-    <StreamVideoProvider userId={demoUser.id} userName={demoUser.name}>
+    <StreamVideoProvider userId={user.id} userName={user.name}>
       <InterviewRoom
         interviewId={id}
-        candidateId={demoUser.id}
-        candidateName={demoUser.name}
+        candidateId={user.id}
+        candidateName={user.name}
         jobTitle={job.title}
         company={job.organization.name}
         durationMinutes={calculatedDuration}

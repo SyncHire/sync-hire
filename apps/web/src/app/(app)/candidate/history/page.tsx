@@ -9,13 +9,12 @@ import {
   Briefcase,
   Building2,
   Calendar,
-  Clock,
   Loader2,
   Trophy,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,10 +26,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getCompanyLogoUrl } from "@/lib/logo-utils";
-import { getAllInterviews, getDemoUser, getJobById } from "@/lib/mock-data";
+import type { Interview, Job } from "@/lib/storage/storage-interface";
+import { useQuery } from "@tanstack/react-query";
 
-type CompletedInterview = ReturnType<typeof getAllInterviews>[0] & {
-  job: NonNullable<ReturnType<typeof getJobById>>;
+interface JobsResponse {
+  success: boolean;
+  data: Job[];
+}
+
+interface InterviewsResponse {
+  success: boolean;
+  data: Interview[];
+}
+
+type CompletedInterview = Interview & {
+  job: Job;
   formattedDate: string;
 };
 
@@ -42,9 +52,35 @@ export default function InterviewHistory() {
   const [sortField, setSortField] = useState<SortField>("score");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  // Get demo user and completed interviews
-  const demoUser = getDemoUser();
-  const allInterviews = getAllInterviews();
+  // Fetch user's interviews
+  const { data: interviewsData, isLoading: interviewsLoading } = useQuery<InterviewsResponse>({
+    queryKey: ["/api/candidate/interviews"],
+    queryFn: async () => {
+      const res = await fetch("/api/candidate/interviews");
+      if (!res.ok) {
+        throw new Error("Failed to fetch interviews");
+      }
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch all jobs to get job details
+  const { data: jobsData, isLoading: jobsLoading } = useQuery<JobsResponse>({
+    queryKey: ["/api/jobs"],
+    queryFn: async () => {
+      const res = await fetch("/api/jobs");
+      if (!res.ok) {
+        throw new Error("Failed to fetch jobs");
+      }
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const interviews = interviewsData?.data ?? [];
+  const jobs = jobsData?.data ?? [];
+  const isLoading = interviewsLoading || jobsLoading;
 
   // Handle sorting
   const handleSort = (field: SortField) => {
@@ -59,56 +95,78 @@ export default function InterviewHistory() {
   };
 
   // Filter and process completed interviews
-  const completedInterviews: CompletedInterview[] = allInterviews
-    .filter((interview) => interview.status === "COMPLETED")
-    .map((interview) => {
-      const job = getJobById(interview.jobId);
-      // Format completion date - using createdAt for completed interviews
-      const completionDate = interview.createdAt;
-      return {
-        ...interview,
-        job: job!, // We know job exists for completed interviews
-        formattedDate: completionDate.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }),
-      };
-    })
-    .sort((a, b) => {
-      let comparison = 0;
+  const completedInterviews = useMemo(() => {
+    const completed = (interviews || [])
+      .filter((interview) => interview.status === "COMPLETED")
+      .map((interview) => {
+        const job = jobs.find((j) => j.id === interview.jobId);
+        if (!job) {
+          return null;
+        }
+        // Format completion date - using createdAt for completed interviews
+        const completionDate = interview.createdAt instanceof Date
+          ? interview.createdAt
+          : new Date(interview.createdAt);
+        return {
+          ...interview,
+          job,
+          formattedDate: completionDate.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
+        };
+      })
+      .filter((item): item is CompletedInterview => item !== null)
+      .sort((a, b) => {
+        let comparison = 0;
 
-      switch (sortField) {
-        case "score":
-          comparison = (a.score || 0) - (b.score || 0);
-          break;
-        case "date":
-          comparison = a.createdAt.getTime() - b.createdAt.getTime();
-          break;
-        case "company":
-          comparison = (a.job?.organization?.name || "").localeCompare(
-            b.job?.organization?.name || "",
-          );
-          break;
-        case "position":
-          comparison = (a.job?.title || "").localeCompare(b.job?.title || "");
-          break;
-      }
+        switch (sortField) {
+          case "score":
+            comparison = (a.score || 0) - (b.score || 0);
+            break;
+          case "date":
+            comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+            break;
+          case "company":
+            comparison = (a.job?.organization?.name || "").localeCompare(
+              b.job?.organization?.name || "",
+            );
+            break;
+          case "position":
+            comparison = (a.job?.title || "").localeCompare(b.job?.title || "");
+            break;
+        }
 
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
+        return sortDirection === "asc" ? comparison : -comparison;
+      });
+
+    return completed;
+  }, [interviews, jobs, sortField, sortDirection]);
 
   const getScoreColor = (score: number) => {
-    if (score >= 90) return "text-emerald-600 dark:text-emerald-400";
-    if (score >= 80) return "text-blue-600 dark:text-blue-400";
-    if (score >= 70) return "text-amber-600 dark:text-amber-400";
+    if (score >= 90) {
+      return "text-emerald-600 dark:text-emerald-400";
+    }
+    if (score >= 80) {
+      return "text-blue-600 dark:text-blue-400";
+    }
+    if (score >= 70) {
+      return "text-amber-600 dark:text-amber-400";
+    }
     return "text-gray-600 dark:text-gray-400";
   };
 
   const getScoreLabel = (score: number) => {
-    if (score >= 90) return "Excellent";
-    if (score >= 80) return "Great";
-    if (score >= 70) return "Good";
+    if (score >= 90) {
+      return "Excellent";
+    }
+    if (score >= 80) {
+      return "Great";
+    }
+    if (score >= 70) {
+      return "Good";
+    }
     return "Needs Work";
   };
 
@@ -122,6 +180,17 @@ export default function InterviewHistory() {
       <ArrowDown className="h-3.5 w-3.5 ml-1.5" />
     );
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+          <p className="text-muted-foreground">Loading interview history...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 p-6">
@@ -263,7 +332,7 @@ export default function InterviewHistory() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {completedInterviews.map((interview, i) => (
+              {completedInterviews.map((interview) => (
                 <TableRow
                   key={interview.id}
                   className="group hover:bg-secondary/30 border-border transition-colors cursor-pointer"
@@ -318,7 +387,7 @@ export default function InterviewHistory() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {interview.score !== undefined ? (
+                    {interview.score !== undefined && interview.score !== null ? (
                       <div className="flex items-center gap-3">
                         <div className="relative h-10 w-10 flex items-center justify-center">
                           <svg
@@ -394,7 +463,7 @@ export default function InterviewHistory() {
               No completed interviews
             </h3>
             <p className="text-muted-foreground mb-6">
-              You haven't completed any interviews yet. Start your first
+              You haven&apos;t completed any interviews yet. Start your first
               interview to see your results here.
             </p>
             <div className="flex justify-center gap-4">

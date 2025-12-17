@@ -4,14 +4,11 @@
  * Returns all interviews/applicants for a specific job
  * Combines interview data with user/CV data to provide applicant details
  * Also includes AI-matched applications that haven't started interviews yet
- * Falls back to demo applicants only for demo jobs (job-1, job-2, job-3)
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import { getDemoApplicants } from "@/lib/mock-data";
 import { getStorage } from "@/lib/storage/storage-factory";
-
 import { InterviewStatus } from "@sync-hire/database";
 
 // Common applicant type for the response
@@ -30,7 +27,7 @@ interface ApplicantResponse {
   aiEvaluation?: unknown;
   skills: string[];
   experience: unknown[];
-  source: "interview" | "ai_match" | "demo";
+  source: "interview" | "ai_match";
   matchReasons?: string[];
   skillGaps?: string[];
 }
@@ -52,9 +49,6 @@ export async function GET(
       );
     }
 
-    // Check if this is a demo job (legacy hardcoded jobs)
-    const isDemoJob = ["job-1", "job-2", "job-3"].includes(jobId);
-
     // Get all interviews and filter by jobId
     const allInterviews = await storage.getAllInterviews();
     const jobInterviews = allInterviews.filter(
@@ -66,9 +60,6 @@ export async function GET(
 
     // Track CVIds that have interviews already
     const interviewCvIds = new Set<string>();
-
-    // Track if we're using demo data
-    let usingDemoData = false;
 
     // Enrich interview data with user/CV information
     const interviewApplicants = await Promise.all(
@@ -142,35 +133,7 @@ export async function GET(
     );
 
     // Combine interview applicants and AI-matched applicants
-    let applicants: ApplicantResponse[] = [...interviewApplicants, ...aiApplicants];
-
-    // Only use demo data for demo jobs when there are no real applicants
-    if (applicants.length === 0 && isDemoJob) {
-      usingDemoData = true;
-      const demoApplicants = getDemoApplicants();
-      applicants = demoApplicants.map((demo) => ({
-        id: demo.id,
-        interviewId: demo.id,
-        candidateId: demo.id,
-        cvId: null,
-        name: demo.name,
-        email: demo.email,
-        status: "COMPLETED" as const,
-        score: demo.score,
-        durationMinutes: demo.durationMinutes,
-        createdAt: demo.completedAt instanceof Date
-          ? demo.completedAt.toISOString()
-          : String(demo.completedAt),
-        completedAt: demo.completedAt instanceof Date
-          ? demo.completedAt.toISOString()
-          : String(demo.completedAt),
-        aiEvaluation: demo.aiEvaluation,
-        skills: [],
-        experience: [],
-        source: "demo" as const,
-      }));
-      console.log(`📋 Using demo applicants for demo job ${jobId}`);
-    }
+    const applicants: ApplicantResponse[] = [...interviewApplicants, ...aiApplicants];
 
     // Sort by score (completed first, then by score descending)
     applicants.sort((a, b) => {
@@ -207,7 +170,6 @@ export async function GET(
                 )
               : null,
         },
-        usingDemoData,
       },
     });
   } catch (error) {

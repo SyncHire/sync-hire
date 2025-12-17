@@ -2,21 +2,18 @@
  * API Route: Start an interview
  * Creates a Stream call and invites the Python AI agent
  * POST /api/start-interview
- * Supports both mock interview IDs and application IDs
+ * Supports both interview IDs and application IDs
  */
 import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import {
-  getDemoUser,
-  mockInterviews,
-  type Question,
-} from "@/lib/mock-data";
-import type { Job } from "@/lib/storage/storage-interface";
+import type { Question } from "@/lib/types/interview-types";
+import type { Job, Interview } from "@/lib/storage/storage-interface";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { getStreamClient } from "@/lib/stream-token";
 import { mergeInterviewQuestions } from "@/lib/utils/question-utils";
 import { getAgentEndpoint, getAgentHeaders } from "@/lib/agent-config";
+import { getServerSession } from "@/lib/auth-server";
 
 /**
  * Generate a short, deterministic call ID from an application or interview ID.
@@ -49,16 +46,25 @@ export async function POST(request: Request) {
       );
     }
 
+    // Get authenticated user
+    const session = await getServerSession();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
+    }
+    const user = session.user;
+
     const storage = getStorage();
-    const demoUser = getDemoUser();
     let job: Job | null = null;
     let questions: Question[] = [];
 
-    // Try to get interview from mock data first
-    let interview = mockInterviews[interviewId];
+    // Try to get interview from database
+    let interview: Interview | null = await storage.getInterview(interviewId);
 
     if (interview) {
-      // For mock interviews, get job from storage (no more mock job fallback)
+      // Get job from storage
       job = await storage.getJob(interview.jobId);
     } else if (interviewId.startsWith("application-")) {
       // Parse application ID: application-job-{timestamp}-{random}-{userId} -> jobId = job-{timestamp}-{random}
@@ -69,7 +75,7 @@ export async function POST(request: Request) {
 
         if (job) {
           // Try to load generated questions
-          const userCvId = await storage.getUserCVId(demoUser.id);
+          const userCvId = await storage.getUserCVId(user.id);
           if (userCvId) {
             const questionSet = await storage.getInterviewQuestions(userCvId, jobId);
 
@@ -79,14 +85,19 @@ export async function POST(request: Request) {
             }
           }
 
-          // Create synthetic interview
+          // Create synthetic interview for application
           interview = {
             id: interviewId,
             jobId,
-            candidateId: demoUser.id,
+            candidateId: user.id,
             status: "PENDING" as const,
+            callId: null,
+            transcript: null,
+            score: null,
             durationMinutes: 30,
+            aiEvaluation: null,
             createdAt: new Date(),
+            completedAt: null,
           };
         }
       }

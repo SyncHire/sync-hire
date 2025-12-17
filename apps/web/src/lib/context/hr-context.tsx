@@ -7,7 +7,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext } from "react";
-import type { Job, User } from "@/lib/mock-data";
+import type { Job, User } from "@/lib/storage/storage-interface";
 
 interface HRContextValue {
   user: User | null;

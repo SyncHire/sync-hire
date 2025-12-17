@@ -37,7 +37,7 @@ import {
 } from "@/lib/job-matching";
 import { getCompanyLogoUrl } from "@/lib/logo-utils";
 import { useHasOrganization } from "@/lib/hooks/use-organizations";
-import type { JobApplication } from "@/lib/mock-data";
+import type { JobApplication } from "@/lib/types/interview-types";
 
 type WorkflowStage = "upload" | "processing" | "results";
 

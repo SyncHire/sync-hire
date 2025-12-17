@@ -8,7 +8,7 @@
  * 3. Active interview - video call with AI
  */
 import { useState } from "react";
-import type { Question } from "@/lib/mock-data";
+import type { Question } from "@/lib/types/interview-types";
 import { InterviewCallView } from "./interview/InterviewCallView";
 import {
   InterviewEndedScreen,
