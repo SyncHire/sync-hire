@@ -1,7 +1,7 @@
 # SyncHire MVP Checklist
 
 > **Last Updated:** December 2024
-> **Overall Progress:** ~75% Complete
+> **Overall Progress:** ~78% Complete
 
 ## Status Overview
 
@@ -12,7 +12,7 @@
 | Cloud Storage | 100% | ✅ Complete |
 | Monitoring | 100% | ✅ Complete |
 | Testing | 0% | ❌ Not Started |
-| Production Hardening | 30% | 🚧 In Progress |
+| Production Hardening | 40% | 🚧 In Progress |
 
 ---
 
@@ -29,8 +29,9 @@
 ### Authentication (Better Auth)
 - [x] Email/password authentication with validation
 - [x] Google OAuth integration
-- [x] Email verification flow (UI complete, email service stubbed)
-- [x] Password reset flow (UI complete, email service stubbed)
+- [x] Email verification flow with Resend
+- [x] Password reset flow with Resend
+- [x] Organization invitation emails with Resend
 - [x] Organization plugin with custom roles (owner, admin, recruiter, hiring_manager, viewer)
 - [x] Invitation system with 48-hour expiration
 - [x] Route protection via `proxy.ts` (Next.js 16)
@@ -58,7 +59,7 @@
 ## 🚧 Remaining Work
 
 ### High Priority
-- [ ] **Email Service Integration** - Connect Resend/SendGrid for verification emails
+- [x] **Email Service Integration** - Resend with React Email templates
 - [ ] **Testing Framework Setup** - Configure Vitest, Playwright, pytest
 - [ ] **CI/CD Pipeline** - GitHub Actions for automated testing and deployment
 
@@ -97,7 +98,7 @@
 | Sentry | Error monitoring | ✅ Active | $29/mo |
 | Stream Video | WebRTC calls | ✅ Active | Usage-based |
 | Upstash Redis | Rate limiting | ❌ Not setup | $0-10/mo |
-| Resend/SendGrid | Transactional email | ❌ Not setup | $0-20/mo |
+| Resend | Transactional email | ✅ Configured | $0-20/mo |
 
 *Covered by ~$2k GCP credits
 
@@ -142,6 +143,10 @@ AGENT_API_URL             # Python agent endpoint
 # Monitoring
 NEXT_PUBLIC_SENTRY_DSN
 NEXT_PUBLIC_SENTRY_ENABLED=true
+
+# Email (Resend)
+RESEND_API_KEY
+EMAIL_FROM                # e.g., "SyncHire <noreply@yourdomain.com>"
 ```
 
 ### Optional
@@ -149,9 +154,6 @@ NEXT_PUBLIC_SENTRY_ENABLED=true
 # Rate Limiting (not yet implemented)
 UPSTASH_REDIS_REST_URL
 UPSTASH_REDIS_REST_TOKEN
-
-# Email (not yet implemented)
-RESEND_API_KEY
 ```
 
 ---
@@ -198,7 +200,6 @@ cd apps/agent && uv run pytest  # Python tests
 
 | Risk | Mitigation |
 |------|------------|
-| Email service delay | Auth works without email; verification is optional in dev |
 | Test coverage slow | Focus on critical paths first (cv-processor, auth) |
 | Rate limit abuse | Temporary: rely on GCP/Firebase built-in protection |
 
@@ -211,7 +212,7 @@ cd apps/agent && uv run pytest  # Python tests
 
 ## Next Steps (Recommended Order)
 
-1. **Email Integration** - Unblocks full auth flow
+1. ~~**Email Integration** - Unblocks full auth flow~~ ✅ Done
 2. **Testing Setup** - Vitest config + first unit tests
 3. **CI/CD** - GitHub Actions for test automation
 4. **Rate Limiting** - Protect AI endpoints

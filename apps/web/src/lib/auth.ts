@@ -13,6 +13,11 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { organization } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
 import { prisma } from "@sync-hire/database";
+import {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  sendInvitationEmail,
+} from "./email/resend";
 
 // Derive base URL from BETTER_AUTH_URL or WEB_PORT
 const port = process.env.WEB_PORT || "3000";
@@ -37,9 +42,7 @@ export const auth = betterAuth({
       user: { email: string };
       url: string;
     }) => {
-      // TODO: Implement email sending (Resend, SendGrid, etc.)
-      // For now, log to console in development
-      console.log(`[Auth] Verify email for ${user.email}: ${url}`);
+      await sendVerificationEmail(user.email, url);
     },
     sendResetPassword: async ({
       user,
@@ -48,8 +51,7 @@ export const auth = betterAuth({
       user: { email: string };
       url: string;
     }) => {
-      // TODO: Implement password reset email
-      console.log(`[Auth] Reset password for ${user.email}: ${url}`);
+      await sendPasswordResetEmail(user.email, url);
     },
   },
 
@@ -91,10 +93,7 @@ export const auth = betterAuth({
         organization: { name: string };
         inviter: { user: { name: string } };
       }) => {
-        // TODO: Implement invitation email
-        console.log(
-          `[Auth] Invite ${email} to ${org.name} by ${inviter.user.name}`,
-        );
+        await sendInvitationEmail(email, org.name, inviter.user.name);
       },
     }),
   ],
