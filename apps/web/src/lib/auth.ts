@@ -13,11 +13,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { organization } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
 import { prisma } from "@sync-hire/database";
-import {
-  sendVerificationEmail,
-  sendPasswordResetEmail,
-  sendInvitationEmail,
-} from "./email/resend";
+import { getEmailService } from "./email/resend";
 
 // Derive base URL from BETTER_AUTH_URL or WEB_PORT
 const port = process.env.WEB_PORT || "3000";
@@ -42,7 +38,7 @@ export const auth = betterAuth({
       user: { email: string };
       url: string;
     }) => {
-      await sendVerificationEmail(user.email, url);
+      await getEmailService().sendVerificationEmail(user.email, url);
     },
     sendResetPassword: async ({
       user,
@@ -51,7 +47,7 @@ export const auth = betterAuth({
       user: { email: string };
       url: string;
     }) => {
-      await sendPasswordResetEmail(user.email, url);
+      await getEmailService().sendPasswordResetEmail(user.email, url);
     },
   },
 
@@ -88,12 +84,22 @@ export const auth = betterAuth({
         email,
         organization: org,
         inviter,
+        id,
       }: {
         email: string;
         organization: { name: string };
-        inviter: { user: { name: string } };
+        inviter: { user: { name: string | null; email: string } };
+        id: string;
       }) => {
-        await sendInvitationEmail(email, org.name, inviter.user.name);
+        // Construct the invitation acceptance URL with encoded ID
+        const invitationUrl = `${baseURL}/api/auth/organization/accept-invitation?invitationId=${encodeURIComponent(id)}`;
+        const inviterDisplayName = inviter.user.name || inviter.user.email || "A team member";
+        await getEmailService().sendInvitationEmail(
+          email,
+          org.name,
+          inviterDisplayName,
+          invitationUrl
+        );
       },
     }),
   ],

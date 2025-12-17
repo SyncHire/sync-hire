@@ -5,116 +5,148 @@
  * - Email verification
  * - Password reset
  * - Organization invitations
+ *
+ * Uses dependency injection for testability.
+ * Throws errors on failure for caller visibility.
  */
 
 import { Resend } from "resend";
-import * as Sentry from "@sentry/nextjs";
+import { logger } from "@/lib/logger";
 import { VerificationEmail } from "./templates/verification-email";
 import { PasswordResetEmail } from "./templates/password-reset-email";
 import { InvitationEmail } from "./templates/invitation-email";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-const FROM_EMAIL =
-  process.env.EMAIL_FROM || "SyncHire <noreply@synchire.com>";
-
 /**
- * Send email verification link to new user
+ * Email service for transactional emails.
+ * Accepts Resend client via constructor for testability.
  */
-export async function sendVerificationEmail(
-  email: string,
-  verificationUrl: string
-): Promise<void> {
-  const { logger } = Sentry;
+export class EmailService {
+  constructor(
+    private readonly client: Resend,
+    private readonly fromEmail: string
+  ) {}
 
-  try {
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
+  /**
+   * Send email verification link to new user.
+   * @throws Error if email sending fails
+   */
+  async sendVerificationEmail(
+    email: string,
+    verificationUrl: string
+  ): Promise<void> {
+    const { error } = await this.client.emails.send({
+      from: this.fromEmail,
       to: email,
       subject: "Verify your SyncHire account",
       react: VerificationEmail({ verificationUrl }),
     });
 
     if (error) {
-      logger.error("Failed to send verification email", {
-        email,
-        error: error.message,
-      });
-      Sentry.captureException(new Error(`Verification email failed: ${error.message}`));
-      return;
+      const err = new Error(`Verification email failed: ${error.message}`);
+      logger.error(err, { api: "email", operation: "sendVerification", email });
+      throw err;
     }
 
-    logger.info("Verification email sent", { email });
-  } catch (err) {
-    logger.error("Verification email error", { email, error: err });
-    Sentry.captureException(err);
+    logger.info("Verification email sent", { api: "email", email });
   }
-}
 
-/**
- * Send password reset link to user
- */
-export async function sendPasswordResetEmail(
-  email: string,
-  resetUrl: string
-): Promise<void> {
-  const { logger } = Sentry;
-
-  try {
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
+  /**
+   * Send password reset link to user.
+   * @throws Error if email sending fails
+   */
+  async sendPasswordResetEmail(email: string, resetUrl: string): Promise<void> {
+    const { error } = await this.client.emails.send({
+      from: this.fromEmail,
       to: email,
       subject: "Reset your SyncHire password",
       react: PasswordResetEmail({ resetUrl }),
     });
 
     if (error) {
-      logger.error("Failed to send password reset email", {
-        email,
-        error: error.message,
-      });
-      Sentry.captureException(new Error(`Password reset email failed: ${error.message}`));
-      return;
+      const err = new Error(`Password reset email failed: ${error.message}`);
+      logger.error(err, { api: "email", operation: "sendPasswordReset", email });
+      throw err;
     }
 
-    logger.info("Password reset email sent", { email });
-  } catch (err) {
-    logger.error("Password reset email error", { email, error: err });
-    Sentry.captureException(err);
+    logger.info("Password reset email sent", { api: "email", email });
   }
-}
 
-/**
- * Send organization invitation to user
- */
-export async function sendInvitationEmail(
-  email: string,
-  organizationName: string,
-  inviterName: string
-): Promise<void> {
-  const { logger } = Sentry;
-
-  try {
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
+  /**
+   * Send organization invitation to user.
+   * @throws Error if email sending fails
+   */
+  async sendInvitationEmail(
+    email: string,
+    organizationName: string,
+    inviterName: string,
+    invitationUrl: string
+  ): Promise<void> {
+    const { error } = await this.client.emails.send({
+      from: this.fromEmail,
       to: email,
       subject: `You've been invited to join ${organizationName} on SyncHire`,
-      react: InvitationEmail({ organizationName, inviterName }),
+      react: InvitationEmail({ organizationName, inviterName, invitationUrl }),
     });
 
     if (error) {
-      logger.error("Failed to send invitation email", {
+      const err = new Error(`Invitation email failed: ${error.message}`);
+      logger.error(err, {
+        api: "email",
+        operation: "sendInvitation",
         email,
         organizationName,
-        error: error.message,
       });
-      Sentry.captureException(new Error(`Invitation email failed: ${error.message}`));
-      return;
+      throw err;
     }
 
-    logger.info("Invitation email sent", { email, organizationName });
-  } catch (err) {
-    logger.error("Invitation email error", { email, error: err });
-    Sentry.captureException(err);
+    logger.info("Invitation email sent", {
+      api: "email",
+      email,
+      organizationName,
+    });
   }
+}
+
+// Lazy-initialized singleton for production use
+let emailServiceInstance: EmailService | null = null;
+
+/**
+ * Get or create the EmailService singleton.
+ * Validates that RESEND_API_KEY is configured.
+ */
+export function getEmailService(): EmailService {
+  if (emailServiceInstance) {
+    return emailServiceInstance;
+  }
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "RESEND_API_KEY environment variable is not configured. Email sending is disabled."
+    );
+  }
+
+  const fromEmail =
+    process.env.EMAIL_FROM || "SyncHire <noreply@sync-hire.com>";
+
+  emailServiceInstance = new EmailService(new Resend(apiKey), fromEmail);
+  return emailServiceInstance;
+}
+
+/**
+ * Create a new EmailService instance with custom dependencies.
+ * Useful for testing with mock clients.
+ */
+export function createEmailService(
+  client: Resend,
+  fromEmail: string
+): EmailService {
+  return new EmailService(client, fromEmail);
+}
+
+/**
+ * Reset the EmailService singleton (for testing purposes).
+ */
+export function resetEmailService(): void {
+  emailServiceInstance = null;
 }

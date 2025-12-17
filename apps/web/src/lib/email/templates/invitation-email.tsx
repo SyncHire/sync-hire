@@ -9,20 +9,28 @@ import {
   Section,
   Text,
 } from "@react-email/components";
+import {
+  main,
+  container,
+  h1,
+  text,
+  buttonContainer,
+  button,
+  warningInfo,
+  footer,
+} from "./styles";
 
 interface InvitationEmailProps {
   organizationName: string;
   inviterName: string;
+  invitationUrl: string;
 }
 
 export function InvitationEmail({
   organizationName,
   inviterName,
+  invitationUrl,
 }: InvitationEmailProps) {
-  // Base URL for accepting invitations
-  const baseUrl = process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "http://localhost:3000";
-  const acceptUrl = `${baseUrl}/login`;
-
   return (
     <Html>
       <Head />
@@ -41,11 +49,12 @@ export function InvitationEmail({
             conduct consistent, scalable technical interviews.
           </Text>
           <Section style={buttonContainer}>
-            <Button style={button} href={acceptUrl}>
+            <Button style={button} href={invitationUrl}>
               Accept Invitation
             </Button>
           </Section>
-          <Text style={warning}>
+          {/* Expiration matches auth.ts invitationExpiresIn (48 hours) */}
+          <Text style={warningInfo}>
             This invitation will expire in 48 hours.
           </Text>
           <Text style={footer}>
@@ -57,68 +66,3 @@ export function InvitationEmail({
     </Html>
   );
 }
-
-const main = {
-  backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
-};
-
-const container = {
-  backgroundColor: "#ffffff",
-  margin: "0 auto",
-  padding: "40px 20px",
-  marginBottom: "64px",
-  borderRadius: "8px",
-  maxWidth: "465px",
-};
-
-const h1 = {
-  color: "#1f2937",
-  fontSize: "24px",
-  fontWeight: "600",
-  lineHeight: "1.25",
-  marginBottom: "24px",
-  textAlign: "center" as const,
-};
-
-const text = {
-  color: "#374151",
-  fontSize: "14px",
-  lineHeight: "24px",
-  marginBottom: "16px",
-};
-
-const buttonContainer = {
-  textAlign: "center" as const,
-  marginBottom: "24px",
-};
-
-const button = {
-  backgroundColor: "#2563eb",
-  borderRadius: "6px",
-  color: "#ffffff",
-  fontSize: "14px",
-  fontWeight: "600",
-  textDecoration: "none",
-  textAlign: "center" as const,
-  padding: "12px 24px",
-  display: "inline-block",
-};
-
-const warning = {
-  color: "#f59e0b",
-  fontSize: "12px",
-  lineHeight: "20px",
-  marginTop: "16px",
-  textAlign: "center" as const,
-};
-
-const footer = {
-  color: "#6b7280",
-  fontSize: "12px",
-  lineHeight: "20px",
-  marginTop: "32px",
-};
-
-export default InvitationEmail;
