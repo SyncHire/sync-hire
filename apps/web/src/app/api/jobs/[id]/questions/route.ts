@@ -188,14 +188,15 @@ export async function PUT(
       );
     }
 
-    const existingQuestion = job.questions![questionIndex];
+    const questions = job.questions ?? [];
+    const existingQuestion = questions[questionIndex];
     const updatedQuestion = {
       ...existingQuestion,
       ...updates,
       updatedAt: new Date(),
     };
 
-    const updatedQuestions = [...(job.questions || [])];
+    const updatedQuestions = [...questions];
     updatedQuestions[questionIndex] = updatedQuestion;
 
     await storage.saveJob(jobId, { ...job, questions: updatedQuestions });

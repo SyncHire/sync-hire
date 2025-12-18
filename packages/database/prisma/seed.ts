@@ -530,7 +530,7 @@ Key Responsibilities:
   });
 
   // Job 4: Google - ML Engineer
-  const googleJob = await prisma.job.create({
+  await prisma.job.create({
     data: {
       id: 'job-4',
       title: 'ML Engineer',
@@ -630,7 +630,7 @@ Key Responsibilities:
   });
 
   // Job 6: Stripe - DevOps Engineer
-  const stripeDevOpsJob = await prisma.job.create({
+  await prisma.job.create({
     data: {
       id: 'job-6',
       title: 'DevOps Engineer',
@@ -730,7 +730,7 @@ Key Responsibilities:
   });
 
   // Application 2: Demo candidate applied to Databricks (ready for interview)
-  const application2 = await prisma.candidateApplication.create({
+  await prisma.candidateApplication.create({
     data: {
       jobId: databricksJob.id,
       cvUploadId: demoCV.id,
@@ -874,7 +874,7 @@ Candidate: First, I'd use observability tools like Datadog or New Relic to ident
   });
 
   // Interview 3: Spotify - Pending
-  const interview3 = await prisma.interview.create({
+  await prisma.interview.create({
     data: {
       id: 'interview-3',
       jobId: spotifyJob.id,

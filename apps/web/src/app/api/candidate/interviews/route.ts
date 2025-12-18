@@ -5,6 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth-server";
+import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
 
 export async function GET() {
@@ -26,7 +27,7 @@ export async function GET() {
       data: interviews,
     });
   } catch (error) {
-    console.error("Failed to fetch candidate interviews:", error);
+    logger.error(error, { api: "candidate/interviews", operation: "GET" });
     return NextResponse.json(
       { success: false, error: "Failed to fetch interviews" },
       { status: 500 }
