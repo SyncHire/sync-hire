@@ -2,6 +2,7 @@
  * Database Seed Script
  *
  * Populates the database with initial demo data for development and testing.
+ * Uses upsert operations to be idempotent - safe to run multiple times.
  * Run with: pnpm db:seed
  *
  * Note: Uses Better Auth's hashPassword for password hashing.
@@ -29,21 +30,7 @@ async function main() {
     );
   }
 
-  console.log('🌱 Starting database seed...');
-
-  // Clean up existing data first (in development only)
-  console.log('🧹 Cleaning existing data...');
-  await prisma.notification.deleteMany({});
-  await prisma.interview.deleteMany({});
-  await prisma.candidateApplication.deleteMany({});
-  await prisma.jobQuestion.deleteMany({});
-  await prisma.job.deleteMany({});
-  await prisma.member.deleteMany({});
-  await prisma.organization.deleteMany({});
-  await prisma.cVUpload.deleteMany({});
-  await prisma.account.deleteMany({});
-  await prisma.session.deleteMany({});
-  await prisma.user.deleteMany({});
+  console.log('🌱 Starting database seed (upsert mode)...');
 
   console.log('🔐 Hashing passwords...');
   const hashedPasswords = {
@@ -59,11 +46,18 @@ async function main() {
   // USERS
   // =============================================================================
 
-  console.log('Creating users...');
+  console.log('Upserting users...');
 
-  const demoCandidate = await prisma.user.create({
-    data: {
+  const demoCandidate = await prisma.user.upsert({
+    where: { id: 'demo-user' },
+    create: {
       id: 'demo-user',
+      name: 'Demo Candidate',
+      email: 'demo@synchire.com',
+      password: hashedPasswords.candidate,
+      emailVerified: true,
+    },
+    update: {
       name: 'Demo Candidate',
       email: 'demo@synchire.com',
       password: hashedPasswords.candidate,
@@ -71,9 +65,16 @@ async function main() {
     },
   });
 
-  const stripeEmployer = await prisma.user.create({
-    data: {
+  const stripeEmployer = await prisma.user.upsert({
+    where: { id: 'employer-stripe' },
+    create: {
       id: 'employer-stripe',
+      name: 'Sarah Chen',
+      email: 'hr@stripe.com',
+      password: hashedPasswords.stripe,
+      emailVerified: true,
+    },
+    update: {
       name: 'Sarah Chen',
       email: 'hr@stripe.com',
       password: hashedPasswords.stripe,
@@ -81,9 +82,16 @@ async function main() {
     },
   });
 
-  const databricksEmployer = await prisma.user.create({
-    data: {
+  const databricksEmployer = await prisma.user.upsert({
+    where: { id: 'employer-databricks' },
+    create: {
       id: 'employer-databricks',
+      name: 'Marcus Johnson',
+      email: 'talent@databricks.com',
+      password: hashedPasswords.databricks,
+      emailVerified: true,
+    },
+    update: {
       name: 'Marcus Johnson',
       email: 'talent@databricks.com',
       password: hashedPasswords.databricks,
@@ -91,9 +99,16 @@ async function main() {
     },
   });
 
-  const vercelEmployer = await prisma.user.create({
-    data: {
+  const vercelEmployer = await prisma.user.upsert({
+    where: { id: 'employer-vercel' },
+    create: {
       id: 'employer-vercel',
+      name: 'Emily Rodriguez',
+      email: 'careers@vercel.com',
+      password: hashedPasswords.vercel,
+      emailVerified: true,
+    },
+    update: {
       name: 'Emily Rodriguez',
       email: 'careers@vercel.com',
       password: hashedPasswords.vercel,
@@ -101,9 +116,16 @@ async function main() {
     },
   });
 
-  const googleEmployer = await prisma.user.create({
-    data: {
+  const googleEmployer = await prisma.user.upsert({
+    where: { id: 'employer-google' },
+    create: {
       id: 'employer-google',
+      name: 'David Kim',
+      email: 'recruiting@google.com',
+      password: hashedPasswords.google,
+      emailVerified: true,
+    },
+    update: {
       name: 'David Kim',
       email: 'recruiting@google.com',
       password: hashedPasswords.google,
@@ -111,9 +133,16 @@ async function main() {
     },
   });
 
-  const spotifyEmployer = await prisma.user.create({
-    data: {
+  const spotifyEmployer = await prisma.user.upsert({
+    where: { id: 'employer-spotify' },
+    create: {
       id: 'employer-spotify',
+      name: 'Anna Lindqvist',
+      email: 'talent@spotify.com',
+      password: hashedPasswords.spotify,
+      emailVerified: true,
+    },
+    update: {
       name: 'Anna Lindqvist',
       email: 'talent@spotify.com',
       password: hashedPasswords.spotify,
@@ -121,13 +150,13 @@ async function main() {
     },
   });
 
-  console.log('✓ Created 6 users (1 candidate, 5 employers)');
+  console.log('✓ Upserted 6 users (1 candidate, 5 employers)');
 
   // =============================================================================
   // ACCOUNTS (Better Auth credential accounts for email/password login)
   // =============================================================================
 
-  console.log('Creating credential accounts...');
+  console.log('Upserting credential accounts...');
 
   const userPasswordPairs = [
     { user: demoCandidate, password: hashedPasswords.candidate },
@@ -139,27 +168,45 @@ async function main() {
   ];
 
   for (const { user, password } of userPasswordPairs) {
-    await prisma.account.create({
-      data: {
+    await prisma.account.upsert({
+      where: {
+        providerId_accountId: {
+          providerId: 'credential',
+          accountId: user.id,
+        },
+      },
+      create: {
         userId: user.id,
         providerId: 'credential',
         accountId: user.id,
         password,
       },
+      update: {
+        password,
+      },
     });
   }
 
-  console.log('✓ Created credential accounts for all users');
+  console.log('✓ Upserted credential accounts for all users');
 
   // =============================================================================
   // ORGANIZATIONS (Real companies)
   // =============================================================================
 
-  console.log('Creating organizations...');
+  console.log('Upserting organizations...');
 
-  const stripeOrg = await prisma.organization.create({
-    data: {
+  const stripeOrg = await prisma.organization.upsert({
+    where: { id: 'org-stripe' },
+    create: {
       id: 'org-stripe',
+      name: 'Stripe',
+      slug: 'stripe',
+      description: 'Financial infrastructure for the internet. Build products, do business, and accept payments globally.',
+      website: 'https://stripe.com',
+      industry: 'Financial Technology',
+      size: '1001-5000',
+    },
+    update: {
       name: 'Stripe',
       slug: 'stripe',
       description: 'Financial infrastructure for the internet. Build products, do business, and accept payments globally.',
@@ -169,9 +216,18 @@ async function main() {
     },
   });
 
-  const databricksOrg = await prisma.organization.create({
-    data: {
+  const databricksOrg = await prisma.organization.upsert({
+    where: { id: 'org-databricks' },
+    create: {
       id: 'org-databricks',
+      name: 'Databricks',
+      slug: 'databricks',
+      description: 'The Data and AI Company. Unify analytics, data engineering, and machine learning.',
+      website: 'https://databricks.com',
+      industry: 'Data & Analytics',
+      size: '5001-10000',
+    },
+    update: {
       name: 'Databricks',
       slug: 'databricks',
       description: 'The Data and AI Company. Unify analytics, data engineering, and machine learning.',
@@ -181,9 +237,18 @@ async function main() {
     },
   });
 
-  const vercelOrg = await prisma.organization.create({
-    data: {
+  const vercelOrg = await prisma.organization.upsert({
+    where: { id: 'org-vercel' },
+    create: {
       id: 'org-vercel',
+      name: 'Vercel',
+      slug: 'vercel',
+      description: 'The Frontend Cloud. Build, scale, and secure a faster, personalized web.',
+      website: 'https://vercel.com',
+      industry: 'Cloud Infrastructure',
+      size: '501-1000',
+    },
+    update: {
       name: 'Vercel',
       slug: 'vercel',
       description: 'The Frontend Cloud. Build, scale, and secure a faster, personalized web.',
@@ -193,9 +258,18 @@ async function main() {
     },
   });
 
-  const googleOrg = await prisma.organization.create({
-    data: {
+  const googleOrg = await prisma.organization.upsert({
+    where: { id: 'org-google' },
+    create: {
       id: 'org-google',
+      name: 'Google',
+      slug: 'google',
+      description: 'Organizing the world\'s information and making it universally accessible and useful.',
+      website: 'https://google.com',
+      industry: 'Technology',
+      size: '10000+',
+    },
+    update: {
       name: 'Google',
       slug: 'google',
       description: 'Organizing the world\'s information and making it universally accessible and useful.',
@@ -205,9 +279,18 @@ async function main() {
     },
   });
 
-  const spotifyOrg = await prisma.organization.create({
-    data: {
+  const spotifyOrg = await prisma.organization.upsert({
+    where: { id: 'org-spotify' },
+    create: {
       id: 'org-spotify',
+      name: 'Spotify',
+      slug: 'spotify',
+      description: 'Audio streaming and media services provider with millions of songs and podcasts.',
+      website: 'https://spotify.com',
+      industry: 'Entertainment',
+      size: '5001-10000',
+    },
+    update: {
       name: 'Spotify',
       slug: 'spotify',
       description: 'Audio streaming and media services provider with millions of songs and podcasts.',
@@ -217,155 +300,220 @@ async function main() {
     },
   });
 
-  console.log('✓ Created 5 organizations');
+  console.log('✓ Upserted 5 organizations');
 
   // =============================================================================
   // ORGANIZATION MEMBERS
   // =============================================================================
 
-  console.log('Creating organization members...');
+  console.log('Upserting organization members...');
 
-  await prisma.member.createMany({
-    data: [
-      { organizationId: stripeOrg.id, userId: stripeEmployer.id, role: 'owner' },
-      { organizationId: databricksOrg.id, userId: databricksEmployer.id, role: 'owner' },
-      { organizationId: vercelOrg.id, userId: vercelEmployer.id, role: 'owner' },
-      { organizationId: googleOrg.id, userId: googleEmployer.id, role: 'owner' },
-      { organizationId: spotifyOrg.id, userId: spotifyEmployer.id, role: 'owner' },
-    ],
-  });
+  const memberPairs = [
+    { orgId: stripeOrg.id, userId: stripeEmployer.id },
+    { orgId: databricksOrg.id, userId: databricksEmployer.id },
+    { orgId: vercelOrg.id, userId: vercelEmployer.id },
+    { orgId: googleOrg.id, userId: googleEmployer.id },
+    { orgId: spotifyOrg.id, userId: spotifyEmployer.id },
+  ];
 
-  console.log('✓ Created organization members');
+  for (const { orgId, userId } of memberPairs) {
+    await prisma.member.upsert({
+      where: {
+        organizationId_userId: {
+          organizationId: orgId,
+          userId: userId,
+        },
+      },
+      create: {
+        organizationId: orgId,
+        userId: userId,
+        role: 'owner',
+      },
+      update: {
+        role: 'owner',
+      },
+    });
+  }
+
+  console.log('✓ Upserted organization members');
 
   // =============================================================================
   // CV UPLOAD (Demo Candidate)
   // =============================================================================
 
-  console.log('Creating CV upload...');
+  console.log('Upserting CV upload...');
 
-  const demoCV = await prisma.cVUpload.create({
-    data: {
+  const cvExtraction = {
+    personalInfo: {
+      fullName: 'Demo Candidate',
+      email: 'demo@synchire.com',
+      phone: '+1 (555) 123-4567',
+      location: 'San Francisco, CA',
+      summary: 'Full-stack engineer with 5+ years of experience building scalable web applications. Passionate about clean code, user experience, and modern development practices.',
+      linkedinUrl: 'https://linkedin.com/in/demo-candidate',
+      githubUrl: 'https://github.com/demo-candidate',
+    },
+    experience: [
+      {
+        title: 'Senior Software Engineer',
+        company: 'TechStartup Inc.',
+        location: 'San Francisco, CA',
+        startDate: '2022-01',
+        endDate: null,
+        current: true,
+        description: [
+          'Led development of customer-facing dashboard serving 50K+ users',
+          'Architected microservices migration reducing latency by 40%',
+          'Mentored team of 3 junior developers on React best practices',
+          'Implemented CI/CD pipelines reducing deployment time by 60%',
+        ],
+      },
+      {
+        title: 'Software Engineer',
+        company: 'Digital Agency Co.',
+        location: 'New York, NY',
+        startDate: '2019-06',
+        endDate: '2021-12',
+        current: false,
+        description: [
+          'Built responsive web applications for Fortune 500 clients',
+          'Developed RESTful APIs using Node.js and Express',
+          'Collaborated with design team to implement pixel-perfect UIs',
+          'Optimized database queries improving page load times by 30%',
+        ],
+      },
+      {
+        title: 'Junior Developer',
+        company: 'WebDev Solutions',
+        location: 'Boston, MA',
+        startDate: '2018-01',
+        endDate: '2019-05',
+        current: false,
+        description: [
+          'Developed and maintained client websites using React and Vue.js',
+          'Participated in code reviews and agile development processes',
+          'Wrote unit tests achieving 80% code coverage',
+        ],
+      },
+    ],
+    education: [
+      {
+        degree: 'Bachelor of Science',
+        field: 'Computer Science',
+        institution: 'University of California, Berkeley',
+        location: 'Berkeley, CA',
+        startDate: '2014-09',
+        endDate: '2018-05',
+        current: false,
+        gpa: '3.7',
+      },
+    ],
+    skills: [
+      'React',
+      'TypeScript',
+      'Node.js',
+      'Python',
+      'PostgreSQL',
+      'MongoDB',
+      'AWS',
+      'Docker',
+      'Kubernetes',
+      'GraphQL',
+      'REST APIs',
+      'Git',
+      'CI/CD',
+      'Agile/Scrum',
+    ],
+    certifications: [
+      {
+        name: 'AWS Solutions Architect Associate',
+        issuer: 'Amazon Web Services',
+        issueDate: '2023-03',
+      },
+    ],
+    languages: [
+      { language: 'English', proficiency: 'Native' },
+      { language: 'Spanish', proficiency: 'Intermediate' },
+    ],
+    projects: [
+      {
+        name: 'Open Source Dashboard',
+        description: 'React-based analytics dashboard with real-time data visualization',
+        technologies: ['React', 'D3.js', 'WebSocket', 'Node.js'],
+        url: 'https://github.com/demo-candidate/dashboard',
+      },
+    ],
+  };
+
+  const demoCV = await prisma.cVUpload.upsert({
+    where: { fileHash: 'demo-cv-hash-123' },
+    create: {
       userId: demoCandidate.id,
       fileName: 'demo_candidate_resume.pdf',
       fileUrl: '/uploads/demo-cv.pdf',
       fileHash: 'demo-cv-hash-123',
       fileSize: 204800,
-      extraction: {
-        personalInfo: {
-          fullName: 'Demo Candidate',
-          email: 'demo@synchire.com',
-          phone: '+1 (555) 123-4567',
-          location: 'San Francisco, CA',
-          summary: 'Full-stack engineer with 5+ years of experience building scalable web applications. Passionate about clean code, user experience, and modern development practices.',
-          linkedinUrl: 'https://linkedin.com/in/demo-candidate',
-          githubUrl: 'https://github.com/demo-candidate',
-        },
-        experience: [
-          {
-            title: 'Senior Software Engineer',
-            company: 'TechStartup Inc.',
-            location: 'San Francisco, CA',
-            startDate: '2022-01',
-            endDate: null,
-            current: true,
-            description: [
-              'Led development of customer-facing dashboard serving 50K+ users',
-              'Architected microservices migration reducing latency by 40%',
-              'Mentored team of 3 junior developers on React best practices',
-              'Implemented CI/CD pipelines reducing deployment time by 60%',
-            ],
-          },
-          {
-            title: 'Software Engineer',
-            company: 'Digital Agency Co.',
-            location: 'New York, NY',
-            startDate: '2019-06',
-            endDate: '2021-12',
-            current: false,
-            description: [
-              'Built responsive web applications for Fortune 500 clients',
-              'Developed RESTful APIs using Node.js and Express',
-              'Collaborated with design team to implement pixel-perfect UIs',
-              'Optimized database queries improving page load times by 30%',
-            ],
-          },
-          {
-            title: 'Junior Developer',
-            company: 'WebDev Solutions',
-            location: 'Boston, MA',
-            startDate: '2018-01',
-            endDate: '2019-05',
-            current: false,
-            description: [
-              'Developed and maintained client websites using React and Vue.js',
-              'Participated in code reviews and agile development processes',
-              'Wrote unit tests achieving 80% code coverage',
-            ],
-          },
-        ],
-        education: [
-          {
-            degree: 'Bachelor of Science',
-            field: 'Computer Science',
-            institution: 'University of California, Berkeley',
-            location: 'Berkeley, CA',
-            startDate: '2014-09',
-            endDate: '2018-05',
-            current: false,
-            gpa: '3.7',
-          },
-        ],
-        skills: [
-          'React',
-          'TypeScript',
-          'Node.js',
-          'Python',
-          'PostgreSQL',
-          'MongoDB',
-          'AWS',
-          'Docker',
-          'Kubernetes',
-          'GraphQL',
-          'REST APIs',
-          'Git',
-          'CI/CD',
-          'Agile/Scrum',
-        ],
-        certifications: [
-          {
-            name: 'AWS Solutions Architect Associate',
-            issuer: 'Amazon Web Services',
-            issueDate: '2023-03',
-          },
-        ],
-        languages: [
-          { language: 'English', proficiency: 'Native' },
-          { language: 'Spanish', proficiency: 'Intermediate' },
-        ],
-        projects: [
-          {
-            name: 'Open Source Dashboard',
-            description: 'React-based analytics dashboard with real-time data visualization',
-            technologies: ['React', 'D3.js', 'WebSocket', 'Node.js'],
-            url: 'https://github.com/demo-candidate/dashboard',
-          },
-        ],
-      },
+      extraction: cvExtraction,
+    },
+    update: {
+      userId: demoCandidate.id,
+      fileName: 'demo_candidate_resume.pdf',
+      fileUrl: '/uploads/demo-cv.pdf',
+      fileSize: 204800,
+      extraction: cvExtraction,
     },
   });
 
-  console.log('✓ Created CV upload');
+  console.log('✓ Upserted CV upload');
 
   // =============================================================================
-  // JOBS
+  // JOBS (with questions)
   // =============================================================================
 
-  console.log('Creating jobs...');
+  console.log('Upserting jobs...');
+
+  // Helper to upsert a job with its questions
+  async function upsertJobWithQuestions(
+    jobId: string,
+    jobData: Parameters<typeof prisma.job.create>[0]['data'],
+    questions: Array<{ content: string; type: 'LONG_ANSWER' | 'SHORT_ANSWER'; duration: number; category: string; order: number }>
+  ) {
+    // First upsert the job (without questions)
+    const { questions: _, ...jobDataWithoutQuestions } = jobData as Record<string, unknown>;
+
+    await prisma.job.upsert({
+      where: { id: jobId },
+      create: {
+        id: jobId,
+        ...jobDataWithoutQuestions,
+      } as Parameters<typeof prisma.job.create>[0]['data'],
+      update: jobDataWithoutQuestions as Parameters<typeof prisma.job.update>[0]['data'],
+    });
+
+    // Delete existing questions for this job
+    await prisma.jobQuestion.deleteMany({
+      where: { jobId },
+    });
+
+    // Create the questions
+    if (questions.length > 0) {
+      await prisma.jobQuestion.createMany({
+        data: questions.map(q => ({
+          jobId,
+          content: q.content,
+          type: q.type,
+          duration: q.duration,
+          category: q.category,
+          order: q.order,
+        })),
+      });
+    }
+  }
 
   // Job 1: Stripe - Senior Frontend Engineer
-  const stripeJob = await prisma.job.create({
-    data: {
-      id: 'job-1',
+  await upsertJobWithQuestions(
+    'job-1',
+    {
       title: 'Senior Frontend Engineer',
       organizationId: stripeOrg.id,
       createdById: stripeEmployer.id,
@@ -392,38 +540,18 @@ Key Responsibilities:
       aiMatchingEnabled: true,
       aiMatchingThreshold: 75,
       aiMatchingStatus: 'COMPLETE',
-      questions: {
-        create: [
-          {
-            content: 'Tell me about yourself and your experience with React.',
-            type: 'LONG_ANSWER',
-            duration: 3,
-            category: 'Introduction',
-            order: 1,
-          },
-          {
-            content: 'How do you approach state management in large applications?',
-            type: 'LONG_ANSWER',
-            duration: 3,
-            category: 'Technical Skills',
-            order: 2,
-          },
-          {
-            content: 'Describe a challenging performance issue you solved.',
-            type: 'LONG_ANSWER',
-            duration: 3,
-            category: 'Problem Solving',
-            order: 3,
-          },
-        ],
-      },
     },
-  });
+    [
+      { content: 'Tell me about yourself and your experience with React.', type: 'LONG_ANSWER', duration: 3, category: 'Introduction', order: 1 },
+      { content: 'How do you approach state management in large applications?', type: 'LONG_ANSWER', duration: 3, category: 'Technical Skills', order: 2 },
+      { content: 'Describe a challenging performance issue you solved.', type: 'LONG_ANSWER', duration: 3, category: 'Problem Solving', order: 3 },
+    ]
+  );
 
   // Job 2: Databricks - Backend Engineer
-  const databricksJob = await prisma.job.create({
-    data: {
-      id: 'job-2',
+  await upsertJobWithQuestions(
+    'job-2',
+    {
       title: 'Backend Engineer',
       organizationId: databricksOrg.id,
       createdById: databricksEmployer.id,
@@ -450,31 +578,17 @@ Key Responsibilities:
       aiMatchingEnabled: true,
       aiMatchingThreshold: 70,
       aiMatchingStatus: 'COMPLETE',
-      questions: {
-        create: [
-          {
-            content: 'Tell me about your backend development experience.',
-            type: 'LONG_ANSWER',
-            duration: 3,
-            category: 'Introduction',
-            order: 1,
-          },
-          {
-            content: 'How do you design RESTful APIs? Walk me through your approach.',
-            type: 'LONG_ANSWER',
-            duration: 3,
-            category: 'Technical Skills',
-            order: 2,
-          },
-        ],
-      },
     },
-  });
+    [
+      { content: 'Tell me about your backend development experience.', type: 'LONG_ANSWER', duration: 3, category: 'Introduction', order: 1 },
+      { content: 'How do you design RESTful APIs? Walk me through your approach.', type: 'LONG_ANSWER', duration: 3, category: 'Technical Skills', order: 2 },
+    ]
+  );
 
   // Job 3: Vercel - Full Stack Engineer
-  const vercelJob = await prisma.job.create({
-    data: {
-      id: 'job-3',
+  await upsertJobWithQuestions(
+    'job-3',
+    {
       title: 'Full Stack Engineer',
       organizationId: vercelOrg.id,
       createdById: vercelEmployer.id,
@@ -501,38 +615,18 @@ Key Responsibilities:
       aiMatchingEnabled: true,
       aiMatchingThreshold: 75,
       aiMatchingStatus: 'COMPLETE',
-      questions: {
-        create: [
-          {
-            content: 'Tell me about your full stack development journey.',
-            type: 'LONG_ANSWER',
-            duration: 3,
-            category: 'Introduction',
-            order: 1,
-          },
-          {
-            content: 'How do you decide between server-side and client-side rendering?',
-            type: 'LONG_ANSWER',
-            duration: 3,
-            category: 'Technical Skills',
-            order: 2,
-          },
-          {
-            content: 'Describe how you would debug a production performance issue.',
-            type: 'LONG_ANSWER',
-            duration: 3,
-            category: 'Problem Solving',
-            order: 3,
-          },
-        ],
-      },
     },
-  });
+    [
+      { content: 'Tell me about your full stack development journey.', type: 'LONG_ANSWER', duration: 3, category: 'Introduction', order: 1 },
+      { content: 'How do you decide between server-side and client-side rendering?', type: 'LONG_ANSWER', duration: 3, category: 'Technical Skills', order: 2 },
+      { content: 'Describe how you would debug a production performance issue.', type: 'LONG_ANSWER', duration: 3, category: 'Problem Solving', order: 3 },
+    ]
+  );
 
   // Job 4: Google - ML Engineer
-  await prisma.job.create({
-    data: {
-      id: 'job-4',
+  await upsertJobWithQuestions(
+    'job-4',
+    {
       title: 'ML Engineer',
       organizationId: googleOrg.id,
       createdById: googleEmployer.id,
@@ -557,31 +651,17 @@ Key Responsibilities:
       ],
       status: 'ACTIVE',
       aiMatchingEnabled: false,
-      questions: {
-        create: [
-          {
-            content: 'Tell me about your ML engineering background.',
-            type: 'LONG_ANSWER',
-            duration: 3,
-            category: 'Introduction',
-            order: 1,
-          },
-          {
-            content: 'Walk me through deploying an ML model to production.',
-            type: 'LONG_ANSWER',
-            duration: 3,
-            category: 'Technical Skills',
-            order: 2,
-          },
-        ],
-      },
     },
-  });
+    [
+      { content: 'Tell me about your ML engineering background.', type: 'LONG_ANSWER', duration: 3, category: 'Introduction', order: 1 },
+      { content: 'Walk me through deploying an ML model to production.', type: 'LONG_ANSWER', duration: 3, category: 'Technical Skills', order: 2 },
+    ]
+  );
 
   // Job 5: Spotify - Mobile Engineer
-  const spotifyJob = await prisma.job.create({
-    data: {
-      id: 'job-5',
+  await upsertJobWithQuestions(
+    'job-5',
+    {
       title: 'Mobile Engineer',
       organizationId: spotifyOrg.id,
       createdById: spotifyEmployer.id,
@@ -608,31 +688,17 @@ Key Responsibilities:
       aiMatchingEnabled: true,
       aiMatchingThreshold: 70,
       aiMatchingStatus: 'COMPLETE',
-      questions: {
-        create: [
-          {
-            content: 'Tell me about your mobile development experience.',
-            type: 'LONG_ANSWER',
-            duration: 3,
-            category: 'Introduction',
-            order: 1,
-          },
-          {
-            content: 'How do you approach cross-platform development trade-offs?',
-            type: 'LONG_ANSWER',
-            duration: 3,
-            category: 'Technical Skills',
-            order: 2,
-          },
-        ],
-      },
     },
-  });
+    [
+      { content: 'Tell me about your mobile development experience.', type: 'LONG_ANSWER', duration: 3, category: 'Introduction', order: 1 },
+      { content: 'How do you approach cross-platform development trade-offs?', type: 'LONG_ANSWER', duration: 3, category: 'Technical Skills', order: 2 },
+    ]
+  );
 
   // Job 6: Stripe - DevOps Engineer
-  await prisma.job.create({
-    data: {
-      id: 'job-6',
+  await upsertJobWithQuestions(
+    'job-6',
+    {
       title: 'DevOps Engineer',
       organizationId: stripeOrg.id,
       createdById: stripeEmployer.id,
@@ -657,39 +723,31 @@ Key Responsibilities:
       ],
       status: 'ACTIVE',
       aiMatchingEnabled: false,
-      questions: {
-        create: [
-          {
-            content: 'Tell me about your infrastructure and DevOps experience.',
-            type: 'LONG_ANSWER',
-            duration: 3,
-            category: 'Introduction',
-            order: 1,
-          },
-          {
-            content: 'How do you approach infrastructure as code?',
-            type: 'LONG_ANSWER',
-            duration: 3,
-            category: 'Technical Skills',
-            order: 2,
-          },
-        ],
-      },
     },
-  });
+    [
+      { content: 'Tell me about your infrastructure and DevOps experience.', type: 'LONG_ANSWER', duration: 3, category: 'Introduction', order: 1 },
+      { content: 'How do you approach infrastructure as code?', type: 'LONG_ANSWER', duration: 3, category: 'Technical Skills', order: 2 },
+    ]
+  );
 
-  console.log('✓ Created 6 jobs');
+  console.log('✓ Upserted 6 jobs with questions');
 
   // =============================================================================
   // APPLICATIONS
   // =============================================================================
 
-  console.log('Creating applications...');
+  console.log('Upserting applications...');
 
   // Application 1: Demo candidate applied to Stripe (with completed interview)
-  const application1 = await prisma.candidateApplication.create({
-    data: {
-      jobId: stripeJob.id,
+  const application1 = await prisma.candidateApplication.upsert({
+    where: {
+      jobId_userId: {
+        jobId: 'job-1',
+        userId: demoCandidate.id,
+      },
+    },
+    create: {
+      jobId: 'job-1',
       cvUploadId: demoCV.id,
       userId: demoCandidate.id,
       candidateName: 'Demo Candidate',
@@ -709,7 +767,7 @@ Key Responsibilities:
       questionsData: {
         metadata: {
           cvId: demoCV.id,
-          jobId: stripeJob.id,
+          jobId: 'job-1',
           generatedAt: new Date().toISOString(),
           questionCount: 6,
           customQuestionCount: 3,
@@ -727,12 +785,26 @@ Key Responsibilities:
         ],
       },
     },
+    update: {
+      cvUploadId: demoCV.id,
+      candidateName: 'Demo Candidate',
+      candidateEmail: 'demo@synchire.com',
+      matchScore: 92,
+      status: 'COMPLETED',
+      source: 'AI_MATCH',
+    },
   });
 
   // Application 2: Demo candidate applied to Databricks (ready for interview)
-  await prisma.candidateApplication.create({
-    data: {
-      jobId: databricksJob.id,
+  await prisma.candidateApplication.upsert({
+    where: {
+      jobId_userId: {
+        jobId: 'job-2',
+        userId: demoCandidate.id,
+      },
+    },
+    create: {
+      jobId: 'job-2',
       cvUploadId: demoCV.id,
       userId: demoCandidate.id,
       candidateName: 'Demo Candidate',
@@ -751,12 +823,26 @@ Key Responsibilities:
       status: 'READY',
       source: 'MANUAL_APPLY',
     },
+    update: {
+      cvUploadId: demoCV.id,
+      candidateName: 'Demo Candidate',
+      candidateEmail: 'demo@synchire.com',
+      matchScore: 85,
+      status: 'READY',
+      source: 'MANUAL_APPLY',
+    },
   });
 
   // Application 3: Demo candidate applied to Vercel (with completed interview)
-  const application3 = await prisma.candidateApplication.create({
-    data: {
-      jobId: vercelJob.id,
+  const application3 = await prisma.candidateApplication.upsert({
+    where: {
+      jobId_userId: {
+        jobId: 'job-3',
+        userId: demoCandidate.id,
+      },
+    },
+    create: {
+      jobId: 'job-3',
       cvUploadId: demoCV.id,
       userId: demoCandidate.id,
       candidateName: 'Demo Candidate',
@@ -774,21 +860,30 @@ Key Responsibilities:
       status: 'COMPLETED',
       source: 'AI_MATCH',
     },
+    update: {
+      cvUploadId: demoCV.id,
+      candidateName: 'Demo Candidate',
+      candidateEmail: 'demo@synchire.com',
+      matchScore: 88,
+      status: 'COMPLETED',
+      source: 'AI_MATCH',
+    },
   });
 
-  console.log('✓ Created 3 applications');
+  console.log('✓ Upserted 3 applications');
 
   // =============================================================================
   // INTERVIEWS
   // =============================================================================
 
-  console.log('Creating interviews...');
+  console.log('Upserting interviews...');
 
   // Interview 1: Stripe - Completed with high score
-  const interview1 = await prisma.interview.create({
-    data: {
+  const interview1 = await prisma.interview.upsert({
+    where: { id: 'interview-1' },
+    create: {
       id: 'interview-1',
-      jobId: stripeJob.id,
+      jobId: 'job-1',
       candidateId: demoCandidate.id,
       status: 'COMPLETED',
       callId: 'stripe-call-123',
@@ -826,13 +921,19 @@ Candidate: I believe in hands-on mentoring. I conduct regular code reviews with 
         summary: 'Outstanding candidate with excellent technical skills and communication. Highly recommended for the Senior Frontend Engineer role.',
       },
     },
+    update: {
+      status: 'COMPLETED',
+      score: 92,
+      durationMinutes: 28,
+    },
   });
 
   // Interview 2: Vercel - Completed with good score
-  const interview2 = await prisma.interview.create({
-    data: {
+  const interview2 = await prisma.interview.upsert({
+    where: { id: 'interview-2' },
+    create: {
       id: 'interview-2',
-      jobId: vercelJob.id,
+      jobId: 'job-3',
       candidateId: demoCandidate.id,
       status: 'COMPLETED',
       callId: 'vercel-call-456',
@@ -871,16 +972,25 @@ Candidate: First, I'd use observability tools like Datadog or New Relic to ident
         summary: 'Strong candidate with well-rounded skills. Would be a valuable addition to the Full Stack Engineer team.',
       },
     },
+    update: {
+      status: 'COMPLETED',
+      score: 85,
+      durationMinutes: 25,
+    },
   });
 
   // Interview 3: Spotify - Pending
-  await prisma.interview.create({
-    data: {
+  await prisma.interview.upsert({
+    where: { id: 'interview-3' },
+    create: {
       id: 'interview-3',
-      jobId: spotifyJob.id,
+      jobId: 'job-5',
       candidateId: demoCandidate.id,
       status: 'PENDING',
       durationMinutes: 0,
+    },
+    update: {
+      status: 'PENDING',
     },
   });
 
@@ -895,60 +1005,77 @@ Candidate: First, I'd use observability tools like Datadog or New Relic to ident
     data: { interviewId: interview2.id },
   });
 
-  console.log('✓ Created 3 interviews (2 completed, 1 pending)');
+  console.log('✓ Upserted 3 interviews (2 completed, 1 pending)');
 
   // =============================================================================
   // NOTIFICATIONS
   // =============================================================================
 
-  console.log('Creating notifications...');
+  console.log('Upserting notifications...');
 
-  await prisma.notification.createMany({
-    data: [
-      {
-        userId: demoCandidate.id,
-        type: 'SUCCESS',
-        title: 'Interview Completed',
-        message: 'Your interview for Senior Frontend Engineer at Stripe has been completed. Results are now available!',
-        read: false,
-        actionUrl: '/interview/interview-1/results',
-      },
-      {
-        userId: demoCandidate.id,
-        type: 'SUCCESS',
-        title: 'Interview Completed',
-        message: 'Your interview for Full Stack Engineer at Vercel has been completed. Results are now available!',
-        read: true,
-        actionUrl: '/interview/interview-2/results',
-      },
-      {
-        userId: demoCandidate.id,
-        type: 'INFO',
-        title: 'New Job Match',
-        message: 'We found a new job that matches your profile: Backend Engineer at Databricks',
-        read: false,
-        actionUrl: '/candidate/jobs',
-      },
-      {
-        userId: stripeEmployer.id,
-        type: 'INFO',
-        title: 'New Application',
-        message: 'Demo Candidate (92% match) has been auto-matched to Senior Frontend Engineer',
-        read: false,
-        actionUrl: '/hr/jobs/job-1',
-      },
-      {
-        userId: vercelEmployer.id,
-        type: 'INFO',
-        title: 'Interview Completed',
-        message: 'Demo Candidate has completed their interview for Full Stack Engineer',
-        read: false,
-        actionUrl: '/hr/jobs/job-3',
-      },
-    ],
-  });
+  // For notifications, we'll use a deterministic ID based on content
+  const notificationData = [
+    {
+      id: 'notif-demo-stripe-complete',
+      userId: demoCandidate.id,
+      type: 'SUCCESS' as const,
+      title: 'Interview Completed',
+      message: 'Your interview for Senior Frontend Engineer at Stripe has been completed. Results are now available!',
+      read: false,
+      actionUrl: '/interview/interview-1/results',
+    },
+    {
+      id: 'notif-demo-vercel-complete',
+      userId: demoCandidate.id,
+      type: 'SUCCESS' as const,
+      title: 'Interview Completed',
+      message: 'Your interview for Full Stack Engineer at Vercel has been completed. Results are now available!',
+      read: true,
+      actionUrl: '/interview/interview-2/results',
+    },
+    {
+      id: 'notif-demo-databricks-match',
+      userId: demoCandidate.id,
+      type: 'INFO' as const,
+      title: 'New Job Match',
+      message: 'We found a new job that matches your profile: Backend Engineer at Databricks',
+      read: false,
+      actionUrl: '/candidate/jobs',
+    },
+    {
+      id: 'notif-stripe-new-app',
+      userId: stripeEmployer.id,
+      type: 'INFO' as const,
+      title: 'New Application',
+      message: 'Demo Candidate (92% match) has been auto-matched to Senior Frontend Engineer',
+      read: false,
+      actionUrl: '/hr/jobs/job-1',
+    },
+    {
+      id: 'notif-vercel-interview-complete',
+      userId: vercelEmployer.id,
+      type: 'INFO' as const,
+      title: 'Interview Completed',
+      message: 'Demo Candidate has completed their interview for Full Stack Engineer',
+      read: false,
+      actionUrl: '/hr/jobs/job-3',
+    },
+  ];
 
-  console.log('✓ Created 5 notifications');
+  for (const notif of notificationData) {
+    await prisma.notification.upsert({
+      where: { id: notif.id },
+      create: notif,
+      update: {
+        type: notif.type,
+        title: notif.title,
+        message: notif.message,
+        actionUrl: notif.actionUrl,
+      },
+    });
+  }
+
+  console.log('✓ Upserted 5 notifications');
 
   // =============================================================================
   // SUMMARY
