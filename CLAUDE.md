@@ -159,6 +159,35 @@ useEffect(() => {
 <div className="bg-blue-100 text-blue-600">
 ```
 
+### Logging
+- **Always use the logger abstraction** from `@/lib/logger` - not direct `console.*` or `Sentry.*` calls
+- The logger handles Sentry integration internally with proper tags and context
+
+**Good patterns:**
+```typescript
+import { logger } from "@/lib/logger";
+
+// Error with context (automatically sent to Sentry)
+logger.error(error, { api: "email", operation: "sendVerification", email });
+
+// Warning (sent to Sentry)
+logger.warn("Rate limit approaching", { api: "gemini", remaining: 10 });
+
+// Info logging (console only)
+logger.info("Email sent", { api: "email", email });
+```
+
+**Bad patterns:**
+```typescript
+// Don't use Sentry directly
+import * as Sentry from "@sentry/nextjs";
+Sentry.captureException(error);
+const { logger } = Sentry;
+
+// Don't use console directly
+console.error("Failed:", error);
+```
+
 ## Database (Prisma 7)
 
 ### Using Types

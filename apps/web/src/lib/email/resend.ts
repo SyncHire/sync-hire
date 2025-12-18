@@ -1,0 +1,152 @@
+/**
+ * Resend Email Service
+ *
+ * Transactional email sending for authentication flows:
+ * - Email verification
+ * - Password reset
+ * - Organization invitations
+ *
+ * Uses dependency injection for testability.
+ * Throws errors on failure for caller visibility.
+ */
+
+import { Resend } from "resend";
+import { logger } from "@/lib/logger";
+import { VerificationEmail } from "./templates/verification-email";
+import { PasswordResetEmail } from "./templates/password-reset-email";
+import { InvitationEmail } from "./templates/invitation-email";
+
+interface EmailUser {
+  id: string;
+  email: string;
+}
+
+/**
+ * Email service for transactional emails.
+ * Accepts Resend client via constructor for testability.
+ */
+export class EmailService {
+  constructor(
+    private readonly client: Resend,
+    private readonly fromEmail: string
+  ) {}
+
+  /**
+   * Send email verification link to new user.
+   * @throws Error if email sending fails
+   */
+  async sendVerificationEmail(
+    user: EmailUser,
+    verificationUrl: string
+  ): Promise<void> {
+    const { error } = await this.client.emails.send({
+      from: this.fromEmail,
+      to: user.email,
+      subject: "Verify your SyncHire account",
+      react: VerificationEmail({ verificationUrl }),
+    });
+
+    if (error) {
+      const err = new Error("Verification email failed", { cause: error });
+      logger.error(err, {
+        api: "email",
+        operation: "sendVerification",
+        userId: user.id,
+      });
+      throw err;
+    }
+
+    logger.info("Verification email sent", { api: "email", userId: user.id });
+  }
+
+  /**
+   * Send password reset link to user.
+   * @throws Error if email sending fails
+   */
+  async sendPasswordResetEmail(
+    user: EmailUser,
+    resetUrl: string
+  ): Promise<void> {
+    const { error } = await this.client.emails.send({
+      from: this.fromEmail,
+      to: user.email,
+      subject: "Reset your SyncHire password",
+      react: PasswordResetEmail({ resetUrl }),
+    });
+
+    if (error) {
+      const err = new Error("Password reset email failed", { cause: error });
+      logger.error(err, {
+        api: "email",
+        operation: "sendPasswordReset",
+        userId: user.id,
+      });
+      throw err;
+    }
+
+    logger.info("Password reset email sent", { api: "email", userId: user.id });
+  }
+
+  /**
+   * Send organization invitation to user.
+   * @throws Error if email sending fails
+   */
+  async sendInvitationEmail(
+    email: string,
+    organizationName: string,
+    inviterName: string,
+    invitationUrl: string,
+    invitationId: string
+  ): Promise<void> {
+    const { error } = await this.client.emails.send({
+      from: this.fromEmail,
+      to: email,
+      subject: `You've been invited to join ${organizationName} on SyncHire`,
+      react: InvitationEmail({ organizationName, inviterName, invitationUrl }),
+    });
+
+    if (error) {
+      const err = new Error("Invitation email failed", { cause: error });
+      logger.error(err, {
+        api: "email",
+        operation: "sendInvitation",
+        invitationId,
+        organizationName,
+      });
+      throw err;
+    }
+
+    logger.info("Invitation email sent", {
+      api: "email",
+      invitationId,
+      organizationName,
+    });
+  }
+}
+
+// Lazy-initialized singleton for production use
+let emailServiceInstance: EmailService | null = null;
+
+/**
+ * Get or create the EmailService singleton.
+ * Validates that RESEND_API_KEY is configured.
+ * @throws Error when RESEND_API_KEY is not set
+ */
+export function getEmailService(): EmailService {
+  if (emailServiceInstance) {
+    return emailServiceInstance;
+  }
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "RESEND_API_KEY environment variable is not configured. Email sending is disabled."
+    );
+  }
+
+  const fromEmail =
+    process.env.EMAIL_FROM || "SyncHire <noreply@sync-hire.com>";
+
+  emailServiceInstance = new EmailService(new Resend(apiKey), fromEmail);
+  return emailServiceInstance;
+}

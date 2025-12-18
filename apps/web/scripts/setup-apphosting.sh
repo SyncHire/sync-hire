@@ -157,6 +157,9 @@ set_secret "GOOGLE_CLIENT_SECRET" "$GOOGLE_CLIENT_SECRET"
 # Sentry (error tracking)
 set_secret "SENTRY_DSN" "$NEXT_PUBLIC_SENTRY_DSN"
 
+# Email (Resend)
+set_secret "RESEND_API_KEY" "$RESEND_API_KEY"
+
 echo ""
 echo "🔐 Checking backend access to secrets..."
 
@@ -167,7 +170,7 @@ BACKEND_NAME="${BACKEND_NAME:-synchire}"
 BACKEND_SA="firebase-app-hosting-compute@${PROJECT_ID}.iam.gserviceaccount.com"
 
 # List of all secrets to grant access
-SECRETS="GEMINI_API_KEY STREAM_API_SECRET BETTER_AUTH_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET API_SECRET_KEY SENTRY_DSN"
+SECRETS="GEMINI_API_KEY STREAM_API_SECRET BETTER_AUTH_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET API_SECRET_KEY SENTRY_DSN RESEND_API_KEY"
 
 for secret in $SECRETS; do
   # Check if secret exists first
@@ -254,7 +257,7 @@ echo ""
 if [ "$DRY_RUN" = true ]; then
   echo "📋 DRY-RUN Summary:"
   echo "  Bucket: gs://$GCS_BUCKET"
-  echo "  Secrets: GEMINI_API_KEY, STREAM_API_SECRET, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SENTRY_DSN"
+  echo "  Secrets: GEMINI_API_KEY, STREAM_API_SECRET, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SENTRY_DSN, RESEND_API_KEY"
   echo "  VPC: $VPC_NETWORK / $VPC_SUBNET"
   echo ""
   echo "To create these resources, run:"

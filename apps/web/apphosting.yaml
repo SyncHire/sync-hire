@@ -120,3 +120,13 @@ env:
     availability:
       - BUILD
       - RUNTIME
+
+  # Email service (Resend)
+  - variable: RESEND_API_KEY
+    secret: RESEND_API_KEY
+    availability:
+      - RUNTIME
+  - variable: EMAIL_FROM
+    value: "SyncHire <noreply@sync-hire.com>"
+    availability:
+      - RUNTIME

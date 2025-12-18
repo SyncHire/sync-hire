@@ -13,6 +13,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { organization } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
 import { prisma } from "@sync-hire/database";
+import { getEmailService } from "./email/resend";
 
 // Derive base URL from BETTER_AUTH_URL or WEB_PORT
 const port = process.env.WEB_PORT || "3000";
@@ -34,22 +35,19 @@ export const auth = betterAuth({
       user,
       url,
     }: {
-      user: { email: string };
+      user: { id: string; email: string };
       url: string;
     }) => {
-      // TODO: Implement email sending (Resend, SendGrid, etc.)
-      // For now, log to console in development
-      console.log(`[Auth] Verify email for ${user.email}: ${url}`);
+      await getEmailService().sendVerificationEmail(user, url);
     },
     sendResetPassword: async ({
       user,
       url,
     }: {
-      user: { email: string };
+      user: { id: string; email: string };
       url: string;
     }) => {
-      // TODO: Implement password reset email
-      console.log(`[Auth] Reset password for ${user.email}: ${url}`);
+      await getEmailService().sendPasswordResetEmail(user, url);
     },
   },
 
@@ -81,19 +79,27 @@ export const auth = betterAuth({
       // Schema now matches Better Auth defaults
       allowSetActive: true,
       // Invitation settings
-      invitationExpiresIn: 60 * 60 * 48, // 48 hours
+      invitationExpiresIn: 60 * 60 * 24 * 7, // 1 week
       sendInvitationEmail: async ({
         email,
         organization: org,
         inviter,
+        id,
       }: {
         email: string;
         organization: { name: string };
-        inviter: { user: { name: string } };
+        inviter: { user: { name: string | null; email: string } };
+        id: string;
       }) => {
-        // TODO: Implement invitation email
-        console.log(
-          `[Auth] Invite ${email} to ${org.name} by ${inviter.user.name}`,
+        // Construct the invitation acceptance URL with encoded ID
+        const invitationUrl = `${baseURL}/api/auth/organization/accept-invitation?invitationId=${encodeURIComponent(id)}`;
+        const inviterDisplayName = inviter.user.name || inviter.user.email;
+        await getEmailService().sendInvitationEmail(
+          email,
+          org.name,
+          inviterDisplayName,
+          invitationUrl,
+          id
         );
       },
     }),
