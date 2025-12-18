@@ -79,7 +79,7 @@ export const auth = betterAuth({
       // Schema now matches Better Auth defaults
       allowSetActive: true,
       // Invitation settings
-      invitationExpiresIn: 60 * 60 * 48, // 48 hours
+      invitationExpiresIn: 60 * 60 * 24 * 7, // 1 week
       sendInvitationEmail: async ({
         email,
         organization: org,
