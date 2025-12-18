@@ -42,7 +42,7 @@ export class EmailService {
     });
 
     if (error) {
-      const err = new Error(`Verification email failed: ${error.message}`);
+      const err = new Error("Verification email failed", { cause: error });
       logger.error(err, { api: "email", operation: "sendVerification", email });
       throw err;
     }
@@ -63,7 +63,7 @@ export class EmailService {
     });
 
     if (error) {
-      const err = new Error(`Password reset email failed: ${error.message}`);
+      const err = new Error("Password reset email failed", { cause: error });
       logger.error(err, { api: "email", operation: "sendPasswordReset", email });
       throw err;
     }
@@ -89,7 +89,7 @@ export class EmailService {
     });
 
     if (error) {
-      const err = new Error(`Invitation email failed: ${error.message}`);
+      const err = new Error("Invitation email failed", { cause: error });
       logger.error(err, {
         api: "email",
         operation: "sendInvitation",
@@ -133,20 +133,3 @@ export function getEmailService(): EmailService {
   return emailServiceInstance;
 }
 
-/**
- * Create a new EmailService instance with custom dependencies.
- * Useful for testing with mock clients.
- */
-export function createEmailService(
-  client: Resend,
-  fromEmail: string
-): EmailService {
-  return new EmailService(client, fromEmail);
-}
-
-/**
- * Reset the EmailService singleton (for testing purposes).
- */
-export function resetEmailService(): void {
-  emailServiceInstance = null;
-}
