@@ -16,6 +16,11 @@ import { VerificationEmail } from "./templates/verification-email";
 import { PasswordResetEmail } from "./templates/password-reset-email";
 import { InvitationEmail } from "./templates/invitation-email";
 
+interface EmailUser {
+  id: string;
+  email: string;
+}
+
 /**
  * Email service for transactional emails.
  * Accepts Resend client via constructor for testability.
@@ -31,44 +36,55 @@ export class EmailService {
    * @throws Error if email sending fails
    */
   async sendVerificationEmail(
-    email: string,
+    user: EmailUser,
     verificationUrl: string
   ): Promise<void> {
     const { error } = await this.client.emails.send({
       from: this.fromEmail,
-      to: email,
+      to: user.email,
       subject: "Verify your SyncHire account",
       react: VerificationEmail({ verificationUrl }),
     });
 
     if (error) {
       const err = new Error("Verification email failed", { cause: error });
-      logger.error(err, { api: "email", operation: "sendVerification", email });
+      logger.error(err, {
+        api: "email",
+        operation: "sendVerification",
+        userId: user.id,
+      });
       throw err;
     }
 
-    logger.info("Verification email sent", { api: "email", email });
+    logger.info("Verification email sent", { api: "email", userId: user.id });
   }
 
   /**
    * Send password reset link to user.
    * @throws Error if email sending fails
    */
-  async sendPasswordResetEmail(email: string, resetUrl: string): Promise<void> {
+  async sendPasswordResetEmail(
+    user: EmailUser,
+    resetUrl: string
+  ): Promise<void> {
     const { error } = await this.client.emails.send({
       from: this.fromEmail,
-      to: email,
+      to: user.email,
       subject: "Reset your SyncHire password",
       react: PasswordResetEmail({ resetUrl }),
     });
 
     if (error) {
       const err = new Error("Password reset email failed", { cause: error });
-      logger.error(err, { api: "email", operation: "sendPasswordReset", email });
+      logger.error(err, {
+        api: "email",
+        operation: "sendPasswordReset",
+        userId: user.id,
+      });
       throw err;
     }
 
-    logger.info("Password reset email sent", { api: "email", email });
+    logger.info("Password reset email sent", { api: "email", userId: user.id });
   }
 
   /**
@@ -79,7 +95,8 @@ export class EmailService {
     email: string,
     organizationName: string,
     inviterName: string,
-    invitationUrl: string
+    invitationUrl: string,
+    invitationId: string
   ): Promise<void> {
     const { error } = await this.client.emails.send({
       from: this.fromEmail,
@@ -93,7 +110,7 @@ export class EmailService {
       logger.error(err, {
         api: "email",
         operation: "sendInvitation",
-        email,
+        invitationId,
         organizationName,
       });
       throw err;
@@ -101,7 +118,7 @@ export class EmailService {
 
     logger.info("Invitation email sent", {
       api: "email",
-      email,
+      invitationId,
       organizationName,
     });
   }
@@ -113,6 +130,7 @@ let emailServiceInstance: EmailService | null = null;
 /**
  * Get or create the EmailService singleton.
  * Validates that RESEND_API_KEY is configured.
+ * @throws Error when RESEND_API_KEY is not set
  */
 export function getEmailService(): EmailService {
   if (emailServiceInstance) {
@@ -132,4 +150,3 @@ export function getEmailService(): EmailService {
   emailServiceInstance = new EmailService(new Resend(apiKey), fromEmail);
   return emailServiceInstance;
 }
-

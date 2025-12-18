@@ -35,19 +35,19 @@ export const auth = betterAuth({
       user,
       url,
     }: {
-      user: { email: string };
+      user: { id: string; email: string };
       url: string;
     }) => {
-      await getEmailService().sendVerificationEmail(user.email, url);
+      await getEmailService().sendVerificationEmail(user, url);
     },
     sendResetPassword: async ({
       user,
       url,
     }: {
-      user: { email: string };
+      user: { id: string; email: string };
       url: string;
     }) => {
-      await getEmailService().sendPasswordResetEmail(user.email, url);
+      await getEmailService().sendPasswordResetEmail(user, url);
     },
   },
 
@@ -93,12 +93,13 @@ export const auth = betterAuth({
       }) => {
         // Construct the invitation acceptance URL with encoded ID
         const invitationUrl = `${baseURL}/api/auth/organization/accept-invitation?invitationId=${encodeURIComponent(id)}`;
-        const inviterDisplayName = inviter.user.name || inviter.user.email || "A team member";
+        const inviterDisplayName = inviter.user.name || inviter.user.email;
         await getEmailService().sendInvitationEmail(
           email,
           org.name,
           inviterDisplayName,
-          invitationUrl
+          invitationUrl,
+          id
         );
       },
     }),
