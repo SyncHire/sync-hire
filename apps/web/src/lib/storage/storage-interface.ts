@@ -201,9 +201,10 @@ export interface StorageInterface {
   getOrCreateApplication(cvHash: string, jobId: string): Promise<CandidateApplication>;
 
   /**
-   * Save/update a candidate application
+   * Save/update a candidate application (upserts by jobId + userId)
+   * Returns the saved application with its database-generated ID
    */
-  saveApplication(application: CandidateApplication): Promise<void>;
+  saveApplication(application: Omit<CandidateApplication, 'id'>): Promise<CandidateApplication>;
 
   /**
    * Get all CV extractions (for AI matching)

@@ -157,10 +157,7 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
       if (matchScore >= matchThreshold) {
         console.log(`   🎉 MATCHED!`);
 
-        const applicationId = `app-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-
-        const application = {
-          id: applicationId,
+        const savedApplication = await storage.saveApplication({
           jobId,
           cvUploadId: cvId,
           userId,
@@ -175,9 +172,8 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
           interviewId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
-        };
-
-        await storage.saveApplication(application);
+        });
+        const applicationId = savedApplication.id;
         matchedCount++;
         matchedCandidates.push(candidateName);
 

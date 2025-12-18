@@ -500,19 +500,27 @@ export class DatabaseStorage implements StorageInterface {
     });
   }
 
-  async saveApplication(application: CandidateApplication): Promise<void> {
-    await this.db.candidateApplication.upsert({
-      where: { id: application.id },
+  async saveApplication(application: Omit<CandidateApplication, 'id'>): Promise<CandidateApplication> {
+    return this.db.candidateApplication.upsert({
+      where: {
+        jobId_userId: {
+          jobId: application.jobId,
+          userId: application.userId,
+        },
+      },
       update: {
+        cvUploadId: application.cvUploadId,
+        candidateName: application.candidateName,
+        candidateEmail: application.candidateEmail,
         matchScore: application.matchScore,
         matchReasons: application.matchReasons,
         skillGaps: application.skillGaps,
         status: application.status,
+        source: application.source,
         interviewId: application.interviewId,
         questionsData: application.questionsData,
       },
       create: {
-        id: application.id,
         jobId: application.jobId,
         cvUploadId: application.cvUploadId,
         userId: application.userId,
