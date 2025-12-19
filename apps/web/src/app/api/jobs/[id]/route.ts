@@ -1,19 +1,23 @@
 /**
  * Job API endpoints
- * GET - Get single job by ID (public for candidates)
+ * GET - Get single job by ID (public for candidates, limited fields)
  * PUT - Update job settings (aiMatchingEnabled, etc.) - requires HR access
  */
 
 import { type NextRequest } from "next/server";
 import { logger } from "@/lib/logger";
-import { MatchingStatus } from "@sync-hire/database";
+import { MatchingStatus, JobStatus } from "@sync-hire/database";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { withJobAccess } from "@/lib/auth-middleware";
 import { errors, successResponse } from "@/lib/api-response";
 
 /**
  * GET /api/jobs/[id]
- * Public endpoint for viewing job details (candidates need this)
+ * Public endpoint for viewing job details (candidates need this).
+ *
+ * Security:
+ * - Only returns ACTIVE jobs (DRAFT/CLOSED are hidden)
+ * - Returns limited public fields (hides internal HR data)
  */
 export async function GET(
   _request: NextRequest,
@@ -28,15 +32,33 @@ export async function GET(
       return errors.notFound("Job");
     }
 
-    // Compute accurate applicant count from interviews
-    const allInterviews = await storage.getAllInterviews();
-    const jobInterviews = allInterviews.filter((i) => i.jobId === jobId);
-    const jobWithCount = {
-      ...job,
-      applicantsCount: jobInterviews.length,
+    // Only show ACTIVE jobs publicly
+    if (job.status !== JobStatus.ACTIVE) {
+      return errors.notFound("Job");
+    }
+
+    // Return only public fields (hide internal HR data)
+    const publicJob = {
+      id: job.id,
+      title: job.title,
+      department: job.department,
+      location: job.location,
+      employmentType: job.employmentType,
+      workArrangement: job.workArrangement,
+      salary: job.salary,
+      description: job.description,
+      requirements: job.requirements,
+      postedAt: job.postedAt,
+      // Include questions for interview prep (content only, no internal IDs)
+      questions: job.questions?.map((q) => ({
+        content: q.content,
+        type: q.type,
+        duration: q.duration,
+        category: q.category,
+      })),
     };
 
-    return successResponse({ success: true, data: jobWithCount });
+    return successResponse({ success: true, data: publicJob });
   } catch (error) {
     logger.error(error, { api: "jobs/[id]", operation: "get" });
     return errors.internal("Failed to get job");
