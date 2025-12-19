@@ -140,7 +140,7 @@ export default function CandidateJobListings() {
         const formData = new FormData();
         formData.append("file", file);
 
-        const response = await fetch("/api/cv/extract", {
+        const response = await fetch("/api/candidate/cv/upload", {
           method: "POST",
           body: formData,
         });

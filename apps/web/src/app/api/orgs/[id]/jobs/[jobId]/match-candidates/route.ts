@@ -1,5 +1,5 @@
 /**
- * POST /api/jobs/[id]/match-candidates
+ * POST /api/orgs/:id/jobs/:jobId/match-candidates
  *
  * Scans all CVs in the system and finds candidates matching the job requirements.
  * For matches above threshold, creates applications and generates personalized questions.
@@ -24,7 +24,7 @@ import type {
 } from "@sync-hire/database";
 import type { Question } from "@/lib/types/interview-types";
 import { getStorage } from "@/lib/storage/storage-factory";
-import { withJobAccess } from "@/lib/auth-middleware";
+import { withOrgMembership } from "@/lib/auth-middleware";
 import { errors, successResponse } from "@/lib/api-response";
 import { z } from "zod";
 
@@ -172,14 +172,14 @@ async function generateAndSaveQuestions(
     }
 
     logger.info("Generated questions for application", {
-      api: "jobs/[id]/match-candidates",
+      api: "orgs/[id]/jobs/[jobId]/match-candidates",
       operation: "generateQuestions",
       applicationId,
       questionCount: mergedQuestions.length,
     });
   } catch (error) {
     logger.error(error, {
-      api: "jobs/[id]/match-candidates",
+      api: "orgs/[id]/jobs/[jobId]/match-candidates",
       operation: "generateQuestions",
       jobId,
       cvId,
@@ -206,13 +206,13 @@ async function generateAndSaveQuestions(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string; jobId: string }> }
 ) {
   try {
-    const { id: jobId } = await params;
+    const { id: organizationId, jobId } = await params;
 
-    // Verify HR access (org member only)
-    const { response, jobOrgId } = await withJobAccess(jobId);
+    // Verify org membership
+    const { response } = await withOrgMembership(organizationId);
     if (response) {
       return response;
     }
@@ -221,7 +221,7 @@ export async function POST(
     const rateLimitResponse = await withRateLimit(
       request,
       "expensive",
-      "jobs/match-candidates"
+      "orgs/jobs/match-candidates"
     );
     if (rateLimitResponse) {
       return rateLimitResponse;
@@ -230,18 +230,20 @@ export async function POST(
     const storage = getStorage();
 
     logger.info("Starting candidate matching", {
-      api: "jobs/[id]/match-candidates",
+      api: "orgs/[id]/jobs/[jobId]/match-candidates",
       operation: "match",
+      organizationId,
       jobId,
     });
 
-    // Get job (already verified to exist by withJobAccess)
+    // Get job and verify it belongs to this org
     const job = await storage.getJob(jobId);
     if (!job) {
       return errors.notFound("Job");
     }
-
-    const organizationId = jobOrgId ?? job.organizationId;
+    if (job.organizationId !== organizationId) {
+      return errors.forbidden("Job does not belong to this organization");
+    }
 
     // Get all CVs
     const cvExtractions = await storage.getAllCVExtractions();
@@ -262,7 +264,7 @@ export async function POST(
 
     if (cvExtractions.length === 0) {
       logger.info("No CVs to match against", {
-        api: "jobs/[id]/match-candidates",
+        api: "orgs/[id]/jobs/[jobId]/match-candidates",
         operation: "match",
         jobId,
       });
@@ -313,7 +315,7 @@ export async function POST(
         skillGaps = result.skillGaps;
       } catch (error) {
         logger.error(error, {
-          api: "jobs/[id]/match-candidates",
+          api: "orgs/[id]/jobs/[jobId]/match-candidates",
           operation: "calculateMatchScore",
           jobId,
           cvId,
@@ -354,7 +356,7 @@ export async function POST(
           savedApplication.id
         ).catch((err) =>
           logger.error(err, {
-            api: "jobs/[id]/match-candidates",
+            api: "orgs/[id]/jobs/[jobId]/match-candidates",
             operation: "generateQuestions",
             jobId,
             cvId,
@@ -368,7 +370,7 @@ export async function POST(
 
     // Log summary
     logger.info("Candidate matching complete", {
-      api: "jobs/[id]/match-candidates",
+      api: "orgs/[id]/jobs/[jobId]/match-candidates",
       operation: "match",
       jobId,
       totalCvs: cvExtractions.length,
@@ -399,7 +401,7 @@ export async function POST(
     });
   } catch (error) {
     logger.error(error, {
-      api: "jobs/[id]/match-candidates",
+      api: "orgs/[id]/jobs/[jobId]/match-candidates",
       operation: "match",
     });
     return errors.internal("Failed to match candidates");

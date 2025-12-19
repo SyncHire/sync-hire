@@ -6,7 +6,7 @@ import { StreamVideo, StreamVideoClient } from "@stream-io/video-react-sdk";
  * Wraps the application with Stream Video Client
  */
 import { type ReactNode, useEffect, useState } from "react";
-import { useStreamToken } from "@/lib/hooks/use-interview";
+import { useStreamToken } from "@/lib/hooks/use-candidate-interview";
 import { streamConfig } from "@/lib/stream-config";
 
 import "@stream-io/video-react-sdk/dist/css/styles.css";

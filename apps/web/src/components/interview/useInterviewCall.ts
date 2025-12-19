@@ -6,7 +6,7 @@ import { type Call, useStreamVideoClient } from "@stream-io/video-react-sdk";
  * Simplified: join happens on user action (button click), not on mount
  */
 import { useEffect, useState } from "react";
-import { useStartInterview } from "@/lib/hooks/use-interview";
+import { useStartCandidateInterview } from "@/lib/hooks/use-candidate-interview";
 
 interface UseInterviewCallParams {
   interviewId: string;
@@ -26,7 +26,7 @@ export function useInterviewCall({
   const [callEnded, setCallEnded] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [videoAvatarEnabled, setVideoAvatarEnabled] = useState(false);
-  const startInterviewMutation = useStartInterview();
+  const startInterviewMutation = useStartCandidateInterview();
 
   useEffect(() => {
     // Only run when enabled and we have a client, and haven't already joined
@@ -43,7 +43,6 @@ export function useInterviewCall({
         // Start interview and get call ID
         const data = await startInterviewMutation.mutateAsync({
           interviewId,
-          candidateId,
           candidateName,
         });
 

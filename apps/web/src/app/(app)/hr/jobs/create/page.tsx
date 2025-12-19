@@ -292,7 +292,10 @@ export default function JobCreationPage() {
       }));
 
     try {
-      const response = await fetch("/api/jobs/create", {
+      if (!activeOrg?.id) {
+        throw new Error("No active organization");
+      }
+      const response = await fetch(`/api/orgs/${activeOrg.id}/jobs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -307,7 +310,6 @@ export default function JobCreationPage() {
           customQuestions: includedQuestions,
           originalJDText: JSON.stringify(state.extractedData, null, 2),
           company: state.extractedData.company || "Company",
-          employerId: "employer-1",
           aiSuggestions: state.acceptedSuggestions,
         }),
       });

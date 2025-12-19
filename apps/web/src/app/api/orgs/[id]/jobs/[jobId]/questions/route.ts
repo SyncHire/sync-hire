@@ -11,28 +11,31 @@
 import { type NextRequest } from "next/server";
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
-import { withJobAccess } from "@/lib/auth-middleware";
+import { withOrgMembership } from "@/lib/auth-middleware";
 import { errors, successResponse, createdResponse } from "@/lib/api-response";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string; jobId: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id: organizationId, jobId } = await params;
 
-    // Verify HR access (org member only)
-    const { response } = await withJobAccess(id);
+    // Verify org membership
+    const { response } = await withOrgMembership(organizationId);
     if (response) {
       return response;
     }
 
     const storage = getStorage();
 
-    // Get job from storage (already verified to exist by withJobAccess)
-    const job = await storage.getJob(id);
+    // Get job and verify it belongs to this org
+    const job = await storage.getJob(jobId);
     if (!job) {
       return errors.notFound("Job");
+    }
+    if (job.organizationId !== organizationId) {
+      return errors.forbidden("Job does not belong to this organization");
     }
 
     // Return job questions
@@ -40,20 +43,23 @@ export async function GET(
 
     return successResponse({ success: true, data: questions });
   } catch (error) {
-    logger.error(error, { api: "jobs/[id]/questions", operation: "get" });
+    logger.error(error, {
+      api: "orgs/[id]/jobs/[jobId]/questions",
+      operation: "get",
+    });
     return errors.internal("Failed to retrieve questions");
   }
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string; jobId: string }> }
 ) {
   try {
-    const { id: jobId } = await params;
+    const { id: organizationId, jobId } = await params;
 
-    // Verify HR access (org member only)
-    const { response } = await withJobAccess(jobId);
+    // Verify org membership
+    const { response } = await withOrgMembership(organizationId);
     if (response) {
       return response;
     }
@@ -67,10 +73,13 @@ export async function POST(
       return errors.badRequest("Missing required fields: type, content");
     }
 
-    // Get existing job (already verified to exist by withJobAccess)
+    // Get existing job and verify it belongs to this org
     const job = await storage.getJob(jobId);
     if (!job) {
       return errors.notFound("Job");
+    }
+    if (job.organizationId !== organizationId) {
+      return errors.forbidden("Job does not belong to this organization");
     }
 
     // Create new question
@@ -99,20 +108,23 @@ export async function POST(
 
     return createdResponse({ success: true, data: newQuestion });
   } catch (error) {
-    logger.error(error, { api: "jobs/[id]/questions", operation: "create" });
+    logger.error(error, {
+      api: "orgs/[id]/jobs/[jobId]/questions",
+      operation: "create",
+    });
     return errors.internal("Failed to create question");
   }
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string; jobId: string }> }
 ) {
   try {
-    const { id: jobId } = await params;
+    const { id: organizationId, jobId } = await params;
 
-    // Verify HR access (org member only)
-    const { response } = await withJobAccess(jobId);
+    // Verify org membership
+    const { response } = await withOrgMembership(organizationId);
     if (response) {
       return response;
     }
@@ -120,14 +132,17 @@ export async function PUT(
     const body = await request.json();
     const storage = getStorage();
 
+    // Get existing job and verify it belongs to this org
+    const job = await storage.getJob(jobId);
+    if (!job) {
+      return errors.notFound("Job");
+    }
+    if (job.organizationId !== organizationId) {
+      return errors.forbidden("Job does not belong to this organization");
+    }
+
     // Check if this is a bulk update (questions array provided)
     if (body.questions && Array.isArray(body.questions)) {
-      // Get existing job (already verified to exist by withJobAccess)
-      const job = await storage.getJob(jobId);
-      if (!job) {
-        return errors.notFound("Job");
-      }
-
       // Update job with new questions
       const updatedJob = {
         ...job,
@@ -173,12 +188,6 @@ export async function PUT(
       return errors.badRequest("Missing questionId or questions array");
     }
 
-    // Get existing job
-    const job = await storage.getJob(jobId);
-    if (!job) {
-      return errors.notFound("Job");
-    }
-
     // Find and update the question
     const questionIndex =
       job.questions?.findIndex((q) => q.id === questionId) ?? -1;
@@ -201,20 +210,23 @@ export async function PUT(
 
     return successResponse({ success: true, data: updatedQuestion });
   } catch (error) {
-    logger.error(error, { api: "jobs/[id]/questions", operation: "update" });
+    logger.error(error, {
+      api: "orgs/[id]/jobs/[jobId]/questions",
+      operation: "update",
+    });
     return errors.internal("Failed to update question");
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string; jobId: string }> }
 ) {
   try {
-    const { id: jobId } = await params;
+    const { id: organizationId, jobId } = await params;
 
-    // Verify HR access (org member only)
-    const { response } = await withJobAccess(jobId);
+    // Verify org membership
+    const { response } = await withOrgMembership(organizationId);
     if (response) {
       return response;
     }
@@ -227,10 +239,13 @@ export async function DELETE(
       return errors.badRequest("Missing questionId");
     }
 
-    // Get existing job (already verified to exist by withJobAccess)
+    // Get existing job and verify it belongs to this org
     const job = await storage.getJob(jobId);
     if (!job) {
       return errors.notFound("Job");
+    }
+    if (job.organizationId !== organizationId) {
+      return errors.forbidden("Job does not belong to this organization");
     }
 
     // Filter out the deleted question
@@ -247,7 +262,10 @@ export async function DELETE(
 
     return successResponse({ success: true, data: { deleted: true } });
   } catch (error) {
-    logger.error(error, { api: "jobs/[id]/questions", operation: "delete" });
+    logger.error(error, {
+      api: "orgs/[id]/jobs/[jobId]/questions",
+      operation: "delete",
+    });
     return errors.internal("Failed to delete question");
   }
 }

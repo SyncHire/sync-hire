@@ -24,7 +24,8 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import type { AIEvaluation } from "@/lib/types/interview-types";
 import type { Interview, Job } from "@/lib/storage/storage-interface";
-import { useAnalyzeInterview, useInterviewDetails } from "@/lib/hooks/use-interview";
+import { useCandidateInterview } from "@/lib/hooks/use-candidate-interview";
+import { useAnalyzeInterview } from "@/lib/hooks/use-interview";
 
 interface ResultsContentProps {
   interview: Interview;
@@ -128,8 +129,9 @@ export default function ResultsContent({
   // Poll while waiting for analysis
   const shouldPoll = needsAnalysis;
 
-  const { data: polledData, refetch } = useInterviewDetails(
+  const { data: polledData, refetch } = useCandidateInterview(
     shouldPoll ? initialInterview.id : null,
+    { refetchInterval: 3000 }
   );
 
   // Auto-trigger analysis if needed
@@ -149,10 +151,22 @@ export default function ResultsContent({
     }
   }, [needsAnalysis, initialInterview.id, analyzeInterview, refetch]);
 
+  // Build interview object from polled data or use initial
+  // The candidate endpoint returns a flattened CandidateInterviewResponse
+  const polledInterview = polledData?.data
+    ? {
+        ...initialInterview,
+        status: polledData.data.status,
+        score: polledData.data.score,
+        aiEvaluation: polledData.data.aiEvaluation,
+        completedAt: polledData.data.completedAt,
+      }
+    : null;
+
   // Use polled data if available and has evaluation, otherwise use initial
   const interview =
-    polledData?.data?.interview?.aiEvaluation
-      ? polledData.data.interview
+    polledInterview?.aiEvaluation
+      ? polledInterview
       : initialInterview;
 
   // Show "Generating" while analysis is in progress

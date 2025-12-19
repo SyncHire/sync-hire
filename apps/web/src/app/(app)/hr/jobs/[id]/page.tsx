@@ -32,7 +32,15 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { useSaveJobQuestions, useGenerateJobQuestions, useUpdateJobSettings, useMatchCandidates, useJob, type Job } from "@/lib/hooks/use-job-questions";
+import {
+  useSaveOrgJobQuestions,
+  useGenerateOrgJobQuestions,
+  useUpdateOrgJobSettings,
+  useOrgMatchCandidates,
+  useOrgJob,
+  type Job,
+} from "@/lib/hooks/use-org-jobs";
+import { useActiveOrganization } from "@/lib/hooks/use-organizations";
 
 interface Question {
   id: string;
@@ -47,13 +55,17 @@ export default function HRJDDetail() {
   const jobId = params?.id as string | undefined;
   const scanningParam = searchParams.get("scanning") === "true";
 
+  // Get active organization
+  const { data: activeOrg } = useActiveOrganization();
+  const orgId = activeOrg?.id ?? null;
+
   // Track previous status for toast notification
   const [prevStatus, setPrevStatus] = useState<string | undefined>();
   // Force polling for a few seconds after navigating from job creation
   const [forcePolling, setForcePolling] = useState(scanningParam);
 
   // Fetch job with react-query, poll while scanning or force polling
-  const { data: job, isLoading } = useJob(jobId, { pollWhileScanning: true, forcePolling });
+  const { data: job, isLoading } = useOrgJob(orgId, jobId ?? null, { pollWhileScanning: true, forcePolling });
 
   // Stop force polling after 10 seconds or when scanning completes
   useEffect(() => {
@@ -81,10 +93,10 @@ export default function HRJDDetail() {
   const [aiMatchingEnabled, setAiMatchingEnabled] = useState(true);
 
   // React Query mutations
-  const saveQuestionsMutation = useSaveJobQuestions();
-  const generateQuestionsMutation = useGenerateJobQuestions();
-  const updateSettingsMutation = useUpdateJobSettings();
-  const matchCandidatesMutation = useMatchCandidates();
+  const saveQuestionsMutation = useSaveOrgJobQuestions();
+  const generateQuestionsMutation = useGenerateOrgJobQuestions();
+  const updateSettingsMutation = useUpdateOrgJobSettings();
+  const matchCandidatesMutation = useOrgMatchCandidates();
 
   // Sync local state with job data
   useEffect(() => {
@@ -151,9 +163,10 @@ export default function HRJDDetail() {
 
   // Generate AI questions
   const handleGenerateQuestions = () => {
-    if (!job) return;
+    if (!job || !orgId) return;
     generateQuestionsMutation.mutate(
       {
+        orgId,
         jobId: job.id,
         title: job.title,
         description: job.description,
@@ -179,9 +192,9 @@ export default function HRJDDetail() {
 
   // Save questions to job
   const handleSaveQuestions = () => {
-    if (!job) return;
+    if (!job || !orgId) return;
     saveQuestionsMutation.mutate(
-      { jobId: job.id, questions },
+      { orgId, jobId: job.id, questions },
       {
         onSuccess: () => {
           setHasUnsavedChanges(false);
@@ -192,16 +205,16 @@ export default function HRJDDetail() {
 
   // Toggle AI Matching and trigger candidate matching
   const handleToggleAiMatching = (enabled: boolean) => {
-    if (!job) return;
+    if (!job || !orgId) return;
     setAiMatchingEnabled(enabled);
 
     updateSettingsMutation.mutate(
-      { jobId: job.id, aiMatchingEnabled: enabled },
+      { orgId, jobId: job.id, aiMatchingEnabled: enabled },
       {
         onSuccess: () => {
           if (enabled) {
             toast.success("AI Matching enabled - scanning for candidates...");
-            matchCandidatesMutation.mutate({ jobId: job.id });
+            matchCandidatesMutation.mutate({ orgId, jobId: job.id });
           } else {
             toast.success("AI Matching disabled");
           }
@@ -215,8 +228,8 @@ export default function HRJDDetail() {
 
   // Rescan for candidates
   const handleRescanCandidates = () => {
-    if (!job) return;
-    matchCandidatesMutation.mutate({ jobId: job.id });
+    if (!job || !orgId) return;
+    matchCandidatesMutation.mutate({ orgId, jobId: job.id });
   };
 
   if (isLoading) {

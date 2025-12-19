@@ -1,11 +1,13 @@
 /**
- * API Route: Start an interview
- * Creates a Stream call and invites the Python AI agent
- * POST /api/start-interview
- * Supports both interview IDs and application IDs
+ * POST /api/candidate/interviews/:id/start
+ *
+ * Starts an interview for the authenticated candidate.
+ * Creates a Stream call and invites the Python AI agent.
+ * Supports both interview IDs and application IDs.
  *
  * Access: Authenticated user who is the candidate for this interview
  */
+
 import crypto from "crypto";
 import { logger } from "@/lib/logger";
 import type { Question } from "@/lib/types/interview-types";
@@ -41,13 +43,13 @@ function generateCallId(applicationId: string): string {
 // Also stores whether video avatar is enabled for that call
 const invitedCalls = new Map<string, { videoAvatarEnabled: boolean }>();
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { interviewId, candidateId, candidateName } = await request.json();
-
-    if (!interviewId || !candidateId) {
-      return errors.badRequest("interviewId and candidateId are required");
-    }
+    const { id: interviewId } = await params;
+    const { candidateName } = await request.json();
 
     // Get authenticated user
     const session = await getServerSession();
@@ -55,12 +57,7 @@ export async function POST(request: Request) {
       return errors.unauthorized();
     }
     const user = session.user;
-
-    // Verify the authenticated user is the candidate for this interview
-    // This prevents users from starting interviews for other candidates
-    if (user.id !== candidateId) {
-      return errors.forbidden("You can only start your own interviews");
-    }
+    const candidateId = user.id;
 
     const storage = getStorage();
     let job: Job | null = null;
@@ -127,7 +124,7 @@ export async function POST(request: Request) {
     let interviewQuestions: Question[] = questions;
     if (interviewQuestions.length === 0 && job.questions) {
       logger.warn("No personalized questions found, using job defaults", {
-        api: "start-interview",
+        api: "candidate/interviews/[id]/start",
         interviewId,
         questionCount: job.questions.length,
       });
@@ -180,7 +177,7 @@ export async function POST(request: Request) {
     // Check if this is a new call or existing call
     const isNewCall = callData.created;
     logger.info("Call status", {
-      api: "start-interview",
+      api: "candidate/interviews/[id]/start",
       callId,
       isNewCall: isNewCall ? "NEW" : "EXISTING",
     });
@@ -192,12 +189,12 @@ export async function POST(request: Request) {
           update_members: [{ user_id: candidateId, role: "admin" }],
         });
         logger.debug("Updated member role to admin", {
-          api: "start-interview",
+          api: "candidate/interviews/[id]/start",
           callId,
         });
       } catch (memberUpdateErr) {
         logger.warn("Could not update member role", {
-          api: "start-interview",
+          api: "candidate/interviews/[id]/start",
           callId,
           error:
             memberUpdateErr instanceof Error
@@ -211,7 +208,7 @@ export async function POST(request: Request) {
     const existingCall = invitedCalls.get(callId);
     const alreadyInvited = !!existingCall;
     logger.debug("Agent invitation check", {
-      api: "start-interview",
+      api: "candidate/interviews/[id]/start",
       callId,
       alreadyInvited,
     });
@@ -222,7 +219,7 @@ export async function POST(request: Request) {
     if (!alreadyInvited) {
       const agentUrl = getAgentEndpoint("/join-interview");
       logger.debug("Sending request to agent", {
-        api: "start-interview",
+        api: "candidate/interviews/[id]/start",
         callId,
         agentUrl,
       });
@@ -233,13 +230,13 @@ export async function POST(request: Request) {
           body: JSON.stringify({
             callId,
             questions: interviewQuestions,
-            candidateName: candidateName || "Candidate",
+            candidateName: candidateName || user.name || "Candidate",
             jobTitle: job.title,
           }),
         });
 
         logger.debug("Agent response received", {
-          api: "start-interview",
+          api: "candidate/interviews/[id]/start",
           callId,
           status: agentResponse.status,
         });
@@ -247,7 +244,7 @@ export async function POST(request: Request) {
         if (!agentResponse.ok) {
           const errorText = await agentResponse.text();
           logger.error(new Error("Failed to invite agent"), {
-            api: "start-interview",
+            api: "candidate/interviews/[id]/start",
             callId,
             errorText,
           });
@@ -256,7 +253,7 @@ export async function POST(request: Request) {
 
         const agentData = await agentResponse.json();
         logger.info("Agent invitation successful", {
-          api: "start-interview",
+          api: "candidate/interviews/[id]/start",
           callId,
           videoAvatarEnabled: agentData.videoAvatarEnabled,
         });
@@ -268,7 +265,7 @@ export async function POST(request: Request) {
         invitedCalls.set(callId, { videoAvatarEnabled });
       } catch (agentError) {
         logger.error(agentError, {
-          api: "start-interview",
+          api: "candidate/interviews/[id]/start",
           operation: "invite-agent",
           callId,
         });
@@ -276,7 +273,7 @@ export async function POST(request: Request) {
       }
     } else {
       logger.debug("Agent already invited, skipping duplicate", {
-        api: "start-interview",
+        api: "candidate/interviews/[id]/start",
         callId,
       });
     }
@@ -289,7 +286,7 @@ export async function POST(request: Request) {
       message: "Interview started and AI agent invited",
     });
   } catch (error) {
-    logger.error(error, { api: "start-interview", operation: "start" });
+    logger.error(error, { api: "candidate/interviews/[id]/start", operation: "start" });
     return errors.internal("Failed to start interview");
   }
 }

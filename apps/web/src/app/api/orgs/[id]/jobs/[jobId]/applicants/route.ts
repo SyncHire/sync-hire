@@ -1,5 +1,5 @@
 /**
- * GET /api/jobs/[id]/applicants
+ * GET /api/orgs/:id/jobs/:jobId/applicants
  *
  * Returns all interviews/applicants for a specific job.
  * Combines interview data with user/CV data to provide applicant details.
@@ -12,7 +12,7 @@ import { type NextRequest } from "next/server";
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { InterviewStatus } from "@sync-hire/database";
-import { withJobAccess } from "@/lib/auth-middleware";
+import { withOrgMembership } from "@/lib/auth-middleware";
 import { errors, successResponse } from "@/lib/api-response";
 
 // Common applicant type for the response
@@ -38,23 +38,26 @@ interface ApplicantResponse {
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string; jobId: string }> }
 ) {
   try {
-    const { id: jobId } = await params;
+    const { id: organizationId, jobId } = await params;
 
-    // Verify HR access (org member only)
-    const { response } = await withJobAccess(jobId);
+    // Verify org membership
+    const { response } = await withOrgMembership(organizationId);
     if (response) {
       return response;
     }
 
     const storage = getStorage();
 
-    // Get the job (already verified to exist by withJobAccess)
+    // Get the job and verify it belongs to this org
     const job = await storage.getJob(jobId);
     if (!job) {
       return errors.notFound("Job");
+    }
+    if (job.organizationId !== organizationId) {
+      return errors.forbidden("Job does not belong to this organization");
     }
 
     // Get all interviews and filter by jobId
@@ -191,7 +194,10 @@ export async function GET(
       },
     });
   } catch (error) {
-    logger.error(error, { api: "jobs/[id]/applicants", operation: "fetch" });
+    logger.error(error, {
+      api: "orgs/[id]/jobs/[jobId]/applicants",
+      operation: "fetch",
+    });
     return errors.internal("Failed to fetch applicants");
   }
 }
