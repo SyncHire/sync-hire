@@ -79,6 +79,7 @@ describe("GET /api/orgs/:id/jobs", () => {
       organizationId: orgId,
       role: "member",
       createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
     // Mock jobs data
@@ -88,6 +89,25 @@ describe("GET /api/orgs/:id/jobs", () => {
         title: "Senior Engineer",
         location: "Remote",
         status: "ACTIVE",
+        organization: { id: orgId, name: "Test Org", slug: "test-org", createdAt: new Date(), updatedAt: new Date() },
+        questions: [],
+        applicantsCount: 0,
+        organizationId: orgId,
+        createdById: "user-456",
+        department: null,
+        employmentType: "Full-time",
+        workArrangement: "Remote",
+        salary: null,
+        description: "Test description",
+        requirements: [],
+        aiMatchingEnabled: true,
+        aiMatchingThreshold: 70,
+        aiMatchingStatus: "PENDING",
+        jdFileUrl: null,
+        jdExtraction: null,
+        postedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
     ]);
 
