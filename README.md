@@ -74,8 +74,8 @@ Web app runs on http://localhost:3000, Python agent on http://localhost:8080.
 
 ## Documentation
 
+- [Deployment](./DEPLOYMENT.md) - Production deployment guide
 - [Architecture](./docs/ARCHITECTURE.md) - System design and decisions
-- [API Specification](./docs/API_SPEC.md) - Endpoints and data models
 - [Vision-Agents](./docs/VISION_AGENTS_INTEGRATION.md) - Python agent setup
 
 ## Support
