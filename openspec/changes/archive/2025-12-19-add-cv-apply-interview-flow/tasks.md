@@ -56,10 +56,10 @@
 
 ## 7. Interview Start Integration
 
-- [ ] 7.1 Update interview start endpoint to load questions from storage
-- [ ] 7.2 Merge custom questions and suggested questions for interview
-- [ ] 7.3 Pass combined question set to interview agent
-- [ ] 7.4 Ensure question order is preserved
+- [x] 7.1 Update interview start endpoint to load questions from storage
+- [x] 7.2 Merge custom questions and suggested questions for interview
+- [x] 7.3 Pass combined question set to interview agent
+- [x] 7.4 Ensure question order is preserved
 
 ## 8. Testing
 
@@ -78,7 +78,7 @@
 
 ## Implementation Summary
 
-### Completed (Core Feature)
+### Completed (Core Feature + Interview Integration)
 - Backend infrastructure for storing and retrieving interview questions
 - Gemini AI integration for personalized question generation
 - REST API endpoint for applying CV to job position with caching
@@ -86,9 +86,10 @@
 - Application state management per job
 - Loading states, error handling, and user feedback with toast notifications
 - Full TypeScript implementation with strict type safety
-
-### Not Yet Completed (Future Enhancement)
 - Interview start endpoint integration (fetch and merge questions)
+- Question merging with `mergeInterviewQuestions()` utility
+
+### Deferred (Post-MVP)
 - Unit and integration tests
 - Manual UI testing on desktop and mobile
 - Documentation updates
