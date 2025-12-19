@@ -35,30 +35,12 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
   let interview: Interview | null = await storage.getInterview(id);
   let job: Job | null = interview ? await storage.getJob(interview.jobId) : null;
 
-  // If not found, try to parse as application ID (format: application-{jobId}-{userId})
-  if (!interview && id.startsWith("application-")) {
-    // Format: application-job-{timestamp}-{random}-{userId} -> jobId = job-{timestamp}-{random}
-    const jobIdMatch = id.match(/^application-(job-\d+-[a-z0-9]+)-/);
-    if (jobIdMatch) {
-      const jobId = jobIdMatch[1];
-      job = await storage.getJob(jobId);
-
-      if (job) {
-        // Create a synthetic completed interview object for results
-        interview = {
-          id,
-          jobId,
-          candidateId: user.id,
-          status: InterviewStatus.COMPLETED,
-          callId: null,
-          transcript: null,
-          score: 87,
-          durationMinutes: 30,
-          aiEvaluation: null,
-          createdAt: new Date(),
-          completedAt: new Date(),
-        };
-      }
+  // If not found as interview, try as application ID
+  if (!interview) {
+    const application = await storage.getApplication(id);
+    if (application) {
+      job = await storage.getJob(application.jobId);
+      // Results page requires a completed interview - application lookup alone is not enough
     }
   }
 
@@ -66,8 +48,8 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
     notFound();
   }
 
-  // For non-completed interviews, redirect (unless it's a synthetic one)
-  if (interview.status !== InterviewStatus.COMPLETED && !id.startsWith("application-")) {
+  // Results page only shows completed interviews
+  if (interview.status !== InterviewStatus.COMPLETED) {
     notFound();
   }
 

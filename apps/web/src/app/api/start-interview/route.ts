@@ -76,14 +76,16 @@ export async function POST(request: Request) {
       }
       // Get job from storage
       job = await storage.getJob(interview.jobId);
-    } else if (interviewId.startsWith("application-")) {
-      // Parse application ID: application-job-{timestamp}-{random}-{userId} -> jobId = job-{timestamp}-{random}
-      const jobIdMatch = interviewId.match(
-        /^application-(job-\d+-[a-z0-9]+)-/
-      );
-      if (jobIdMatch) {
-        const jobId = jobIdMatch[1];
-        job = await storage.getJob(jobId);
+    } else {
+      // Try as application ID
+      const application = await storage.getApplication(interviewId);
+      if (application) {
+        // Verify the authenticated user is the applicant
+        if (application.userId !== user.id) {
+          return errors.forbidden("You are not the candidate for this application");
+        }
+
+        job = await storage.getJob(application.jobId);
 
         if (job) {
           // Try to load generated questions
@@ -91,20 +93,19 @@ export async function POST(request: Request) {
           if (userCvId) {
             const questionSet = await storage.getInterviewQuestions(
               userCvId,
-              jobId
+              application.jobId
             );
 
             if (questionSet) {
-              // Use utility to merge custom questions (from JD) and AI-personalized questions
               questions = mergeInterviewQuestions(questionSet);
             }
           }
 
-          // Create synthetic interview for application
+          // Create interview from application
           interview = {
             id: interviewId,
-            jobId,
-            candidateId: user.id,
+            jobId: application.jobId,
+            candidateId: application.userId,
             status: "PENDING" as const,
             callId: null,
             transcript: null,

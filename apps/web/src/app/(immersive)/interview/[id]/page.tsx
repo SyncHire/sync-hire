@@ -1,7 +1,7 @@
 /**
  * Interview Room Page
  * Dynamic route for interview sessions: /interview/[id]
- * Supports both interview IDs and application IDs (application-job-5-user-id)
+ * Supports both interview IDs and application IDs
  */
 
 import { notFound, redirect } from "next/navigation";
@@ -35,22 +35,20 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
   let interview: Interview | null = await storage.getInterview(id);
   let job: Job | null = interview ? await storage.getJob(interview.jobId) : null;
   let generatedQuestions: Question[] = [];
-  let jobId: string | null = null;
+  let jobId: string | null = interview?.jobId ?? null;
 
-  // If not found, try to parse as application ID (format: application-{jobId}-{userId})
-  if (!interview && id.startsWith("application-")) {
-    // Format: application-job-{timestamp}-{random}-{userId} -> jobId = job-{timestamp}-{random}
-    const jobIdMatch = id.match(/^application-(job-\d+-[a-z0-9]+)-/);
-    if (jobIdMatch) {
-      jobId = jobIdMatch[1];
+  // If not found as interview, try as application ID
+  if (!interview) {
+    const application = await storage.getApplication(id);
+    if (application) {
+      jobId = application.jobId;
       job = await storage.getJob(jobId);
 
       if (job) {
-        // Create a synthetic interview object for starting interview from application
         interview = {
           id,
           jobId,
-          candidateId: user.id,
+          candidateId: application.userId,
           status: "PENDING" as const,
           durationMinutes: 30,
           createdAt: new Date(),
@@ -62,8 +60,6 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
         };
       }
     }
-  } else if (interview) {
-    jobId = interview.jobId;
   }
 
   if (!interview || !job) {
