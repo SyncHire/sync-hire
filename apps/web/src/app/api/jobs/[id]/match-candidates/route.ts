@@ -11,7 +11,7 @@ import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
 import { geminiClient } from "@/lib/gemini-client";
 import { ApplicationStatus, ApplicationSource } from "@sync-hire/database";
 import { withRateLimit } from "@/lib/rate-limiter";
-import type { ExtractedCVData, ExtractedJobData, CandidateApplication, InterviewQuestions } from "@sync-hire/database";
+import type { ExtractedCVData, ExtractedJobData, CandidateApplication, InterviewQuestions, ApplicationFailure } from "@sync-hire/database";
 import type { Question } from "@/lib/types/interview-types";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { z } from "zod";
@@ -94,11 +94,10 @@ async function generateAndSaveQuestions(
     };
 
     // Map job questions to Question interface format
-    // DB questions have `content` and different type enum, map to Question interface
     const questionsWithCategory: Question[] = (job.questions || []).map(q => ({
       id: q.id,
-      text: q.content, // DB stores as `content`, Question interface uses `text`
-      type: "text" as const, // DB uses SHORT_ANSWER/LONG_ANSWER, map to "text" for interview
+      text: q.content,
+      type: "text" as const,
       duration: q.duration,
       category: (q.category ?? "Technical Skills") as Question["category"],
     }));
@@ -146,7 +145,12 @@ async function generateAndSaveQuestions(
       await storage.saveApplication(application);
     }
 
-    logger.info("Generated questions for application", { api: "jobs/match-candidates", applicationId, questionCount: mergedQuestions.length });
+    logger.info("Generated questions for application", {
+      api: "jobs/[id]/match-candidates",
+      operation: "generateQuestions",
+      applicationId,
+      questionCount: mergedQuestions.length,
+    });
   } catch (error) {
     logger.error(error, {
       api: "jobs/[id]/match-candidates",
@@ -155,11 +159,19 @@ async function generateAndSaveQuestions(
       cvId,
       applicationId,
     });
-    // Update application status to indicate failure so it doesn't stay stuck
-    // TODO: Add GENERATION_FAILED status to ApplicationStatus enum to distinguish from human rejection
+    // Update application status to FAILED with structured failure info
     const application = await storage.getApplication(applicationId);
     if (application) {
-      application.status = ApplicationStatus.REJECTED;
+      const failureInfo: ApplicationFailure = {
+        code: "question_generation_failed",
+        message: "Failed to generate personalized interview questions",
+        step: "question_generation",
+        retryable: true,
+        occurredAt: new Date().toISOString(),
+        details: { cvId, jobId },
+      };
+      application.status = ApplicationStatus.FAILED;
+      application.failureInfo = failureInfo;
       application.updatedAt = new Date();
       await storage.saveApplication(application);
     }
@@ -180,12 +192,20 @@ export async function POST(
     const { id: jobId } = await params;
     const storage = getStorage();
 
-    logger.info("Starting candidate match", { api: "jobs/match-candidates", jobId });
+    logger.info("Starting candidate matching", {
+      api: "jobs/[id]/match-candidates",
+      operation: "match",
+      jobId,
+    });
 
     // Get job
     const job = await storage.getJob(jobId);
     if (!job) {
-      logger.warn("Job not found", { api: "jobs/match-candidates", jobId });
+      logger.error(new Error("Job not found"), {
+        api: "jobs/[id]/match-candidates",
+        operation: "getJob",
+        jobId,
+      });
       return NextResponse.json(
         {
           success: false,
@@ -196,14 +216,15 @@ export async function POST(
       );
     }
 
-    logger.info("Processing job", { api: "jobs/match-candidates", jobId, jobTitle: job.title, organization: job.organization.name });
-
     // Get all CVs
     const cvExtractions = await storage.getAllCVExtractions();
-    logger.info("Found CVs to process", { api: "jobs/match-candidates", jobId, cvCount: cvExtractions.length });
 
     if (cvExtractions.length === 0) {
-      logger.info("No CVs to match against", { api: "jobs/match-candidates", jobId });
+      logger.info("No CVs to match against", {
+        api: "jobs/[id]/match-candidates",
+        operation: "match",
+        jobId,
+      });
       return NextResponse.json({
         success: true,
         data: {
@@ -215,7 +236,6 @@ export async function POST(
     }
 
     const matchThreshold = job.aiMatchingThreshold || 80;
-    logger.info("Match threshold set", { api: "jobs/match-candidates", jobId, matchThreshold });
 
     const applications: CandidateApplication[] = [];
     let skippedCount = 0;
@@ -225,20 +245,17 @@ export async function POST(
     // Process each CV
     for (const { cvId, userId, data: cvData } of cvExtractions) {
       const candidateName = cvData.personalInfo?.fullName || "Unknown";
-      logger.info("Processing candidate", { api: "jobs/match-candidates", jobId, cvId, candidateName });
 
       // Check if application already exists
       const existingApplications = await storage.getApplicationsForJob(jobId);
       const alreadyApplied = existingApplications.some(app => app.cvUploadId === cvId);
 
       if (alreadyApplied) {
-        logger.info("Candidate already applied, skipping", { api: "jobs/match-candidates", jobId, cvId });
         skippedCount++;
         continue;
       }
 
       // Calculate match score
-      logger.info("Calculating match score", { api: "jobs/match-candidates", jobId, cvId });
       let matchScore: number;
       let matchReasons: string[];
       let skillGaps: string[];
@@ -265,11 +282,8 @@ export async function POST(
         continue;
       }
 
-      logger.info("Match score calculated", { api: "jobs/match-candidates", jobId, cvId, matchScore, matchThreshold, matchReasons, skillGaps });
-
       // Only create application if above threshold
       if (matchScore >= matchThreshold) {
-        logger.info("Candidate matched, creating application", { api: "jobs/match-candidates", jobId, cvId, matchScore });
 
         // Save application (ID auto-generated by database via upsert on jobId + userId)
         const savedApplication = await storage.saveApplication({
@@ -284,14 +298,12 @@ export async function POST(
           status: ApplicationStatus.GENERATING_QUESTIONS,
           source: ApplicationSource.AI_MATCH,
           questionsData: null,
+          failureInfo: null,
           interviewId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         });
         applications.push(savedApplication);
-
-        // Note: applicantsCount is calculated on read from actual applications
-        // No need to update counter here to avoid race conditions
 
         // Generate smart merged questions in background
         generateAndSaveQuestions(
@@ -311,16 +323,16 @@ export async function POST(
           })
         );
       } else {
-        logger.info("Candidate below threshold", { api: "jobs/match-candidates", jobId, cvId, matchScore, matchThreshold });
         belowThresholdCount++;
       }
     }
 
-    // Summary
+    // Log summary
     logger.info("Candidate matching complete", {
-      api: "jobs/match-candidates",
+      api: "jobs/[id]/match-candidates",
+      operation: "match",
       jobId,
-      totalCVs: cvExtractions.length,
+      totalCvs: cvExtractions.length,
       skipped: skippedCount,
       belowThreshold: belowThresholdCount,
       failed: failedCount,

@@ -142,6 +142,54 @@ export interface AIEvaluation {
 }
 
 // =============================================================================
+// Application Failure Tracking (CandidateApplication.failureInfo)
+// Based on Stripe's decline_code pattern for structured error tracking
+// =============================================================================
+
+/**
+ * Machine-readable failure codes (like Stripe's decline_code)
+ */
+export type FailureCode =
+  | 'cv_extraction_failed'       // CV couldn't be parsed
+  | 'jd_extraction_failed'       // JD couldn't be parsed
+  | 'question_generation_failed' // AI couldn't generate questions
+  | 'matching_failed'            // AI matching failed
+  | 'timeout'                    // Operation timed out
+  | 'rate_limited'               // API rate limit hit
+  | 'internal_error';            // Unexpected error
+
+/**
+ * Structured failure details stored when ApplicationStatus = FAILED
+ *
+ * @example
+ * {
+ *   code: 'question_generation_failed',
+ *   message: 'Failed to generate personalized questions',
+ *   step: 'question_generation',
+ *   retryable: true,
+ *   attemptCount: 3,
+ *   occurredAt: '2024-01-15T10:30:00Z',
+ *   details: { cvId: 'abc', jobId: 'xyz' }
+ * }
+ */
+export interface ApplicationFailure {
+  /** Machine-readable failure code */
+  code: FailureCode;
+  /** Human-readable error message (safe for UI display) */
+  message: string;
+  /** Which processing step failed */
+  step: 'matching' | 'question_generation' | 'cv_extraction' | 'jd_extraction' | 'interview_setup';
+  /** Whether retry might succeed (like Stripe's advice_code) */
+  retryable: boolean;
+  /** Number of retry attempts made */
+  attemptCount?: number;
+  /** ISO 8601 timestamp when failure occurred */
+  occurredAt: string;
+  /** Additional context for debugging */
+  details?: Record<string, unknown>;
+}
+
+// =============================================================================
 // Type Guards for Runtime Validation
 // =============================================================================
 
@@ -209,5 +257,21 @@ export function isAIEvaluation(data: unknown): data is AIEvaluation {
     Array.isArray(d.strengths) &&
     Array.isArray(d.improvements) &&
     typeof d.summary === 'string'
+  );
+}
+
+/**
+ * Type guard for ApplicationFailure
+ * Validates the structure of failure info stored in CandidateApplication.failureInfo
+ */
+export function isApplicationFailure(data: unknown): data is ApplicationFailure {
+  if (!data || typeof data !== 'object') return false;
+  const d = data as Record<string, unknown>;
+  return (
+    typeof d.code === 'string' &&
+    typeof d.message === 'string' &&
+    typeof d.step === 'string' &&
+    typeof d.retryable === 'boolean' &&
+    typeof d.occurredAt === 'string'
   );
 }

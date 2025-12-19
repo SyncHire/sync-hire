@@ -195,6 +195,11 @@ export interface StorageInterface {
   getApplication(applicationId: string): Promise<CandidateApplication | null>;
 
   /**
+   * Get application by interview ID (direct lookup, avoids loading all job applications)
+   */
+  getApplicationByInterviewId(interviewId: string): Promise<CandidateApplication | null>;
+
+  /**
    * Get or create application for a CV and job combination
    * Creates application if it doesn't exist for the current user
    */

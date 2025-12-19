@@ -292,6 +292,9 @@ model CandidateApplication {
   /// [InterviewQuestions]
   questionsData Json?
 
+  /// [ApplicationFailure]
+  failureInfo Json? // Structured failure details when status=FAILED
+
   interviewId String?  @unique
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -315,6 +318,7 @@ enum ApplicationStatus {
   INTERVIEWING
   COMPLETED
   REJECTED
+  FAILED // Processing failed - see failureInfo for details
 }
 
 enum ApplicationSource {

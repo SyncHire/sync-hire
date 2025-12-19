@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
 
 export async function GET(
@@ -51,7 +52,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Failed to fetch interview:", error);
+    logger.error(error, { api: "interviews/[id]", operation: "fetch" });
     return NextResponse.json(
       { success: false, message: "Failed to fetch interview" },
       { status: 500 },

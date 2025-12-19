@@ -447,6 +447,12 @@ export class DatabaseStorage implements StorageInterface {
     });
   }
 
+  async getApplicationByInterviewId(interviewId: string): Promise<CandidateApplication | null> {
+    return this.db.candidateApplication.findUnique({
+      where: { interviewId },
+    });
+  }
+
   async getOrCreateApplication(cvHash: string, jobId: string): Promise<CandidateApplication> {
     const user = await this.getCurrentUser();
 

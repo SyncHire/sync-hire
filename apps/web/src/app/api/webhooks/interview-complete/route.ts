@@ -8,6 +8,7 @@ import type { AIEvaluation } from "@/lib/types/interview-types";
 import type { Interview } from "@/lib/storage/storage-interface";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { InterviewStatus, ApplicationStatus } from "@sync-hire/database";
+import { logger } from "@/lib/logger";
 
 interface TranscriptEntry {
   speaker: string;
@@ -41,41 +42,6 @@ interface InterviewCompletePayload {
 }
 
 /**
- * Parse interview ID to extract jobId and candidateId
- * Supports formats:
- * - "interview-{n}" -> mock interview, look up in mock data
- * - "application-{jobId}-{userId}" -> application-based interview
- */
-function parseInterviewId(interviewId: string): {
-  jobId: string;
-  candidateId: string;
-} | null {
-  // Handle application-based IDs: application-job-5-demo-user
-  if (interviewId.startsWith("application-")) {
-    const match = interviewId.match(/^application-(job-\d+)-(.+)$/);
-    if (match) {
-      return {
-        jobId: match[1],
-        candidateId: match[2],
-      };
-    }
-  }
-
-  // Handle mock interview IDs: interview-{n}
-  // These need to look up the job from mock data, but we'll use a generic approach
-  if (interviewId.startsWith("interview-")) {
-    // For mock interviews, we'll use demo-user as candidateId
-    // The jobId will need to be looked up from stored interview data
-    return {
-      jobId: "", // Will be looked up from existing interview data
-      candidateId: "demo-user",
-    };
-  }
-
-  return null;
-}
-
-/**
  * Format transcript array into a readable string
  */
 function formatTranscript(transcript: TranscriptEntry[]): string {
@@ -92,7 +58,9 @@ export async function POST(request: Request) {
   try {
     const payload: InterviewCompletePayload = await request.json();
 
-    console.log("📥 Interview completion webhook received:", {
+    logger.info("Interview completion webhook received", {
+      api: "webhooks/interview-complete",
+      operation: "receive",
       interviewId: payload.interviewId,
       candidateName: payload.candidateName,
       jobTitle: payload.jobTitle,
@@ -102,42 +70,32 @@ export async function POST(request: Request) {
       transcriptLength: payload.transcript?.length ?? 0,
     });
 
-    // Log transcript summary
+    // Log transcript summary for debugging
     if (payload.transcript && payload.transcript.length > 0) {
-      console.log("📝 Transcript received:");
-      payload.transcript.forEach((entry) => {
-        const prefix = entry.speaker === "agent" ? "🤖" : "👤";
-        console.log(
-          `   ${prefix} [${entry.timestamp.toFixed(1)}s] ${entry.text.substring(0, 100)}${entry.text.length > 100 ? "..." : ""}`,
-        );
+      logger.debug(`Transcript received with ${payload.transcript.length} entries`, {
+        api: "webhooks/interview-complete",
+        operation: "parseTranscript",
+        interviewId: payload.interviewId,
       });
-    }
-
-    // Parse interview ID to get job and candidate info
-    const parsed = parseInterviewId(payload.interviewId);
-    if (!parsed) {
-      console.error("❌ Could not parse interview ID:", payload.interviewId);
-      return NextResponse.json(
-        { error: "Invalid interview ID format" },
-        { status: 400 },
-      );
     }
 
     const storage = getStorage();
 
-    // Try to get existing interview data (for jobId if mock interview)
-    let jobId = parsed.jobId;
+    // Look up existing interview from database
     const existingInterview = await storage.getInterview(payload.interviewId);
-    if (existingInterview) {
-      jobId = existingInterview.jobId;
+    if (!existingInterview) {
+      logger.error(new Error("Interview not found"), {
+        api: "webhooks/interview-complete",
+        operation: "getInterview",
+        interviewId: payload.interviewId,
+      });
+      return NextResponse.json(
+        { error: "Interview not found" },
+        { status: 404 },
+      );
     }
 
-    // If we still don't have a jobId, try to extract from the interview ID pattern
-    if (!jobId && payload.interviewId.startsWith("interview-")) {
-      // For mock interviews, the job is typically job-{same number}
-      const num = payload.interviewId.replace("interview-", "");
-      jobId = `job-${num}`;
-    }
+    const { jobId, candidateId } = existingInterview;
 
     // Format transcript
     const transcriptText = payload.transcript
@@ -169,40 +127,47 @@ export async function POST(request: Request) {
     // Create/update interview record with COMPLETED status
     const interview: Interview = {
       id: payload.interviewId,
-      jobId: jobId || "unknown",
-      candidateId: parsed.candidateId,
+      jobId,
+      candidateId,
       status: InterviewStatus.COMPLETED,
       callId: payload.interviewId,
       transcript: transcriptText ?? null,
       score: payload.score ?? aiEvaluation?.overallScore ?? null,
       durationMinutes: payload.durationMinutes,
-      createdAt: existingInterview?.createdAt || new Date(),
+      createdAt: existingInterview.createdAt,
       completedAt: new Date(payload.completedAt),
       aiEvaluation: aiEvaluation ?? null,
     };
 
     // Save interview to storage
     await storage.saveInterview(payload.interviewId, interview);
-    console.log("✅ Interview saved to storage:", payload.interviewId);
+    logger.info("Interview saved to storage", {
+      api: "webhooks/interview-complete",
+      operation: "saveInterview",
+      interviewId: payload.interviewId,
+    });
 
-    // Also update the CandidateApplication status if this is an application-based interview
-    if (payload.interviewId.startsWith("application-") && jobId) {
-      try {
-        // Find and update the application for this job
-        const jobApplications = await storage.getApplicationsForJob(jobId);
-        for (const app of jobApplications) {
-          if (app.interviewId === payload.interviewId ||
-              payload.interviewId.includes(app.jobId)) {
-            app.status = ApplicationStatus.COMPLETED;
-            app.updatedAt = new Date();
-            await storage.saveApplication(app);
-            console.log(`✅ Updated application ${app.id} status to completed`);
-            break;
-          }
-        }
-      } catch (appError) {
-        console.error("⚠️ Could not update application status:", appError);
+    // Update associated application status if exists
+    try {
+      const application = await storage.getApplicationByInterviewId(payload.interviewId);
+      if (application) {
+        application.status = ApplicationStatus.COMPLETED;
+        application.updatedAt = new Date();
+        await storage.saveApplication(application);
+        logger.info("Updated application status to completed", {
+          api: "webhooks/interview-complete",
+          operation: "updateApplicationStatus",
+          applicationId: application.id,
+          interviewId: payload.interviewId,
+        });
       }
+    } catch (appError) {
+      logger.warn("Could not update application status", {
+        api: "webhooks/interview-complete",
+        operation: "updateApplicationStatus",
+        interviewId: payload.interviewId,
+        error: appError instanceof Error ? appError.message : String(appError),
+      });
     }
 
     return NextResponse.json({
@@ -212,7 +177,10 @@ export async function POST(request: Request) {
       status: "COMPLETED",
     });
   } catch (error) {
-    console.error("Error processing interview completion webhook:", error);
+    logger.error(error, {
+      api: "webhooks/interview-complete",
+      operation: "processWebhook",
+    });
     return NextResponse.json(
       { error: "Failed to process webhook" },
       { status: 500 },
