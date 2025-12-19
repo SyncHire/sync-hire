@@ -50,14 +50,14 @@ export function LandingPage() {
 
       {/* Navigation */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/60 backdrop-blur-xl">
-        <div className="container mx-auto flex h-16 items-center justify-between px-6">
-          <div className="flex items-center gap-3">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Logo size="md" asLink={false} />
             <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
               Open Beta
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {mounted && (
               <Button
                 variant="ghost"
@@ -73,14 +73,14 @@ export function LandingPage() {
               </Button>
             )}
             <Link href="/login">
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="hidden sm:inline-flex">
                 Sign in
               </Button>
             </Link>
             <Link href="/signup">
-              <Button size="sm" className="gap-2">
+              <Button size="sm" className="gap-1 sm:gap-2">
                 Get Started
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="hidden sm:inline h-4 w-4" />
               </Button>
             </Link>
           </div>
