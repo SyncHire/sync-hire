@@ -265,8 +265,15 @@ export async function checkRateLimit(
 
 /**
  * Create a rate limit response with proper headers
+ * Uses IETF draft-ietf-httpapi-ratelimit-headers-10 format
+ * @see https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/
  */
-export function createRateLimitResponse(result: RateLimitResult): Response {
+export function createRateLimitResponse(
+  result: RateLimitResult,
+  tier: RateLimitTier
+): Response {
+  const { points: quota, duration: window } = TIER_CONFIG[tier];
+
   return new Response(
     JSON.stringify({
       success: false,
@@ -276,9 +283,9 @@ export function createRateLimitResponse(result: RateLimitResult): Response {
       status: 429,
       headers: {
         "Content-Type": "application/json",
-        "X-RateLimit-Remaining": result.remaining.toString(),
-        "X-RateLimit-Reset": result.resetInSeconds.toString(),
         "Retry-After": result.resetInSeconds.toString(),
+        "RateLimit-Policy": `"${tier}";q=${quota};w=${window}`,
+        "RateLimit": `"${tier}";r=${result.remaining};t=${result.resetInSeconds}`,
       },
     }
   );
@@ -315,7 +322,7 @@ export async function withRateLimit(
   const result = await checkRateLimit(identifier, tier, endpoint);
 
   if (!result.allowed) {
-    return createRateLimitResponse(result);
+    return createRateLimitResponse(result, tier);
   }
 
   return null;
