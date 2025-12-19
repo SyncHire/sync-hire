@@ -243,11 +243,11 @@ const user: UserWithInterviews = await prisma.user.findFirst({
 import { errors, successResponse } from "@/lib/api-response";
 
 // Error responses
-return errors.badRequest("Missing required field");
+return errors.badRequest("Missing required field");  // 400
 return errors.unauthorized();  // 401
 return errors.forbidden("Not a member of this organization");  // 403
-return errors.notFound("Job");  // 404 "Job not found"
-return errors.validation("Validation failed", [{ field: "email", message: "Invalid" }]);
+return errors.notFound("Job");  // 422 "Job not found" (NOT 404 - see below)
+return errors.validation("Validation failed", [{ field: "email", message: "Invalid" }]);  // 422
 return errors.rateLimited();  // 429
 return errors.internal();  // 500
 
@@ -255,6 +255,12 @@ return errors.internal();  // 500
 return successResponse({ data: result });
 return createdResponse({ id: newId }, "/api/resource/newId");
 ```
+
+### HTTP Status Code Convention
+- **Use 422 (not 404) for missing resources** - differentiates "resource not found" from "route not found"
+  - 404 = route/endpoint doesn't exist (framework-level, e.g., typo in URL)
+  - 422 = valid endpoint but referenced resource doesn't exist (application-level)
+- This prevents debugging confusion when clients can't distinguish between a broken URL and a deleted resource
 
 ### Permission Checks
 - **Always verify resource access** before returning data
