@@ -76,10 +76,33 @@ function createRateLimiters() {
 
 // Lazy singleton - only created when first accessed
 let rateLimitersInstance: ReturnType<typeof createRateLimiters> | undefined;
+let hasLoggedStatus = false;
 
 function getRateLimiters() {
   if (rateLimitersInstance === undefined) {
     rateLimitersInstance = createRateLimiters();
+
+    // Log status on first access
+    if (!hasLoggedStatus) {
+      hasLoggedStatus = true;
+      if (rateLimitersInstance) {
+        logger.info("Rate limiting enabled", {
+          api: "rate-limiter",
+          tiers: { expensive: "10/min", moderate: "20/min", light: "50/min" },
+        });
+      } else {
+        logger.info("Rate limiting disabled", {
+          api: "rate-limiter",
+          reason: !process.env.UPSTASH_REDIS_REST_URL
+            ? "UPSTASH_REDIS_REST_URL not set"
+            : !process.env.UPSTASH_REDIS_REST_TOKEN
+              ? "UPSTASH_REDIS_REST_TOKEN not set"
+              : process.env.RATE_LIMIT_ENABLED === "false"
+                ? "RATE_LIMIT_ENABLED=false"
+                : "Not in production (set RATE_LIMIT_ENABLED=true to enable)",
+        });
+      }
+    }
   }
   return rateLimitersInstance;
 }
