@@ -8,10 +8,22 @@
  */
 
 import Link from "next/link";
+import Image from "next/image";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Moon, Sparkles, Sun, Users, Zap, Shield } from "lucide-react";
+import {
+  ArrowRight,
+  Moon,
+  Sparkles,
+  Sun,
+  Users,
+  Zap,
+  Shield,
+  FileText,
+  Video,
+  BarChart3,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 
@@ -38,9 +50,14 @@ export function LandingPage() {
 
       {/* Navigation */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/60 backdrop-blur-xl">
-        <div className="container mx-auto flex h-16 items-center justify-between px-6">
-          <Logo size="md" asLink={false} />
-          <div className="flex items-center gap-4">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Logo size="md" asLink={false} />
+            <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+              Open Beta
+            </span>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-4">
             {mounted && (
               <Button
                 variant="ghost"
@@ -56,14 +73,14 @@ export function LandingPage() {
               </Button>
             )}
             <Link href="/login">
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="hidden sm:inline-flex">
                 Sign in
               </Button>
             </Link>
             <Link href="/signup">
-              <Button size="sm" className="gap-2">
+              <Button size="sm" className="gap-1 sm:gap-2">
                 Get Started
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="hidden sm:inline h-4 w-4" />
               </Button>
             </Link>
           </div>
@@ -86,8 +103,10 @@ export function LandingPage() {
               transition={{ delay: 0.1, duration: 0.5 }}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8"
             >
-              <Sparkles className="h-4 w-4 text-cyan-400" />
-              <span className="text-sm font-medium">AI-Powered Interviews</span>
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">
+                Try Free During Beta
+              </span>
             </motion.div>
 
             {/* Main headline */}
@@ -97,9 +116,9 @@ export function LandingPage() {
               transition={{ delay: 0.2, duration: 0.6 }}
               className="text-5xl md:text-7xl font-bold tracking-tight mb-6"
             >
-              <span className="block">Hire smarter.</span>
+              <span className="block">AI interviews every candidate.</span>
               <span className="block bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
-                Interview faster.
+                You review the best.
               </span>
             </motion.h1>
 
@@ -110,9 +129,9 @@ export function LandingPage() {
               transition={{ delay: 0.3, duration: 0.6 }}
               className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10"
             >
-              SyncHire uses AI to conduct preliminary interviews, evaluate
-              candidates, and surface the best matches — so you can focus on
-              what matters.
+              Stop spending hours on screening calls. SyncHire conducts
+              AI-powered video interviews 24/7, scores candidates automatically,
+              and surfaces your top matches.
             </motion.p>
 
             {/* CTAs */}
@@ -136,53 +155,113 @@ export function LandingPage() {
             </motion.div>
           </motion.div>
 
-          {/* Hero visual */}
+          {/* Hero visual - Product Screenshot */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.8 }}
             className="mt-20 relative"
           >
-            <div className="relative mx-auto max-w-4xl">
+            <div className="relative mx-auto max-w-5xl">
               {/* Glow effect */}
               <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/30 via-blue-500/30 to-indigo-500/30 dark:from-cyan-500/20 dark:via-blue-500/20 dark:to-indigo-500/20 blur-2xl rounded-3xl" />
 
-              {/* Main visual container */}
-              <div className="relative rounded-2xl p-8 border shadow-xl bg-white/80 border-border/50 shadow-black/5 dark:bg-white/5 dark:border-white/10 dark:shadow-black/20 backdrop-blur-xl">
-                <div className="grid grid-cols-3 gap-4">
-                  {/* Left panel - Job card */}
-                  <div className="col-span-1 space-y-4">
-                    <div className="bg-secondary/50 rounded-xl p-4 border border-border/50">
-                      <div className="h-3 w-20 bg-foreground/20 rounded mb-3" />
-                      <div className="h-2 w-full bg-foreground/10 rounded mb-2" />
-                      <div className="h-2 w-3/4 bg-foreground/10 rounded" />
-                    </div>
-                    <div className="bg-secondary/50 rounded-xl p-4 border border-border/50">
-                      <div className="h-3 w-16 bg-foreground/20 rounded mb-3" />
-                      <div className="h-2 w-full bg-foreground/10 rounded mb-2" />
-                      <div className="h-2 w-2/3 bg-foreground/10 rounded" />
-                    </div>
-                  </div>
-
-                  {/* Center panel - Video call */}
-                  <div className="col-span-2 bg-secondary/30 rounded-xl p-4 border border-border/50 relative overflow-hidden">
-                    <div className="aspect-video bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-indigo-500/10 rounded-lg flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 mx-auto mb-3 flex items-center justify-center">
-                          <Sparkles className="h-8 w-8 text-white" />
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          AI Interview in Progress
-                        </div>
-                      </div>
-                    </div>
-                    {/* Small candidate video */}
-                    <div className="absolute bottom-6 right-6 w-24 h-18 bg-secondary rounded-lg border border-border/50" />
-                  </div>
-                </div>
+              {/* Product screenshot */}
+              <div className="relative rounded-2xl overflow-hidden border shadow-2xl border-border/50 shadow-black/10 dark:shadow-black/30">
+                <Image
+                  src="/screenshots/hr-applicants-scoring.png"
+                  alt="SyncHire AI-powered candidate scoring dashboard"
+                  width={1200}
+                  height={675}
+                  className="w-full h-auto"
+                  priority
+                />
               </div>
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="py-20 px-6 border-t border-border/40">
+        <div className="container mx-auto max-w-6xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              How It Works
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              From job posting to hiring decision in three simple steps
+            </p>
+          </motion.div>
+
+          <div className="space-y-16 md:space-y-24">
+            {[
+              {
+                step: 1,
+                icon: FileText,
+                title: "Post Your Job",
+                description:
+                  "Describe the role and requirements. Our AI automatically generates tailored interview questions based on the job description.",
+                image: "/screenshots/hr-interview-questions.png",
+              },
+              {
+                step: 2,
+                icon: Video,
+                title: "AI Interviews Candidates",
+                description:
+                  "Candidates complete video interviews on their own schedule. Real-time transcription, natural conversation, and detailed performance analysis.",
+                image: "/screenshots/interview-results.png",
+              },
+              {
+                step: 3,
+                icon: BarChart3,
+                title: "Review Top Matches",
+                description:
+                  "AI scores and ranks every candidate automatically. Focus your time on reviewing only the best matches for your role.",
+                image: "/screenshots/hr-review-matches.png",
+              },
+            ].map((item, i) => (
+              <motion.div
+                key={item.step}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                className={`flex flex-col ${i % 2 === 1 ? "md:flex-row-reverse" : "md:flex-row"} gap-8 md:gap-12 items-center`}
+              >
+                <div className={`flex-1 ${i % 2 === 1 ? "md:text-right" : "md:text-left"} text-center`}>
+                  <div className={`inline-flex items-center gap-4 mb-4 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}>
+                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 border border-primary/20">
+                      <span className="text-lg font-bold text-primary">
+                        {item.step}
+                      </span>
+                    </div>
+                    <h3 className="text-2xl md:text-3xl font-semibold">{item.title}</h3>
+                  </div>
+                  <p className="text-muted-foreground text-lg max-w-md mx-auto md:mx-0">
+                    {item.description}
+                  </p>
+                </div>
+                <div className="flex-1 w-full">
+                  <div className="relative rounded-xl overflow-hidden border border-border/50 shadow-2xl">
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      width={700}
+                      height={450}
+                      className="w-full h-auto"
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -209,23 +288,23 @@ export function LandingPage() {
             {[
               {
                 icon: Sparkles,
-                title: "AI Interviews",
+                title: "24/7 AI Video Interviews",
                 description:
-                  "Our AI conducts natural, conversational interviews 24/7, asking tailored questions based on the role.",
+                  "Candidates interview anytime with our AI. Live transcription, natural conversation, and no scheduling hassles.",
                 gradient: "from-cyan-500 to-blue-500",
               },
               {
                 icon: Zap,
-                title: "Instant Matching",
+                title: "Smart CV Matching",
                 description:
-                  "Upload a job description and we'll automatically match and rank candidates from your talent pool.",
+                  "Upload CVs and get instant match scores from 70-95%. AI identifies skills, gaps, and role fit automatically.",
                 gradient: "from-blue-500 to-indigo-500",
               },
               {
                 icon: Shield,
-                title: "Fair & Consistent",
+                title: "Structured Scoring",
                 description:
-                  "Every candidate gets the same quality interview experience, reducing bias and improving outcomes.",
+                  "Every candidate scored on technical skills, communication, and experience. Detailed feedback and rankings.",
                 gradient: "from-indigo-500 to-purple-500",
               },
             ].map((feature, i) => (
@@ -255,6 +334,58 @@ export function LandingPage() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Powered By Section */}
+      <section className="py-12 px-6 border-t border-border/40">
+        <div className="container mx-auto max-w-4xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center"
+          >
+            <p className="text-sm text-muted-foreground mb-6">
+              Powered by industry-leading technology
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-6 w-6"
+                  fill="currentColor"
+                >
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>
+                <span className="font-medium">Google Gemini</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-6 w-6"
+                  fill="currentColor"
+                >
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                </svg>
+                <span className="font-medium">Stream Video</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-6 w-6"
+                  fill="currentColor"
+                >
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                </svg>
+                <span className="font-medium">Deepgram STT</span>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
@@ -364,11 +495,13 @@ export function LandingPage() {
             <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/30 via-blue-500/30 to-indigo-500/30 dark:from-cyan-500/20 dark:via-blue-500/20 dark:to-indigo-500/20 blur-2xl rounded-3xl" />
             <div className="relative rounded-2xl p-12 text-center border shadow-xl bg-white/80 border-border/50 shadow-black/5 dark:bg-white/5 dark:border-white/10 dark:shadow-black/20 backdrop-blur-xl">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                Ready to transform your hiring?
+                Join the Open Beta
               </h2>
-              <p className="text-muted-foreground text-lg mb-8 max-w-xl mx-auto">
-                Join companies using SyncHire to find and hire top talent
-                faster.
+              <p className="text-muted-foreground text-lg mb-2 max-w-xl mx-auto">
+                Be among the first to experience AI-powered hiring.
+              </p>
+              <p className="text-sm text-muted-foreground mb-8">
+                Free during beta. No credit card required.
               </p>
               <Link href="/signup">
                 <Button size="lg" className="gap-2 px-8">
