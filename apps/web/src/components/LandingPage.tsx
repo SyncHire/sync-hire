@@ -200,14 +200,14 @@ export function LandingPage() {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="space-y-16 md:space-y-24">
             {[
               {
                 step: 1,
                 icon: FileText,
                 title: "Post Your Job",
                 description:
-                  "Describe the role and requirements. Our AI automatically generates tailored interview questions.",
+                  "Describe the role and requirements. Our AI automatically generates tailored interview questions based on the job description.",
                 image: "/screenshots/hr-interview-questions.png",
               },
               {
@@ -215,7 +215,7 @@ export function LandingPage() {
                 icon: Video,
                 title: "AI Interviews Candidates",
                 description:
-                  "Candidates complete video interviews on their schedule. Real-time transcription and analysis.",
+                  "Candidates complete video interviews on their own schedule. Real-time transcription, natural conversation, and detailed performance analysis.",
                 image: "/screenshots/interview-results.png",
               },
               {
@@ -223,37 +223,41 @@ export function LandingPage() {
                 icon: BarChart3,
                 title: "Review Top Matches",
                 description:
-                  "AI scores and ranks every candidate. You focus on reviewing only the best matches.",
+                  "AI scores and ranks every candidate automatically. Focus your time on reviewing only the best matches for your role.",
                 image: "/screenshots/hr-review-matches.png",
               },
             ].map((item, i) => (
               <motion.div
                 key={item.step}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.15, duration: 0.6 }}
-                className="relative"
+                transition={{ duration: 0.6 }}
+                className={`flex flex-col ${i % 2 === 1 ? "md:flex-row-reverse" : "md:flex-row"} gap-8 md:gap-12 items-center`}
               >
-                <div className="text-center mb-6">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 border border-primary/20 mb-4">
-                    <span className="text-lg font-bold text-primary">
-                      {item.step}
-                    </span>
+                <div className={`flex-1 ${i % 2 === 1 ? "md:text-right" : "md:text-left"} text-center`}>
+                  <div className={`inline-flex items-center gap-4 mb-4 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}>
+                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 border border-primary/20">
+                      <span className="text-lg font-bold text-primary">
+                        {item.step}
+                      </span>
+                    </div>
+                    <h3 className="text-2xl md:text-3xl font-semibold">{item.title}</h3>
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                  <p className="text-muted-foreground text-sm">
+                  <p className="text-muted-foreground text-lg max-w-md mx-auto md:mx-0">
                     {item.description}
                   </p>
                 </div>
-                <div className="relative rounded-xl overflow-hidden border border-border/50 shadow-lg">
-                  <Image
-                    src={item.image}
-                    alt={item.title}
-                    width={400}
-                    height={250}
-                    className="w-full h-auto"
-                  />
+                <div className="flex-1 w-full">
+                  <div className="relative rounded-xl overflow-hidden border border-border/50 shadow-2xl">
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      width={700}
+                      height={450}
+                      className="w-full h-auto"
+                    />
+                  </div>
                 </div>
               </motion.div>
             ))}
