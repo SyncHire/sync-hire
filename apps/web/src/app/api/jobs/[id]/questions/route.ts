@@ -4,71 +4,73 @@
  * POST - Add a new question
  * PUT - Update question order OR bulk update all interview questions
  * DELETE - Delete a specific question
+ *
+ * Access: HR only (organization members)
  */
 
-import { type NextRequest, NextResponse } from "next/server";
+import { type NextRequest } from "next/server";
 import { logger } from "@/lib/logger";
-import type { QuestionType } from "@/lib/types/interview-types";
 import { getStorage } from "@/lib/storage/storage-factory";
+import { withJobAccess } from "@/lib/auth-middleware";
+import { errors, successResponse, createdResponse } from "@/lib/api-response";
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+
+    // Verify HR access (org member only)
+    const { response } = await withJobAccess(id);
+    if (response) {
+      return response;
+    }
+
     const storage = getStorage();
 
-    // Get job from storage
+    // Get job from storage (already verified to exist by withJobAccess)
     const job = await storage.getJob(id);
     if (!job) {
-      return NextResponse.json(
-        { success: false, error: "Job not found" },
-        { status: 404 },
-      );
+      return errors.notFound("Job");
     }
 
     // Return job questions
     const questions = job.questions || [];
 
-    return NextResponse.json(
-      { success: true, data: questions },
-      { status: 200 },
-    );
+    return successResponse({ success: true, data: questions });
   } catch (error) {
     logger.error(error, { api: "jobs/[id]/questions", operation: "get" });
-    return NextResponse.json(
-      { success: false, error: "Failed to retrieve questions" },
-      { status: 500 },
-    );
+    return errors.internal("Failed to retrieve questions");
   }
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: jobId } = await params;
+
+    // Verify HR access (org member only)
+    const { response } = await withJobAccess(jobId);
+    if (response) {
+      return response;
+    }
+
     const body = await request.json();
     const storage = getStorage();
 
     const { type, content, order, required } = body;
 
     if (!type || !content) {
-      return NextResponse.json(
-        { success: false, error: "Missing required fields: type, content" },
-        { status: 400 },
-      );
+      return errors.badRequest("Missing required fields: type, content");
     }
 
-    // Get existing job
+    // Get existing job (already verified to exist by withJobAccess)
     const job = await storage.getJob(jobId);
     if (!job) {
-      return NextResponse.json(
-        { success: false, error: "Job not found" },
-        { status: 404 },
-      );
+      return errors.notFound("Job");
     }
 
     // Create new question
@@ -77,7 +79,7 @@ export async function POST(
       id: questionId,
       jobId,
       content,
-      type: type === "video" ? "LONG_ANSWER" as const : "SHORT_ANSWER" as const,
+      type: type === "video" ? ("LONG_ANSWER" as const) : ("SHORT_ANSWER" as const),
       options: [] as string[],
       duration: 2,
       category: null,
@@ -95,98 +97,93 @@ export async function POST(
 
     await storage.saveJob(jobId, updatedJob);
 
-    return NextResponse.json(
-      { success: true, data: newQuestion },
-      { status: 201 },
-    );
+    return createdResponse({ success: true, data: newQuestion });
   } catch (error) {
     logger.error(error, { api: "jobs/[id]/questions", operation: "create" });
-    return NextResponse.json(
-      { success: false, error: "Failed to create question" },
-      { status: 500 },
-    );
+    return errors.internal("Failed to create question");
   }
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: jobId } = await params;
+
+    // Verify HR access (org member only)
+    const { response } = await withJobAccess(jobId);
+    if (response) {
+      return response;
+    }
+
     const body = await request.json();
     const storage = getStorage();
 
     // Check if this is a bulk update (questions array provided)
     if (body.questions && Array.isArray(body.questions)) {
-      // Get existing job
+      // Get existing job (already verified to exist by withJobAccess)
       const job = await storage.getJob(jobId);
       if (!job) {
-        return NextResponse.json(
-          { success: false, error: `Job not found: ${jobId}` },
-          { status: 404 },
-        );
+        return errors.notFound("Job");
       }
 
       // Update job with new questions
       const updatedJob = {
         ...job,
-        questions: body.questions.map((q: { id: string; text: string; type?: string; duration?: number }, index: number) => ({
-          id: q.id,
-          jobId,
-          content: q.text,
-          type: q.type === "video" ? "LONG_ANSWER" as const : "SHORT_ANSWER" as const,
-          options: [] as string[],
-          duration: q.duration || 2,
-          category: null,
-          required: true,
-          order: index,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })),
+        questions: body.questions.map(
+          (
+            q: { id: string; text: string; type?: string; duration?: number },
+            index: number
+          ) => ({
+            id: q.id,
+            jobId,
+            content: q.text,
+            type:
+              q.type === "video"
+                ? ("LONG_ANSWER" as const)
+                : ("SHORT_ANSWER" as const),
+            options: [] as string[],
+            duration: q.duration || 2,
+            category: null,
+            required: true,
+            order: index,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          })
+        ),
       };
 
       // Save updated job
       await storage.saveJob(jobId, updatedJob);
 
-      return NextResponse.json(
-        {
-          success: true,
-          data: {
-            id: jobId,
-            questionCount: body.questions.length,
-          },
+      return successResponse({
+        success: true,
+        data: {
+          id: jobId,
+          questionCount: body.questions.length,
         },
-        { status: 200 },
-      );
+      });
     }
 
     // Single question update
     const { questionId, updates } = body;
 
     if (!questionId) {
-      return NextResponse.json(
-        { success: false, error: "Missing questionId or questions array" },
-        { status: 400 },
-      );
+      return errors.badRequest("Missing questionId or questions array");
     }
 
     // Get existing job
     const job = await storage.getJob(jobId);
     if (!job) {
-      return NextResponse.json(
-        { success: false, error: "Job not found" },
-        { status: 404 },
-      );
+      return errors.notFound("Job");
     }
 
     // Find and update the question
-    const questionIndex = job.questions?.findIndex(q => q.id === questionId) ?? -1;
+    const questionIndex =
+      job.questions?.findIndex((q) => q.id === questionId) ?? -1;
     if (questionIndex === -1) {
-      return NextResponse.json(
-        { success: false, error: "Question not found" },
-        { status: 404 },
-      );
+      return errors.notFound("Question");
     }
 
     const questions = job.questions ?? [];
@@ -202,63 +199,55 @@ export async function PUT(
 
     await storage.saveJob(jobId, { ...job, questions: updatedQuestions });
 
-    return NextResponse.json({ success: true, data: updatedQuestion }, { status: 200 });
+    return successResponse({ success: true, data: updatedQuestion });
   } catch (error) {
     logger.error(error, { api: "jobs/[id]/questions", operation: "update" });
-    return NextResponse.json(
-      { success: false, error: "Failed to update question" },
-      { status: 500 },
-    );
+    return errors.internal("Failed to update question");
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: jobId } = await params;
+
+    // Verify HR access (org member only)
+    const { response } = await withJobAccess(jobId);
+    if (response) {
+      return response;
+    }
+
     const body = await request.json();
     const { questionId } = body;
     const storage = getStorage();
 
     if (!questionId) {
-      return NextResponse.json(
-        { success: false, error: "Missing questionId" },
-        { status: 400 },
-      );
+      return errors.badRequest("Missing questionId");
     }
 
-    // Get existing job
+    // Get existing job (already verified to exist by withJobAccess)
     const job = await storage.getJob(jobId);
     if (!job) {
-      return NextResponse.json(
-        { success: false, error: "Job not found" },
-        { status: 404 },
-      );
+      return errors.notFound("Job");
     }
 
     // Filter out the deleted question
-    const questionIndex = job.questions?.findIndex(q => q.id === questionId) ?? -1;
+    const questionIndex =
+      job.questions?.findIndex((q) => q.id === questionId) ?? -1;
     if (questionIndex === -1) {
-      return NextResponse.json(
-        { success: false, error: "Question not found" },
-        { status: 404 },
-      );
+      return errors.notFound("Question");
     }
 
-    const updatedQuestions = (job.questions || []).filter(q => q.id !== questionId);
+    const updatedQuestions = (job.questions || []).filter(
+      (q) => q.id !== questionId
+    );
     await storage.saveJob(jobId, { ...job, questions: updatedQuestions });
 
-    return NextResponse.json(
-      { success: true, data: { deleted: true } },
-      { status: 200 },
-    );
+    return successResponse({ success: true, data: { deleted: true } });
   } catch (error) {
     logger.error(error, { api: "jobs/[id]/questions", operation: "delete" });
-    return NextResponse.json(
-      { success: false, error: "Failed to delete question" },
-      { status: 500 },
-    );
+    return errors.internal("Failed to delete question");
   }
 }

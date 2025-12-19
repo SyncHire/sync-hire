@@ -1,15 +1,19 @@
 /**
  * GET /api/jobs/[id]/applicants
  *
- * Returns all interviews/applicants for a specific job
- * Combines interview data with user/CV data to provide applicant details
- * Also includes AI-matched applications that haven't started interviews yet
+ * Returns all interviews/applicants for a specific job.
+ * Combines interview data with user/CV data to provide applicant details.
+ * Also includes AI-matched applications that haven't started interviews yet.
+ *
+ * Access: HR only (organization members)
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest } from "next/server";
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { InterviewStatus } from "@sync-hire/database";
+import { withJobAccess } from "@/lib/auth-middleware";
+import { errors, successResponse } from "@/lib/api-response";
 
 // Common applicant type for the response
 interface ApplicantResponse {
@@ -33,26 +37,30 @@ interface ApplicantResponse {
 }
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: jobId } = await params;
+
+    // Verify HR access (org member only)
+    const { response } = await withJobAccess(jobId);
+    if (response) {
+      return response;
+    }
+
     const storage = getStorage();
 
-    // Get the job to verify it exists
+    // Get the job (already verified to exist by withJobAccess)
     const job = await storage.getJob(jobId);
     if (!job) {
-      return NextResponse.json(
-        { success: false, message: "Job not found" },
-        { status: 404 },
-      );
+      return errors.notFound("Job");
     }
 
     // Get all interviews and filter by jobId
     const allInterviews = await storage.getAllInterviews();
     const jobInterviews = allInterviews.filter(
-      (interview) => interview.jobId === jobId,
+      (interview) => interview.jobId === jobId
     );
 
     // Get AI-matched applications for this job
@@ -83,29 +91,34 @@ export async function GET(
           interviewId: interview.id,
           candidateId: interview.candidateId,
           cvId: cvId ?? null,
-          name: cvData?.personalInfo?.fullName ?? user?.name ?? "Unknown Candidate",
+          name:
+            cvData?.personalInfo?.fullName ?? user?.name ?? "Unknown Candidate",
           email: cvData?.personalInfo?.email ?? user?.email ?? "",
           status: interview.status,
           score: interview.score ?? undefined,
           durationMinutes: interview.durationMinutes,
-          createdAt: interview.createdAt instanceof Date
-            ? interview.createdAt.toISOString()
-            : String(interview.createdAt),
-          completedAt: interview.completedAt instanceof Date
-            ? interview.completedAt.toISOString()
-            : interview.completedAt ? String(interview.completedAt) : undefined,
+          createdAt:
+            interview.createdAt instanceof Date
+              ? interview.createdAt.toISOString()
+              : String(interview.createdAt),
+          completedAt:
+            interview.completedAt instanceof Date
+              ? interview.completedAt.toISOString()
+              : interview.completedAt
+                ? String(interview.completedAt)
+                : undefined,
           aiEvaluation: interview.aiEvaluation ?? undefined,
           skills: cvData?.skills ?? [],
           experience: cvData?.experience ?? [],
           source: "interview" as const,
         };
-      }),
+      })
     );
 
     // Convert AI applications to applicant format (only those without interviews)
     const aiApplicants = await Promise.all(
       aiApplications
-        .filter(app => !interviewCvIds.has(app.cvUploadId))
+        .filter((app) => !interviewCvIds.has(app.cvUploadId))
         .map(async (app) => {
           // Get CV data for skills
           const cvData = await storage.getCVExtraction(app.cvUploadId);
@@ -120,7 +133,8 @@ export async function GET(
             status: "PENDING" as const,
             score: app.matchScore,
             durationMinutes: 0,
-            createdAt: app.createdAt?.toISOString?.() ?? new Date().toISOString(),
+            createdAt:
+              app.createdAt?.toISOString?.() ?? new Date().toISOString(),
             completedAt: undefined,
             aiEvaluation: undefined,
             skills: cvData?.skills ?? [],
@@ -129,11 +143,14 @@ export async function GET(
             matchReasons: app.matchReasons,
             skillGaps: app.skillGaps,
           };
-        }),
+        })
     );
 
     // Combine interview applicants and AI-matched applicants
-    const applicants: ApplicantResponse[] = [...interviewApplicants, ...aiApplicants];
+    const applicants: ApplicantResponse[] = [
+      ...interviewApplicants,
+      ...aiApplicants,
+    ];
 
     // Sort by score (completed first, then by score descending)
     applicants.sort((a, b) => {
@@ -146,7 +163,7 @@ export async function GET(
       return (b.score ?? 0) - (a.score ?? 0);
     });
 
-    return NextResponse.json({
+    return successResponse({
       success: true,
       data: {
         job: {
@@ -159,14 +176,15 @@ export async function GET(
           total: applicants.length,
           completed: applicants.filter((a) => a.status === "COMPLETED").length,
           pending: applicants.filter((a) => a.status === "PENDING").length,
-          inProgress: applicants.filter((a) => a.status === "IN_PROGRESS").length,
+          inProgress: applicants.filter((a) => a.status === "IN_PROGRESS")
+            .length,
           averageScore:
             applicants.filter((a) => a.score !== undefined).length > 0
               ? Math.round(
                   applicants
                     .filter((a) => a.score !== undefined)
                     .reduce((sum, a) => sum + (a.score ?? 0), 0) /
-                    applicants.filter((a) => a.score !== undefined).length,
+                    applicants.filter((a) => a.score !== undefined).length
                 )
               : null,
         },
@@ -174,9 +192,6 @@ export async function GET(
     });
   } catch (error) {
     logger.error(error, { api: "jobs/[id]/applicants", operation: "fetch" });
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch applicants" },
-      { status: 500 },
-    );
+    return errors.internal("Failed to fetch applicants");
   }
 }

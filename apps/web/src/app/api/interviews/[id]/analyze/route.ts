@@ -1,8 +1,8 @@
 /**
  * POST /api/interviews/[id]/analyze
- * Triggers AI analysis for an interview that is stuck or missing evaluation
+ * Triggers AI analysis for an interview that is stuck or missing evaluation.
+ * Access: HR only (organization members)
  */
-import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { geminiClient } from "@/lib/gemini-client";
@@ -11,6 +11,8 @@ import type { AIEvaluation } from "@/lib/types/interview-types";
 import { withRateLimit } from "@/lib/rate-limiter";
 import { withQuota } from "@/lib/with-quota";
 import { trackUsage } from "@/lib/ai-usage-tracker";
+import { withInterviewAccess } from "@/lib/auth-middleware";
+import { errors, successResponse } from "@/lib/api-response";
 
 const EvaluationSchema = z.object({
   overallScore: z.number().min(0).max(100),
@@ -30,13 +32,24 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: interviewId } = await params;
+
+    // Verify HR access (org member only, not candidates)
+    const { response, jobOrgId } = await withInterviewAccess(interviewId);
+    if (response) {
+      return response;
+    }
+
     // Rate limit check (moderate tier - transcript analysis)
-    const rateLimitResponse = await withRateLimit(request, "moderate", "interviews/analyze");
+    const rateLimitResponse = await withRateLimit(
+      request,
+      "moderate",
+      "interviews/analyze"
+    );
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
 
-    const { id: interviewId } = await params;
     const storage = getStorage();
 
     logger.info("Analyzing interview", {
@@ -48,21 +61,15 @@ export async function POST(
     // Get the interview
     const interview = await storage.getInterview(interviewId);
     if (!interview) {
-      return NextResponse.json(
-        { error: "Interview not found" },
-        { status: 404 }
-      );
+      return errors.notFound("Interview");
     }
 
     // Get organization from job for quota check
     const job = await storage.getJob(interview.jobId);
     if (!job) {
-      return NextResponse.json(
-        { error: "Job not found for interview" },
-        { status: 404 }
-      );
+      return errors.notFound("Job");
     }
-    const organizationId = job.organizationId;
+    const organizationId = jobOrgId ?? job.organizationId;
 
     // Check quota before analysis
     const quotaResponse = await withQuota(organizationId, "interviews/analyze");
@@ -77,7 +84,7 @@ export async function POST(
         operation: "analyze",
         interviewId,
       });
-      return NextResponse.json({
+      return successResponse({
         success: true,
         message: "Interview already has evaluation",
         interview,
@@ -93,14 +100,13 @@ export async function POST(
         interviewId,
       });
 
-      return NextResponse.json(
+      return errors.validation("Cannot analyze interview without transcript", [
         {
-          error: "Missing transcript",
-          message: "Cannot analyze interview without transcript. Please check if recording was successful.",
-          interview,
+          field: "transcript",
+          message:
+            "Missing transcript. Please check if recording was successful.",
         },
-        { status: 422 }
-      );
+      ]);
     }
 
     logger.info("Analyzing transcript", {
@@ -127,7 +133,7 @@ Be fair but honest in your assessment. Base scores on what was actually discusse
 
     try {
       const jsonSchema = z.toJSONSchema(EvaluationSchema);
-      const response = await geminiClient.models.generateContent({
+      const geminiResponse = await geminiClient.models.generateContent({
         model: "gemini-2.5-flash",
         contents: [{ text: prompt }],
         config: {
@@ -136,7 +142,7 @@ Be fair but honest in your assessment. Base scores on what was actually discusse
         },
       });
 
-      const parsed = JSON.parse(response.text || "{}");
+      const parsed = JSON.parse(geminiResponse.text || "{}");
       const evaluation = EvaluationSchema.parse(parsed);
 
       const aiEvaluation: AIEvaluation = {
@@ -163,7 +169,7 @@ Be fair but honest in your assessment. Base scores on what was actually discusse
       // Track usage after successful evaluation
       await trackUsage(organizationId, "interviews/analyze");
 
-      return NextResponse.json({
+      return successResponse({
         success: true,
         message: "AI evaluation generated",
         interview,
@@ -175,13 +181,8 @@ Be fair but honest in your assessment. Base scores on what was actually discusse
         interviewId,
       });
 
-      return NextResponse.json(
-        {
-          error: "AI analysis failed",
-          message: "Could not analyze interview. The AI service may be temporarily unavailable. Please try again later.",
-          interview,
-        },
-        { status: 503 }
+      return errors.internal(
+        "AI analysis failed. The service may be temporarily unavailable."
       );
     }
   } catch (error) {
@@ -189,9 +190,6 @@ Be fair but honest in your assessment. Base scores on what was actually discusse
       api: "interviews/[id]/analyze",
       operation: "analyze",
     });
-    return NextResponse.json(
-      { error: "Failed to analyze interview" },
-      { status: 500 }
-    );
+    return errors.internal("Failed to analyze interview");
   }
 }

@@ -1,28 +1,33 @@
 /**
  * GET /api/interviews/[id]
  *
- * Retrieves a single interview with full details including AI evaluation
+ * Retrieves a single interview with full details including AI evaluation.
+ * Access: HR (org member) OR the interview candidate.
  */
 
-import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
+import { withInterviewAccess } from "@/lib/auth-middleware";
+import { errors, successResponse } from "@/lib/api-response";
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const storage = getStorage();
 
+    // Verify access - HR or candidate can view
+    const { response } = await withInterviewAccess(id, { allowCandidate: true });
+    if (response) {
+      return response;
+    }
+
+    const storage = getStorage();
     const interview = await storage.getInterview(id);
 
     if (!interview) {
-      return NextResponse.json(
-        { success: false, message: "Interview not found" },
-        { status: 404 },
-      );
+      return errors.notFound("Interview");
     }
 
     // Get associated job details
@@ -31,7 +36,7 @@ export async function GET(
     // Get candidate info if available
     const user = await storage.getUser(interview.candidateId);
 
-    return NextResponse.json({
+    return successResponse({
       success: true,
       data: {
         interview,
@@ -53,9 +58,6 @@ export async function GET(
     });
   } catch (error) {
     logger.error(error, { api: "interviews/[id]", operation: "fetch" });
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch interview" },
-      { status: 500 },
-    );
+    return errors.internal("Failed to fetch interview");
   }
 }
