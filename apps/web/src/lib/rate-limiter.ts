@@ -76,35 +76,69 @@ function createRateLimiters() {
 
 // Lazy singleton - only created when first accessed
 let rateLimitersInstance: ReturnType<typeof createRateLimiters> | undefined;
-let hasLoggedStatus = false;
 
 function getRateLimiters() {
   if (rateLimitersInstance === undefined) {
     rateLimitersInstance = createRateLimiters();
-
-    // Log status on first access
-    if (!hasLoggedStatus) {
-      hasLoggedStatus = true;
-      if (rateLimitersInstance) {
-        logger.info("Rate limiting enabled", {
-          api: "rate-limiter",
-          tiers: { expensive: "10/min", moderate: "20/min", light: "50/min" },
-        });
-      } else {
-        logger.info("Rate limiting disabled", {
-          api: "rate-limiter",
-          reason: !process.env.UPSTASH_REDIS_REST_URL
-            ? "UPSTASH_REDIS_REST_URL not set"
-            : !process.env.UPSTASH_REDIS_REST_TOKEN
-              ? "UPSTASH_REDIS_REST_TOKEN not set"
-              : process.env.RATE_LIMIT_ENABLED === "false"
-                ? "RATE_LIMIT_ENABLED=false"
-                : "Not in production (set RATE_LIMIT_ENABLED=true to enable)",
-        });
-      }
-    }
   }
   return rateLimitersInstance;
+}
+
+/**
+ * Validate rate limit connection on startup
+ * Returns connection status and latency
+ */
+export async function validateRateLimitConnection(): Promise<{
+  enabled: boolean;
+  connected: boolean;
+  latencyMs: number;
+  reason?: string;
+}> {
+  const enabled = isRateLimitEnabled();
+
+  if (!enabled) {
+    const reason = !process.env.UPSTASH_REDIS_REST_URL
+      ? "UPSTASH_REDIS_REST_URL not set"
+      : !process.env.UPSTASH_REDIS_REST_TOKEN
+        ? "UPSTASH_REDIS_REST_TOKEN not set"
+        : process.env.RATE_LIMIT_ENABLED === "false"
+          ? "RATE_LIMIT_ENABLED=false"
+          : "Not in production (set RATE_LIMIT_ENABLED=true to enable)";
+
+    logger.info("Rate limiting disabled", { api: "rate-limiter", reason });
+    return { enabled: false, connected: false, latencyMs: 0, reason };
+  }
+
+  const startTime = Date.now();
+
+  try {
+    const redis = Redis.fromEnv();
+    await redis.ping();
+    const latencyMs = Date.now() - startTime;
+
+    logger.info("Rate limiting enabled", {
+      api: "rate-limiter",
+      latencyMs,
+      tiers: { expensive: "10/min", moderate: "20/min", light: "50/min" },
+    });
+
+    return { enabled: true, connected: true, latencyMs };
+  } catch (error) {
+    const latencyMs = Date.now() - startTime;
+
+    logger.warn("Rate limiting enabled but Redis connection failed", {
+      api: "rate-limiter",
+      latencyMs,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    return {
+      enabled: true,
+      connected: false,
+      latencyMs,
+      reason: error instanceof Error ? error.message : "Connection failed",
+    };
+  }
 }
 
 /**
