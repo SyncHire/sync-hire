@@ -158,8 +158,6 @@ export async function withJobAccess(
     };
   }
 
-  const userId = session.user.id;
-
   // 2. Get job to find its organization
   const job = await prisma.job.findUnique({
     where: { id: jobId },
