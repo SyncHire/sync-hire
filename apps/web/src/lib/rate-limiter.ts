@@ -109,33 +109,37 @@ export async function validateRateLimitConnection(): Promise<{
     return { enabled: false, connected: false, latencyMs: 0, reason };
   }
 
-  const startTime = Date.now();
-
   try {
     const redis = Redis.fromEnv();
+
+    // First ping (cold - includes DNS, TLS handshake)
+    const start1 = Date.now();
     await redis.ping();
-    const latencyMs = Date.now() - startTime;
+    const coldLatencyMs = Date.now() - start1;
+
+    // Second ping (warm - connection reused)
+    const start2 = Date.now();
+    await redis.ping();
+    const warmLatencyMs = Date.now() - start2;
 
     logger.info("Rate limiting enabled", {
       api: "rate-limiter",
-      latencyMs,
+      coldLatencyMs,
+      warmLatencyMs,
       tiers: { expensive: "10/min", moderate: "20/min", light: "50/min" },
     });
 
-    return { enabled: true, connected: true, latencyMs };
+    return { enabled: true, connected: true, latencyMs: warmLatencyMs };
   } catch (error) {
-    const latencyMs = Date.now() - startTime;
-
     logger.warn("Rate limiting enabled but Redis connection failed", {
       api: "rate-limiter",
-      latencyMs,
       error: error instanceof Error ? error.message : "Unknown error",
     });
 
     return {
       enabled: true,
       connected: false,
-      latencyMs,
+      latencyMs: 0,
       reason: error instanceof Error ? error.message : "Connection failed",
     };
   }
