@@ -4,7 +4,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import type { Notification } from "@/lib/mock-data";
+import type { Notification } from "@/lib/storage/storage-interface";
 
 interface NotificationsResponse {
   success: boolean;

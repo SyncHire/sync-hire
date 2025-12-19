@@ -1,26 +1,17 @@
 /**
  * Storage Factory
  *
- * Creates the appropriate storage implementation based on configuration.
- * DatabaseStorage uses Prisma for metadata, CloudStorageProvider handles file uploads separately.
+ * Creates the storage implementation.
+ * DatabaseStorage uses Prisma for all data operations.
  */
 
 import { prisma } from "@sync-hire/database";
 import { DatabaseStorage } from "./database-storage";
-import { FileStorage } from "./file-storage";
 import type { StorageInterface } from "./storage-interface";
 import { singleton } from "@/lib/utils/singleton";
 
 function createStorage(): StorageInterface {
-  const useDatabase = process.env.USE_DATABASE === "true";
-
-  if (useDatabase) {
-    console.log("Using DatabaseStorage (Prisma + PostgreSQL)");
-    return new DatabaseStorage(prisma);
-  }
-
-  console.log("Using FileStorage (local files)");
-  return new FileStorage();
+  return new DatabaseStorage(prisma);
 }
 
 /**

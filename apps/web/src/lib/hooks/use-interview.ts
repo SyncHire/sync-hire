@@ -82,7 +82,7 @@ export function useStartInterview() {
   });
 }
 
-import type { Interview } from "@/lib/mock-data";
+import type { Interview } from "@/lib/storage/storage-interface";
 
 interface InterviewDetailsResponse {
   success: boolean;

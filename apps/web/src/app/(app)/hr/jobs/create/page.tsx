@@ -21,13 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  EMPLOYMENT_TYPES,
-  WORK_ARRANGEMENTS,
-  type EmploymentType,
-  type ExtractedJobData,
-  type WorkArrangement,
-} from "@/lib/mock-data";
+import type { EmploymentType, ExtractedJobData, WorkArrangement } from "@sync-hire/database";
+import { EMPLOYMENT_TYPES, WORK_ARRANGEMENTS } from "@/lib/types/interview-types";
 import { useActiveOrganization } from "@/lib/hooks/use-organizations";
 
 type WorkflowStage = "upload" | "processing" | "results";

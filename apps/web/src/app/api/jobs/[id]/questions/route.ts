@@ -7,13 +7,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
-import type { QuestionType } from "@/lib/mock-data";
-import {
-  createCustomQuestion,
-  deleteCustomQuestion,
-  getCustomQuestionsByJobId,
-  updateCustomQuestion,
-} from "@/lib/mock-data";
+import type { QuestionType } from "@/lib/types/interview-types";
 import { getStorage } from "@/lib/storage/storage-factory";
 
 export async function GET(
@@ -22,8 +16,19 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const storage = getStorage();
 
-    const questions = getCustomQuestionsByJobId(id);
+    // Get job from storage
+    const job = await storage.getJob(id);
+    if (!job) {
+      return NextResponse.json(
+        { success: false, error: "Job not found" },
+        { status: 404 },
+      );
+    }
+
+    // Return job questions
+    const questions = job.questions || [];
 
     return NextResponse.json(
       { success: true, data: questions },
@@ -43,10 +48,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await params;
+    const { id: jobId } = await params;
     const body = await request.json();
+    const storage = getStorage();
 
-    const { type, content, order, required, options, scoringConfig } = body;
+    const { type, content, order, required } = body;
 
     if (!type || !content) {
       return NextResponse.json(
@@ -55,18 +61,41 @@ export async function POST(
       );
     }
 
-    const question = createCustomQuestion(
-      id,
-      type as QuestionType,
+    // Get existing job
+    const job = await storage.getJob(jobId);
+    if (!job) {
+      return NextResponse.json(
+        { success: false, error: "Job not found" },
+        { status: 404 },
+      );
+    }
+
+    // Create new question
+    const questionId = `q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const newQuestion = {
+      id: questionId,
+      jobId,
       content,
-      order || 0,
-      required || false,
-      options,
-      scoringConfig,
-    );
+      type: type === "video" ? "LONG_ANSWER" as const : "SHORT_ANSWER" as const,
+      options: [] as string[],
+      duration: 2,
+      category: null,
+      required: required ?? false,
+      order: order ?? (job.questions?.length ?? 0),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Add to job questions
+    const updatedJob = {
+      ...job,
+      questions: [...(job.questions || []), newQuestion],
+    };
+
+    await storage.saveJob(jobId, updatedJob);
 
     return NextResponse.json(
-      { success: true, data: question },
+      { success: true, data: newQuestion },
       { status: 201 },
     );
   } catch (error) {
@@ -85,11 +114,10 @@ export async function PUT(
   try {
     const { id: jobId } = await params;
     const body = await request.json();
+    const storage = getStorage();
 
     // Check if this is a bulk update (questions array provided)
     if (body.questions && Array.isArray(body.questions)) {
-      const storage = getStorage();
-
       // Get existing job
       const job = await storage.getJob(jobId);
       if (!job) {
@@ -102,12 +130,18 @@ export async function PUT(
       // Update job with new questions
       const updatedJob = {
         ...job,
-        questions: body.questions.map((q: { id: string; text: string; type?: string; duration?: number }) => ({
+        questions: body.questions.map((q: { id: string; text: string; type?: string; duration?: number }, index: number) => ({
           id: q.id,
-          text: q.text,
-          type: q.type || "text",
+          jobId,
+          content: q.text,
+          type: q.type === "video" ? "LONG_ANSWER" as const : "SHORT_ANSWER" as const,
+          options: [] as string[],
           duration: q.duration || 2,
-          category: "Technical Skills" as const,
+          category: null,
+          required: true,
+          order: index,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         })),
       };
 
@@ -126,7 +160,7 @@ export async function PUT(
       );
     }
 
-    // Single question update (legacy behavior)
+    // Single question update
     const { questionId, updates } = body;
 
     if (!questionId) {
@@ -136,16 +170,38 @@ export async function PUT(
       );
     }
 
-    const updated = updateCustomQuestion(questionId, updates);
+    // Get existing job
+    const job = await storage.getJob(jobId);
+    if (!job) {
+      return NextResponse.json(
+        { success: false, error: "Job not found" },
+        { status: 404 },
+      );
+    }
 
-    if (!updated) {
+    // Find and update the question
+    const questionIndex = job.questions?.findIndex(q => q.id === questionId) ?? -1;
+    if (questionIndex === -1) {
       return NextResponse.json(
         { success: false, error: "Question not found" },
         { status: 404 },
       );
     }
 
-    return NextResponse.json({ success: true, data: updated }, { status: 200 });
+    const questions = job.questions ?? [];
+    const existingQuestion = questions[questionIndex];
+    const updatedQuestion = {
+      ...existingQuestion,
+      ...updates,
+      updatedAt: new Date(),
+    };
+
+    const updatedQuestions = [...questions];
+    updatedQuestions[questionIndex] = updatedQuestion;
+
+    await storage.saveJob(jobId, { ...job, questions: updatedQuestions });
+
+    return NextResponse.json({ success: true, data: updatedQuestion }, { status: 200 });
   } catch (error) {
     console.error("Update question error:", error);
     return NextResponse.json(
@@ -160,8 +216,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id: jobId } = await params;
     const body = await request.json();
     const { questionId } = body;
+    const storage = getStorage();
 
     if (!questionId) {
       return NextResponse.json(
@@ -170,14 +228,26 @@ export async function DELETE(
       );
     }
 
-    const deleted = deleteCustomQuestion(questionId);
+    // Get existing job
+    const job = await storage.getJob(jobId);
+    if (!job) {
+      return NextResponse.json(
+        { success: false, error: "Job not found" },
+        { status: 404 },
+      );
+    }
 
-    if (!deleted) {
+    // Filter out the deleted question
+    const questionIndex = job.questions?.findIndex(q => q.id === questionId) ?? -1;
+    if (questionIndex === -1) {
       return NextResponse.json(
         { success: false, error: "Question not found" },
         { status: 404 },
       );
     }
+
+    const updatedQuestions = (job.questions || []).filter(q => q.id !== questionId);
+    await storage.saveJob(jobId, { ...job, questions: updatedQuestions });
 
     return NextResponse.json(
       { success: true, data: { deleted: true } },

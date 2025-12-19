@@ -39,7 +39,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatTime } from "@/lib/date-utils";
 import { toast } from "@/lib/hooks/use-toast";
-import type { InterviewStage, Question } from "@/lib/mock-data";
+import type { InterviewStage, Question } from "@/lib/types/interview-types";
 
 interface InterviewCallViewProps {
   call: Call;

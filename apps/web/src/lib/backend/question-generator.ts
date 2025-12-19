@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { geminiClient } from "@/lib/gemini-client";
 import type { ExtractedCVData, ExtractedJobData } from "@sync-hire/database";
-import type { Question } from "@/lib/mock-data";
+import type { Question } from "@/lib/types/interview-types";
 
 // Zod schema for suggested question response validation
 const suggestedQuestionSchema = z.object({

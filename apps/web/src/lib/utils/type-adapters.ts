@@ -7,18 +7,13 @@
  * These adapters handle the conversion between:
  * - Prisma string fields → strict enum types
  * - Database nullable fields → required domain fields
- *
- * TODO: Remove these once mock-data types are fully deprecated
  */
 
 import type {
   EmploymentType,
   WorkArrangement,
   ExtractedJobData,
-  Interview as PrismaInterview,
 } from "@sync-hire/database";
-import { InterviewStatus } from "@sync-hire/database";
-import type { Interview as MockInterview } from "@/lib/mock-data";
 
 // Valid employment types for ExtractedJobData
 const VALID_EMPLOYMENT_TYPES: EmploymentType[] = ['Full-time', 'Part-time', 'Contract', 'Internship'];
@@ -73,22 +68,3 @@ export function jobToExtractedJobData(job: {
   };
 }
 
-/**
- * Converts a mock Interview to the Prisma Interview type
- * Mock status values are a subset of InterviewStatus enum values
- */
-export function mockInterviewToInterview(mockInterview: MockInterview): PrismaInterview {
-  return {
-    id: mockInterview.id,
-    jobId: mockInterview.jobId,
-    candidateId: mockInterview.candidateId,
-    status: mockInterview.status as InterviewStatus, // Safe cast - mock values are subset of enum
-    callId: mockInterview.callId ?? null, // Convert undefined to null
-    transcript: mockInterview.transcript ?? null,
-    score: mockInterview.score ?? null,
-    durationMinutes: mockInterview.durationMinutes,
-    aiEvaluation: mockInterview.aiEvaluation ?? null,
-    createdAt: mockInterview.createdAt,
-    completedAt: mockInterview.completedAt ?? null,
-  };
-}

@@ -2,7 +2,7 @@
  * Utility functions for handling interview questions
  */
 
-import type { Question, InterviewStage } from "@/lib/mock-data";
+import type { Question, InterviewStage } from "@/lib/types/interview-types";
 import type { InterviewQuestions } from "@/lib/storage/storage-interface";
 
 /**

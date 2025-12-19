@@ -20,7 +20,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getCompanyLogoUrl } from "@/lib/logo-utils";
-import type { Question } from "@/lib/mock-data";
+import type { Question } from "@/lib/types/interview-types";
 
 interface InterviewPreviewScreenProps {
   candidateName: string;

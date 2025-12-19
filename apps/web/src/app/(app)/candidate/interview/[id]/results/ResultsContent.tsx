@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import type { AIEvaluation } from "@/lib/mock-data";
+import type { AIEvaluation } from "@/lib/types/interview-types";
 import type { Interview, Job } from "@/lib/storage/storage-interface";
 import { useAnalyzeInterview, useInterviewDetails } from "@/lib/hooks/use-interview";
 

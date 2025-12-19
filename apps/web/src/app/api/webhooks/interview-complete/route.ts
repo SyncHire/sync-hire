@@ -4,7 +4,7 @@
  * POST /api/webhooks/interview-complete
  */
 import { NextResponse } from "next/server";
-import type { AIEvaluation } from "@/lib/mock-data";
+import type { AIEvaluation } from "@/lib/types/interview-types";
 import type { Interview } from "@/lib/storage/storage-interface";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { InterviewStatus, ApplicationStatus } from "@sync-hire/database";
