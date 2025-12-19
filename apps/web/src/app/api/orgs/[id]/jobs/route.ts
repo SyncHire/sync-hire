@@ -6,7 +6,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
-import * as Sentry from "@sentry/nextjs";
+import { logger } from "@/lib/logger";
 import { prisma } from "@sync-hire/database";
 import { requireAuth } from "@/lib/auth-server";
 import { getAllJobsData } from "@/lib/server-utils/get-jobs";
@@ -43,10 +43,7 @@ export async function GET(
       data: jobs,
     });
   } catch (error) {
-    Sentry.captureException(error, {
-      tags: { api: "orgs/jobs", operation: "fetch" },
-    });
-    console.error("Failed to fetch jobs:", error);
+    logger.error(error, { api: "orgs/jobs", operation: "fetch" });
     return NextResponse.json(
       {
         success: false,

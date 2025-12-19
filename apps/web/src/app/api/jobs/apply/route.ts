@@ -54,7 +54,12 @@ export async function POST(request: NextRequest) {
     const cvData = await storage.getCVExtraction(cvId);
 
     if (!cvData) {
-      logger.warn("CV not found for interview question generation", { api: "jobs/apply", cvId, jobId });
+      logger.error(new Error("CV not found for interview question generation"), {
+        api: "jobs/apply",
+        operation: "getCVExtraction",
+        cvId,
+        jobId,
+      });
       return NextResponse.json(
         {
           error: "CV not found",

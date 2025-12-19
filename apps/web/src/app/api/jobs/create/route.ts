@@ -15,6 +15,8 @@ import { jobToExtractedJobData } from "@/lib/utils/type-adapters";
 import { geminiClient } from "@/lib/gemini-client";
 import { z } from "zod";
 import { requireOrgMembership } from "@/lib/auth-server";
+import { logger } from "@/lib/logger";
+import type { ApplicationFailure } from "@sync-hire/database";
 
 /**
  * Determine the initial AI matching status based on configuration
@@ -63,31 +65,47 @@ async function triggerCandidateMatching(jobId: string): Promise<{ matchedCount: 
     const storage = getStorage();
     const job = await storage.getJob(jobId);
     if (!job) {
-      console.log(`[auto-match] Job not found: ${jobId}`);
+      logger.warn("Job not found for auto-match", {
+        api: "jobs/create",
+        operation: "auto-match",
+        jobId,
+      });
       return { matchedCount: 0, candidateNames: [] };
     }
 
-    console.log(`\n🤖 [auto-match] Starting automatic candidate matching for job: ${jobId}`);
-    console.log(`📋 [auto-match] Job: "${job.title}" at ${job.organization.name}`);
+    logger.info("Starting automatic candidate matching", {
+      api: "jobs/create",
+      operation: "auto-match",
+      jobId,
+      jobTitle: job.title,
+      organization: job.organization.name,
+    });
 
     // Get all CVs
     const cvExtractions = await storage.getAllCVExtractions();
-    console.log(`📁 [auto-match] Found ${cvExtractions.length} CV(s) in system`);
+    logger.debug(`Found ${cvExtractions.length} CV(s) in system`, {
+      api: "jobs/create",
+      operation: "auto-match",
+      jobId,
+      cvCount: cvExtractions.length,
+    });
 
     if (cvExtractions.length === 0) {
-      console.log(`⚠️ [auto-match] No CVs to match against`);
+      logger.info("No CVs to match against", {
+        api: "jobs/create",
+        operation: "auto-match",
+        jobId,
+      });
       // Update job status to complete even with no CVs
       const noMatchJob = await storage.getJob(jobId);
       if (noMatchJob) {
         noMatchJob.aiMatchingStatus = MatchingStatus.COMPLETE;
         await storage.saveJob(jobId, noMatchJob);
-        console.log(`✅ [auto-match] Job status updated to COMPLETE (no CVs)`);
       }
       return { matchedCount: 0, candidateNames: [] };
     }
 
     const matchThreshold = job.aiMatchingThreshold || 80;
-    console.log(`🎯 [auto-match] Match threshold: ${matchThreshold}%`);
 
     let matchedCount = 0;
     const matchedCandidates: string[] = [];
@@ -95,14 +113,12 @@ async function triggerCandidateMatching(jobId: string): Promise<{ matchedCount: 
     // Process each CV
     for (const { cvId, userId, data: cvData } of cvExtractions) {
       const candidateName = cvData.personalInfo?.fullName || "Unknown";
-      console.log(`\n👤 [auto-match] Processing: ${candidateName}`);
 
       // Check if application already exists
       const existingApplications = await storage.getApplicationsForJob(jobId);
       const alreadyApplied = existingApplications.some(app => app.cvUploadId === cvId);
 
       if (alreadyApplied) {
-        console.log(`   ⏭️  Skipped: Already applied`);
         continue;
       }
 
@@ -148,14 +164,18 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
         matchReasons = result.matchReasons;
         skillGaps = result.skillGaps;
       } catch (err) {
-        console.error(`   ❌ Match calculation failed:`, err);
+        logger.error(err, {
+          api: "jobs/create",
+          operation: "auto-match",
+          step: "matchCalculation",
+          jobId,
+          cvId,
+          candidateName,
+        });
         continue;
       }
 
-      console.log(`   📊 Match score: ${matchScore}%`);
-
       if (matchScore >= matchThreshold) {
-        console.log(`   🎉 MATCHED!`);
 
         const savedApplication = await storage.saveApplication({
           jobId,
@@ -169,6 +189,7 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
           status: ApplicationStatus.GENERATING_QUESTIONS,
           source: ApplicationSource.AI_MATCH,
           questionsData: null,
+          failureInfo: null,
           interviewId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -224,37 +245,72 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
             app.updatedAt = new Date();
             await storage.saveApplication(app);
           }
-          console.log(`   ✅ Questions generated for ${candidateName}`);
+          logger.info("Questions generated for candidate", {
+            api: "jobs/create",
+            operation: "auto-match",
+            step: "questionGeneration",
+            jobId,
+            cvId,
+            candidateName,
+          });
         }).catch(async (err) => {
-          console.error(`[auto-match] SYSTEM FAILURE - Question generation failed for ${candidateName}:`, err);
-          // Update application status to indicate failure
-          // TODO: Add GENERATION_FAILED status to ApplicationStatus enum to distinguish from human rejection
+          logger.error(err, {
+            api: "jobs/create",
+            operation: "auto-match",
+            step: "questionGeneration",
+            jobId,
+            cvId,
+            candidateName,
+            applicationId,
+          });
+          // Update application status to FAILED with structured failure info
           const app = await storage.getApplication(applicationId);
           if (app) {
-            app.status = ApplicationStatus.REJECTED; // Mark as rejected so it doesn't stay stuck
+            const failureInfo: ApplicationFailure = {
+              code: "question_generation_failed",
+              message: "Failed to generate personalized interview questions",
+              step: "question_generation",
+              retryable: true,
+              occurredAt: new Date().toISOString(),
+              details: { cvId, jobId },
+            };
+            app.status = ApplicationStatus.FAILED;
+            app.failureInfo = failureInfo;
             app.updatedAt = new Date();
             await storage.saveApplication(app);
-            console.warn(`[auto-match] Application ${applicationId} marked as REJECTED (due to SYSTEM FAILURE in question generation, not human rejection)`);
+            logger.warn("Application marked as FAILED due to question generation failure", {
+              api: "jobs/create",
+              operation: "auto-match",
+              applicationId,
+              failureCode: failureInfo.code,
+            });
           }
         });
-      } else {
-        console.log(`   ❌ Below threshold`);
       }
     }
 
-    console.log(`\n📊 [auto-match] Complete: ${matchedCount} candidate(s) matched\n`);
+    logger.info("Automatic candidate matching complete", {
+      api: "jobs/create",
+      operation: "auto-match",
+      jobId,
+      matchedCount,
+      matchedCandidates,
+    });
 
     // Update job status to complete
     const finalJob = await storage.getJob(jobId);
     if (finalJob) {
       finalJob.aiMatchingStatus = MatchingStatus.COMPLETE;
       await storage.saveJob(jobId, finalJob);
-      console.log(`✅ [auto-match] Job status updated to COMPLETE`);
     }
 
     return { matchedCount, candidateNames: matchedCandidates };
   } catch (error) {
-    console.error("[auto-match] Error:", error);
+    logger.error(error, {
+      api: "jobs/create",
+      operation: "auto-match",
+      jobId,
+    });
 
     // Update job status to complete even on error
     const storage = getStorage();
@@ -274,7 +330,11 @@ export async function POST(request: NextRequest) {
     let session;
     try {
       session = await requireOrgMembership();
-    } catch {
+    } catch (error) {
+      logger.error(error, {
+        api: "jobs/create",
+        operation: "auth",
+      });
       return NextResponse.json(
         {
           success: false,
@@ -329,20 +389,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch or create placeholder organization for the job response
-    const existingOrg = await storage.getOrganization(organizationId);
-    const organization = existingOrg || {
-      id: organizationId,
-      name: "Demo Company",
-      slug: "demo-company",
-      logo: null,
-      website: null,
-      description: null,
-      industry: null,
-      size: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    // Fetch organization - fail if not found (should not happen with valid session)
+    const organization = await storage.getOrganization(organizationId);
+    if (!organization) {
+      logger.error(new Error("Organization not found"), {
+        api: "jobs/create",
+        operation: "getOrganization",
+        organizationId,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Organization not found",
+        },
+        { status: 404 },
+      );
+    }
 
     // Build extracted data if original JD text provided
     const jdExtraction: ExtractedJobData | null = body.originalJDText ? {
@@ -407,9 +469,18 @@ export async function POST(request: NextRequest) {
     // Trigger automatic candidate matching in background (don't wait)
     // Only trigger if AI matching enabled AND there are CVs to match
     if (aiMatchingEnabled && hasCVsToMatch) {
-      console.log(`🚀 [create-job] AI Matching enabled - triggering automatic candidate matching (${cvCount} CVs)`);
+      logger.info("AI Matching enabled - triggering automatic candidate matching", {
+        api: "jobs/create",
+        operation: "triggerAutoMatch",
+        jobId: job.id,
+        cvCount,
+      });
       triggerCandidateMatching(job.id).catch(async (err) => {
-        console.error("[create-job] Auto-match error:", err);
+        logger.error(err, {
+          api: "jobs/create",
+          operation: "auto-match",
+          jobId: job.id,
+        });
 
         // Update job status to indicate failure
         try {
@@ -419,7 +490,11 @@ export async function POST(request: NextRequest) {
             await storage.saveJob(job.id, failedJob);
           }
         } catch (updateErr) {
-          console.error("[create-job] Failed to update job status:", updateErr);
+          logger.error(updateErr, {
+            api: "jobs/create",
+            operation: "updateJobStatus",
+            jobId: job.id,
+          });
         }
       });
     }
@@ -439,7 +514,10 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     );
   } catch (error) {
-    console.error("Create job error:", error);
+    logger.error(error, {
+      api: "jobs/create",
+      operation: "createJob",
+    });
     return NextResponse.json(
       {
         success: false,

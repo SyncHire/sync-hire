@@ -6,6 +6,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { getCandidateJobApplications } from "@/lib/server-utils/get-candidate-jobs";
 import { getStorage } from "@/lib/storage/storage-factory";
 
@@ -23,7 +24,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Failed to fetch candidate job applications:", error);
+    logger.error(error, { api: "candidate/jobs", operation: "fetch" });
     return NextResponse.json(
       {
         success: false,

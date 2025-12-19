@@ -5,6 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { getServerSession } from "@/lib/auth-server";
 
 export async function GET() {
@@ -32,7 +33,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Failed to fetch current user:", error);
+    logger.error(error, { api: "users/me", operation: "fetch" });
     return NextResponse.json(
       {
         success: false,

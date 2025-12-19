@@ -1,11 +1,12 @@
 /**
  * GET /api/interviews
  *
- * Retrieves all interviews from storage (file + mock data merged)
+ * Retrieves all interviews from storage
  * Optional query param: userId - filter interviews for a specific user
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
 
 export async function GET(request: NextRequest) {
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
       data: interviews,
     });
   } catch (error) {
-    console.error("Failed to fetch interviews:", error);
+    logger.error(error, { api: "interviews", operation: "fetch" });
     return NextResponse.json(
       {
         success: false,

@@ -5,6 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
 
 export async function GET(
@@ -36,7 +37,7 @@ export async function GET(
       { status: 200 },
     );
   } catch (error) {
-    console.error("Get extraction error:", error);
+    logger.error(error, { api: "jobs/get-extraction/[id]", operation: "get" });
     return NextResponse.json(
       { success: false, error: "Failed to retrieve extraction" },
       { status: 500 },

@@ -5,10 +5,10 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { geminiClient } from "@/lib/gemini-client";
 import { withRateLimit } from "@/lib/rate-limiter";
-import { logger } from "@/lib/logger";
 
 const requestSchema = z.object({
   jobId: z.string(),

@@ -113,7 +113,7 @@ export async function POST(request: Request) {
     // Use generated questions if available, otherwise map job's questions to agent format
     let interviewQuestions: Question[] = questions;
     if (interviewQuestions.length === 0 && job.questions) {
-      console.warn(`[start-interview] No personalized questions found for interviewId: ${interviewId}, falling back to ${job.questions.length} job default questions`);
+      logger.warn("No personalized questions found, using job defaults", { api: "start-interview", interviewId, questionCount: job.questions.length });
       // Map database JobQuestion to agent Question format
       interviewQuestions = job.questions.map((q) => ({
         id: q.id,
@@ -162,9 +162,7 @@ export async function POST(request: Request) {
 
     // Check if this is a new call or existing call
     const isNewCall = callData.created;
-    console.log(
-      `📞 Call status: ${isNewCall ? "NEW" : "EXISTING"} - ${callId}`,
-    );
+    logger.info("Call status", { api: "start-interview", callId, isNewCall: isNewCall ? "NEW" : "EXISTING" });
 
     // If call already exists, ensure member has admin role (fixes permission issues)
     if (!isNewCall) {
@@ -172,25 +170,24 @@ export async function POST(request: Request) {
         await call.updateCallMembers({
           update_members: [{ user_id: candidateId, role: "admin" }],
         });
-        console.log("🔄 Updated member role to admin");
+        logger.debug("Updated member role to admin", { api: "start-interview", callId });
       } catch (memberUpdateErr) {
-        console.warn("⚠️ Could not update member role:", memberUpdateErr);
+        logger.warn("Could not update member role", { api: "start-interview", callId, error: memberUpdateErr instanceof Error ? memberUpdateErr.message : String(memberUpdateErr) });
       }
     }
 
     // Check if we've already invited an agent to this call (prevents duplicates)
     const existingCall = invitedCalls.get(callId);
     const alreadyInvited = !!existingCall;
-    console.log(`🤖 Agent already invited: ${alreadyInvited}`);
+    logger.debug("Agent invitation check", { api: "start-interview", callId, alreadyInvited });
 
     let videoAvatarEnabled = existingCall?.videoAvatarEnabled ?? false;
 
     // Invite agent if we haven't invited one yet (regardless of whether call is new or existing)
     if (!alreadyInvited) {
       const agentUrl = getAgentEndpoint("/join-interview");
-      console.log(`🔗 Agent URL: ${agentUrl}`);
+      logger.debug("Sending request to agent", { api: "start-interview", callId, agentUrl });
       try {
-        console.log("⏳ Sending request to agent...");
         const agentResponse = await fetch(agentUrl, {
           method: "POST",
           headers: getAgentHeaders(),
@@ -202,11 +199,11 @@ export async function POST(request: Request) {
           }),
         });
 
-        console.log(`📥 Agent response status: ${agentResponse.status}`);
+        logger.debug("Agent response received", { api: "start-interview", callId, status: agentResponse.status });
 
         if (!agentResponse.ok) {
           const errorText = await agentResponse.text();
-          console.error("❌ Failed to invite agent:", errorText);
+          logger.error(new Error("Failed to invite agent"), { api: "start-interview", callId, errorText });
           return NextResponse.json(
             { error: "Failed to invite AI agent to interview" },
             { status: 500 },
@@ -214,7 +211,7 @@ export async function POST(request: Request) {
         }
 
         const agentData = await agentResponse.json();
-        console.log("✅ Agent response:", agentData);
+        logger.info("Agent invitation successful", { api: "start-interview", callId, videoAvatarEnabled: agentData.videoAvatarEnabled });
 
         // Capture video avatar status from agent response
         videoAvatarEnabled = agentData.videoAvatarEnabled ?? false;
@@ -222,16 +219,14 @@ export async function POST(request: Request) {
         // Mark this call as having an invited agent and store video avatar status
         invitedCalls.set(callId, { videoAvatarEnabled });
       } catch (agentError) {
-        console.error("❌ Error calling agent API:", agentError);
+        logger.error(agentError, { api: "start-interview", operation: "invite-agent", callId });
         return NextResponse.json(
           { error: "AI agent service unavailable" },
           { status: 503 },
         );
       }
     } else {
-      console.log(
-        "♻️  Agent already invited to this call - skipping duplicate invitation",
-      );
+      logger.debug("Agent already invited, skipping duplicate", { api: "start-interview", callId });
     }
 
     return NextResponse.json({

@@ -7,6 +7,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import type { QuestionType } from "@/lib/types/interview-types";
 import { getStorage } from "@/lib/storage/storage-factory";
 
@@ -35,7 +36,7 @@ export async function GET(
       { status: 200 },
     );
   } catch (error) {
-    console.error("Get questions error:", error);
+    logger.error(error, { api: "jobs/[id]/questions", operation: "get" });
     return NextResponse.json(
       { success: false, error: "Failed to retrieve questions" },
       { status: 500 },
@@ -99,7 +100,7 @@ export async function POST(
       { status: 201 },
     );
   } catch (error) {
-    console.error("Create question error:", error);
+    logger.error(error, { api: "jobs/[id]/questions", operation: "create" });
     return NextResponse.json(
       { success: false, error: "Failed to create question" },
       { status: 500 },
@@ -203,7 +204,7 @@ export async function PUT(
 
     return NextResponse.json({ success: true, data: updatedQuestion }, { status: 200 });
   } catch (error) {
-    console.error("Update question error:", error);
+    logger.error(error, { api: "jobs/[id]/questions", operation: "update" });
     return NextResponse.json(
       { success: false, error: "Failed to update question" },
       { status: 500 },
@@ -254,7 +255,7 @@ export async function DELETE(
       { status: 200 },
     );
   } catch (error) {
-    console.error("Delete question error:", error);
+    logger.error(error, { api: "jobs/[id]/questions", operation: "delete" });
     return NextResponse.json(
       { success: false, error: "Failed to delete question" },
       { status: 500 },

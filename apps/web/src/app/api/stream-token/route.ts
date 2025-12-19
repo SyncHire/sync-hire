@@ -3,6 +3,7 @@
  * POST /api/stream-token
  */
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { generateStreamToken } from "@/lib/stream-token";
 
 export async function POST(request: Request) {
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ token, userId });
   } catch (error) {
-    console.error("Error generating Stream token:", error);
+    logger.error(error, { api: "stream-token", operation: "generate" });
     return NextResponse.json(
       { error: "Failed to generate token" },
       { status: 500 },
