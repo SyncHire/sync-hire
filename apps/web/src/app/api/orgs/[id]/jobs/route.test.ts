@@ -11,9 +11,15 @@ import {
   createRouteParams,
 } from "../../../../../../test/helpers/api-test-helpers";
 
-// Mock auth-server
+// Mock auth-server (withOrgMembership uses getServerSession)
 vi.mock("@/lib/auth-server", () => ({
-  requireAuth: vi.fn(),
+  getServerSession: vi.fn(),
+}));
+
+// Mock membership cache
+vi.mock("@/lib/membership-cache", () => ({
+  getCachedMembership: vi.fn().mockResolvedValue(null),
+  setCachedMembership: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock prisma
@@ -30,6 +36,16 @@ vi.mock("@/lib/server-utils/get-jobs", () => ({
   getAllJobsData: vi.fn(),
 }));
 
+// Mock logger to avoid noise
+vi.mock("@/lib/logger", () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
 describe("GET /api/orgs/:id/jobs", () => {
   const orgId = "org-123";
 
@@ -38,14 +54,14 @@ describe("GET /api/orgs/:id/jobs", () => {
   });
 
   it("should return 403 when user is not a member of the organization", async () => {
-    const { requireAuth } = await import("@/lib/auth-server");
+    const { getServerSession } = await import("@/lib/auth-server");
     const { prisma } = await import("@sync-hire/database");
 
-    // Mock authenticated user
-    vi.mocked(requireAuth).mockResolvedValueOnce({
+    // Mock authenticated session
+    vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: "user-456", name: "Test User", email: "test@example.com" },
       session: { id: "session-1", activeOrganizationId: null },
-    } as Awaited<ReturnType<typeof requireAuth>>);
+    } as Awaited<ReturnType<typeof getServerSession>>);
 
     // Mock no membership
     vi.mocked(prisma.member.findFirst).mockResolvedValueOnce(null);
@@ -57,20 +73,20 @@ describe("GET /api/orgs/:id/jobs", () => {
     const json = await response.json();
 
     expect(response.status).toBe(403);
-    expect(json.success).toBe(false);
-    expect(json.error).toContain("not a member");
+    expect(json.error).toBeDefined();
+    expect(json.error.message).toContain("Not a member");
   });
 
   it("should return jobs for authenticated org member", async () => {
-    const { requireAuth } = await import("@/lib/auth-server");
+    const { getServerSession } = await import("@/lib/auth-server");
     const { prisma } = await import("@sync-hire/database");
     const { getAllJobsData } = await import("@/lib/server-utils/get-jobs");
 
-    // Mock authenticated user
-    vi.mocked(requireAuth).mockResolvedValueOnce({
+    // Mock authenticated session
+    vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: "user-456", name: "Test User", email: "test@example.com" },
       session: { id: "session-1", activeOrganizationId: orgId },
-    } as Awaited<ReturnType<typeof requireAuth>>);
+    } as Awaited<ReturnType<typeof getServerSession>>);
 
     // Mock membership exists
     vi.mocked(prisma.member.findFirst).mockResolvedValueOnce({
@@ -123,11 +139,11 @@ describe("GET /api/orgs/:id/jobs", () => {
     expect(json.data[0].title).toBe("Senior Engineer");
   });
 
-  it("should return 500 when requireAuth throws", async () => {
-    const { requireAuth } = await import("@/lib/auth-server");
+  it("should return 401 when not authenticated", async () => {
+    const { getServerSession } = await import("@/lib/auth-server");
 
-    // Mock auth failure
-    vi.mocked(requireAuth).mockRejectedValueOnce(new Error("Unauthorized"));
+    // Mock no session (not authenticated)
+    vi.mocked(getServerSession).mockResolvedValueOnce(null);
 
     const request = createTestRequest(`/api/orgs/${orgId}/jobs`);
     const params = createRouteParams({ id: orgId });
@@ -135,8 +151,8 @@ describe("GET /api/orgs/:id/jobs", () => {
     const response = await GET(request, params);
     const json = await response.json();
 
-    expect(response.status).toBe(500);
-    expect(json.success).toBe(false);
-    expect(json.error).toBe("Unauthorized");
+    expect(response.status).toBe(401);
+    expect(json.error).toBeDefined();
+    expect(json.error.code).toBe("unauthorized");
   });
 });
