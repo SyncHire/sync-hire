@@ -7,7 +7,7 @@
  * Shows navigation based on the current view (candidate or HR).
  */
 
-import { Bell, CircleHelp, Inbox, LogOut, Moon, Settings, Sun } from "lucide-react";
+import { Bell, CircleHelp, Inbox, LogOut, Moon, Sun } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -219,15 +219,6 @@ export function MainHeader({ view }: MainHeaderProps) {
                       <p className="text-xs text-muted-foreground">{user.email}</p>
                     </div>
                     <div className="p-2">
-                      {isHRView && (
-                        <Link
-                          href="/hr/settings"
-                          className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted rounded transition-colors"
-                        >
-                          <Settings className="h-4 w-4" />
-                          Organization Settings
-                        </Link>
-                      )}
                       <button
                         onClick={handleSignOut}
                         disabled={isSigningOut}

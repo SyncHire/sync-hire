@@ -10,7 +10,7 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Building2, ChevronDown, Plus, User } from "lucide-react";
+import { Building2, ChevronDown, Plus, Settings, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -125,6 +125,19 @@ export function ContextSwitcher() {
             )}
           </DropdownMenuItem>
         ))}
+
+        {/* Settings link - only show when in org view */}
+        {!isCandidate && activeOrg && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/hr/settings" className="flex items-center">
+                <Settings className="h-4 w-4 mr-2" />
+                Organization Settings
+              </Link>
+            </DropdownMenuItem>
+          </>
+        )}
 
         <DropdownMenuSeparator />
 
