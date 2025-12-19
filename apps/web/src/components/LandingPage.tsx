@@ -224,7 +224,7 @@ export function LandingPage() {
                 title: "Review Top Matches",
                 description:
                   "AI scores and ranks every candidate. You focus on reviewing only the best matches.",
-                image: "/screenshots/candidate-job-matching.png",
+                image: "/screenshots/hr-review-matches.png",
               },
             ].map((item, i) => (
               <motion.div
