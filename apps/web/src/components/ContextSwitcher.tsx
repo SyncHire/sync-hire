@@ -11,6 +11,7 @@
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Building2, ChevronDown, Plus, Settings, User } from "lucide-react";
+import { getOrganizationLogoUrl } from "@/lib/logo-utils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -83,6 +84,12 @@ export function ContextSwitcher() {
         >
           {isCandidate ? (
             <User className="h-3 w-3" />
+          ) : getOrganizationLogoUrl(activeOrg) ? (
+            <img
+              src={getOrganizationLogoUrl(activeOrg)!}
+              alt={activeOrg?.name || ""}
+              className="h-4 w-4 rounded object-cover"
+            />
           ) : (
             <Building2 className="h-3 w-3" />
           )}
@@ -118,7 +125,15 @@ export function ContextSwitcher() {
             className="cursor-pointer"
             disabled={setActiveOrg.isPending}
           >
-            <Building2 className="h-4 w-4 mr-2" />
+            {getOrganizationLogoUrl(org) ? (
+              <img
+                src={getOrganizationLogoUrl(org)!}
+                alt={org.name}
+                className="h-4 w-4 mr-2 rounded object-cover"
+              />
+            ) : (
+              <Building2 className="h-4 w-4 mr-2" />
+            )}
             <span className="flex-1 truncate">{org.name}</span>
             {!isCandidate && activeOrg?.id === org.id && (
               <span className="ml-auto text-xs text-primary">Active</span>
