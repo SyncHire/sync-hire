@@ -143,6 +143,7 @@ useEffect(() => {
 - **Always use theme-aware colors** for dark/light mode compatibility
 - Use semantic color variables: `primary`, `secondary`, `muted`, `accent`, `destructive`, `foreground`, `background`
 - Avoid hardcoded colors like `bg-amber-50`, `text-blue-600` - use theme variables instead
+- **Design inspiration**: Use https://saaspo.com/ for SaaS UI/UX patterns and design ideas
 
 **Good patterns:**
 ```tsx
