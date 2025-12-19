@@ -11,6 +11,8 @@ import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
 import { geminiClient } from "@/lib/gemini-client";
 import { ApplicationStatus, ApplicationSource } from "@sync-hire/database";
 import { withRateLimit } from "@/lib/rate-limiter";
+import { withQuota } from "@/lib/with-quota";
+import { trackUsage } from "@/lib/ai-usage-tracker";
 import type { ExtractedCVData, ExtractedJobData, CandidateApplication, InterviewQuestions, ApplicationFailure } from "@sync-hire/database";
 import type { Question } from "@/lib/types/interview-types";
 import { getStorage } from "@/lib/storage/storage-factory";
@@ -216,8 +218,20 @@ export async function POST(
       );
     }
 
+    const organizationId = job.organizationId;
+
     // Get all CVs
     const cvExtractions = await storage.getAllCVExtractions();
+
+    // Check quota with estimated count (N CVs to process)
+    if (cvExtractions.length > 0) {
+      const quotaResponse = await withQuota(organizationId, "jobs/match-candidates", {
+        estimatedCount: cvExtractions.length,
+      });
+      if (quotaResponse) {
+        return quotaResponse;
+      }
+    }
 
     if (cvExtractions.length === 0) {
       logger.info("No CVs to match against", {
@@ -338,6 +352,12 @@ export async function POST(
       failed: failedCount,
       matched: applications.length,
     });
+
+    // Track AI usage (count = CVs actually processed, not skipped)
+    const processedCount = cvExtractions.length - skippedCount;
+    if (processedCount > 0) {
+      await trackUsage(organizationId, "jobs/match-candidates", processedCount);
+    }
 
     return NextResponse.json({
       success: true,

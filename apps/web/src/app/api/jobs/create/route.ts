@@ -17,6 +17,8 @@ import { z } from "zod";
 import { requireOrgMembership } from "@/lib/auth-server";
 import { logger } from "@/lib/logger";
 import type { ApplicationFailure } from "@sync-hire/database";
+import { withQuota } from "@/lib/with-quota";
+import { trackUsage } from "@/lib/ai-usage-tracker";
 
 /**
  * Determine the initial AI matching status based on configuration
@@ -60,7 +62,10 @@ interface CreateJobRequest {
 /**
  * Trigger candidate matching and return match count
  */
-async function triggerCandidateMatching(jobId: string): Promise<{ matchedCount: number; candidateNames: string[] }> {
+async function triggerCandidateMatching(
+  jobRef: Pick<Job, "id" | "organizationId">
+): Promise<{ matchedCount: number; candidateNames: string[] }> {
+  const { id: jobId, organizationId } = jobRef;
   try {
     const storage = getStorage();
     const job = await storage.getJob(jobId);
@@ -297,6 +302,12 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
       matchedCandidates,
     });
 
+    // Track AI usage (count = number of CVs processed for matching)
+    const processedCvCount = cvExtractions.length;
+    if (processedCvCount > 0) {
+      await trackUsage(organizationId, "jobs/create", processedCvCount);
+    }
+
     // Update job status to complete
     const finalJob = await storage.getJob(jobId);
     if (finalJob) {
@@ -346,6 +357,40 @@ export async function POST(request: NextRequest) {
 
     const body = (await request.json()) as CreateJobRequest;
 
+    // Get organization from authenticated session for quota check
+    const organizationId = session.session.activeOrganizationId;
+    if (!organizationId) {
+      return NextResponse.json(
+        { success: false, error: "No active organization selected" },
+        { status: 400 },
+      );
+    }
+
+    // Check AI matching will be enabled and if there are CVs to match
+    const aiMatchingEnabled = body.aiMatchingEnabled !== false;
+    const storage = getStorage();
+
+    // Get CVs once for both quota check and matching (avoid duplicate calls)
+    let cvCount = 0;
+    let hasCVsToMatch = false;
+
+    if (aiMatchingEnabled) {
+      // Check quota before creating job (will trigger N AI calls for matching)
+      const cvExtractions = await storage.getAllCVExtractions();
+      cvCount = cvExtractions.length;
+      hasCVsToMatch = cvCount > 0;
+      const estimatedCalls = cvCount + 1; // +1 for job creation itself
+
+      if (estimatedCalls > 0) {
+        const quotaResponse = await withQuota(organizationId, "jobs/create", {
+          estimatedCount: estimatedCalls,
+        });
+        if (quotaResponse) {
+          return quotaResponse;
+        }
+      }
+    }
+
     // Validate required fields
     if (!body.title || !body.description || !body.location) {
       return NextResponse.json(
@@ -357,37 +402,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // AI matching is enabled by default
-    const aiMatchingEnabled = body.aiMatchingEnabled !== false;
     const aiMatchingThreshold = body.aiMatchingThreshold || 80;
 
     // Generate job ID
     const jobId = `job-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
-    // Check if there are any CVs to match against (only if AI matching enabled)
-    const storage = getStorage();
-    let hasCVsToMatch = false;
-    let cvCount = 0;
-    if (aiMatchingEnabled) {
-      const cvExtractions = await storage.getAllCVExtractions();
-      cvCount = cvExtractions.length;
-      hasCVsToMatch = cvCount > 0;
-    }
-
-    // Get organization and user from authenticated session
-    const organizationId = session.session.activeOrganizationId;
+    // organizationId already validated above for quota check
     const createdById = session.user.id;
-
-    // This should not happen due to requireOrgMembership, but TypeScript needs the check
-    if (!organizationId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "No active organization selected",
-        },
-        { status: 400 },
-      );
-    }
 
     // Fetch organization - fail if not found (should not happen with valid session)
     const organization = await storage.getOrganization(organizationId);
@@ -475,7 +496,7 @@ export async function POST(request: NextRequest) {
         jobId: job.id,
         cvCount,
       });
-      triggerCandidateMatching(job.id).catch(async (err) => {
+      triggerCandidateMatching(job).catch(async (err) => {
         logger.error(err, {
           api: "jobs/create",
           operation: "auto-match",

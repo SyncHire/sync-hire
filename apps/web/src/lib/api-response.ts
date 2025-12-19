@@ -47,11 +47,11 @@ export interface ApiError {
  *
  * @example
  * // Simple error
- * return errorResponse("not_found", "Job not found", 404);
+ * return errorResponse("not_found", "Job not found", 422);
  *
  * @example
  * // Validation error with field details
- * return errorResponse("validation_error", "Validation failed", 400, [
+ * return errorResponse("validation_error", "Validation failed", 422, [
  *   { field: "email", message: "Invalid email format" },
  *   { field: "title", message: "Title is required" }
  * ]);
@@ -85,15 +85,15 @@ export const errors = {
   forbidden: (message = "Access denied") =>
     errorResponse("forbidden", message, 403),
 
-  /** 404 Not Found */
+  /** 422 Resource Not Found - use instead of 404 to differentiate from "route not found" */
   notFound: (resource: string) =>
-    errorResponse("not_found", `${resource} not found`, 404),
+    errorResponse("not_found", `${resource} not found`, 422),
 
   /** 409 Conflict */
   conflict: (message: string) =>
     errorResponse("conflict", message, 409),
 
-  /** 422 Validation Error */
+  /** 422 Validation Error - for field-level validation failures */
   validation: (message: string, details: FieldError[]) =>
     errorResponse("validation_error", message, 422, details),
 

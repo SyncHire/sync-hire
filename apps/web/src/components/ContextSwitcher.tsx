@@ -10,7 +10,8 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Building2, ChevronDown, Plus, User } from "lucide-react";
+import { Building2, ChevronDown, Plus, Settings, User } from "lucide-react";
+import { getOrganizationLogoUrl } from "@/lib/logo-utils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -63,6 +64,7 @@ export function ContextSwitcher() {
   const currentLabel = isCandidate
     ? "Personal"
     : activeOrg?.name || "Select Organization";
+  const activeOrgLogo = getOrganizationLogoUrl(activeOrg);
 
   async function handleSwitchToPersonal() {
     router.push("/candidate/jobs");
@@ -83,6 +85,12 @@ export function ContextSwitcher() {
         >
           {isCandidate ? (
             <User className="h-3 w-3" />
+          ) : activeOrgLogo ? (
+            <img
+              src={activeOrgLogo}
+              alt={activeOrg?.name || ""}
+              className="h-4 w-4 rounded object-cover"
+            />
           ) : (
             <Building2 className="h-3 w-3" />
           )}
@@ -111,20 +119,44 @@ export function ContextSwitcher() {
         <DropdownMenuSeparator />
 
         {/* Organization list */}
-        {orgs?.map((org) => (
-          <DropdownMenuItem
-            key={org.id}
-            onClick={() => handleSwitchToOrg(org.id)}
-            className="cursor-pointer"
-            disabled={setActiveOrg.isPending}
-          >
-            <Building2 className="h-4 w-4 mr-2" />
-            <span className="flex-1 truncate">{org.name}</span>
-            {!isCandidate && activeOrg?.id === org.id && (
-              <span className="ml-auto text-xs text-primary">Active</span>
-            )}
-          </DropdownMenuItem>
-        ))}
+        {orgs?.map((org) => {
+          const logoUrl = getOrganizationLogoUrl(org);
+          return (
+            <DropdownMenuItem
+              key={org.id}
+              onClick={() => handleSwitchToOrg(org.id)}
+              className="cursor-pointer"
+              disabled={setActiveOrg.isPending}
+            >
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={org.name}
+                  className="h-4 w-4 mr-2 rounded object-cover"
+                />
+              ) : (
+                <Building2 className="h-4 w-4 mr-2" />
+              )}
+              <span className="flex-1 truncate">{org.name}</span>
+              {!isCandidate && activeOrg?.id === org.id && (
+                <span className="ml-auto text-xs text-primary">Active</span>
+              )}
+            </DropdownMenuItem>
+          );
+        })}
+
+        {/* Settings link - only show when in org view */}
+        {!isCandidate && activeOrg && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/hr/settings" className="flex items-center">
+                <Settings className="h-4 w-4 mr-2" />
+                Organization Settings
+              </Link>
+            </DropdownMenuItem>
+          </>
+        )}
 
         <DropdownMenuSeparator />
 

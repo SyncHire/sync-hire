@@ -275,3 +275,32 @@ export function isApplicationFailure(data: unknown): data is ApplicationFailure 
     typeof d.occurredAt === 'string'
   );
 }
+
+// =============================================================================
+// AI Usage Tracking (AIUsageRecord.endpointBreakdown)
+// =============================================================================
+
+/**
+ * Breakdown of AI usage by endpoint
+ * Keys are endpoint identifiers, values are request counts
+ *
+ * @example
+ * {
+ *   "cv/extract": 25,
+ *   "jobs/extract-jd": 10,
+ *   "jobs/generate-questions": 15,
+ *   "interviews/analyze": 5
+ * }
+ */
+export interface EndpointUsageBreakdown {
+  [endpoint: string]: number;
+}
+
+/**
+ * Type guard for EndpointUsageBreakdown
+ */
+export function isEndpointUsageBreakdown(data: unknown): data is EndpointUsageBreakdown {
+  if (!data || typeof data !== 'object') return false;
+  const d = data as Record<string, unknown>;
+  return Object.values(d).every((value) => typeof value === 'number');
+}

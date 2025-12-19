@@ -13,6 +13,8 @@ import { getStorage } from "@/lib/storage/storage-factory";
 import { getCloudStorageProvider } from "@/lib/storage/cloud/storage-provider-factory";
 import { requireAuth } from "@/lib/auth-server";
 import { withRateLimit } from "@/lib/rate-limiter";
+import { withQuota } from "@/lib/with-quota";
+import { trackUsage } from "@/lib/ai-usage-tracker";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -61,6 +63,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check organization quota (before rate limit - quota is monthly, rate limit is per-minute)
+    const quotaResponse = await withQuota(organizationId, "jobs/extract-jd");
+    if (quotaResponse) {
+      return quotaResponse;
+    }
+
     // Validate file type - PDF and Markdown are supported
     const isPdf = file.type === "application/pdf" || file.name.endsWith(".pdf");
     const isMarkdown = file.type === "text/markdown" || file.name.endsWith(".md");
@@ -94,6 +102,11 @@ export async function POST(request: NextRequest) {
 
     const { hash, extractedData, aiSuggestions, aiQuestions, cached } =
       await processor.processFile(buffer, file.name, organizationId, userId);
+
+    // Track usage after successful AI extraction (only if not cached)
+    if (!cached) {
+      await trackUsage(organizationId, "jobs/extract-jd");
+    }
 
     return NextResponse.json(
       {

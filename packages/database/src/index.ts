@@ -25,6 +25,8 @@ export type {
   Interview,
   Notification,
   InterviewCall,
+  OrganizationQuota,
+  AIUsageRecord,
 } from '@prisma/client';
 
 // Re-export enums (as values, usable at runtime)
@@ -37,6 +39,7 @@ export {
   ApplicationSource,
   InterviewStatus,
   NotificationType,
+  QuotaTier,
 } from '@prisma/client';
 
 // Export custom types with relations
