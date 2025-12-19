@@ -43,7 +43,7 @@ export function QuotaUsageIndicator() {
             className={`flex items-center gap-1.5 px-2 py-1 rounded-md border cursor-pointer transition-colors ${
               isDanger
                 ? "bg-destructive/10 border-destructive/50 text-destructive hover:bg-destructive/20"
-                : "bg-amber-500/10 border-amber-500/50 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20"
+                : "bg-destructive/5 border-destructive/30 text-destructive/80 hover:bg-destructive/10"
             }`}
           >
             <AlertTriangle className="h-3.5 w-3.5" />

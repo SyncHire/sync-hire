@@ -19,9 +19,9 @@ const tierLabels = {
 
 const tierColors = {
   FREE: "bg-muted text-muted-foreground",
-  STARTER: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  PROFESSIONAL: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  ENTERPRISE: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  STARTER: "bg-primary/10 text-primary",
+  PROFESSIONAL: "bg-accent text-accent-foreground",
+  ENTERPRISE: "bg-secondary text-secondary-foreground border border-primary/20",
 } as const;
 
 const endpointLabels: Record<string, string> = {
@@ -45,7 +45,7 @@ export default function SettingsPage() {
   const progressColor = isDanger
     ? "bg-destructive"
     : isWarning
-      ? "bg-amber-500"
+      ? "bg-destructive/70"
       : "bg-primary";
 
   return (
@@ -130,7 +130,7 @@ export default function SettingsPage() {
                   </p>
                 )}
                 {isWarning && !isDanger && (
-                  <p className="text-sm text-amber-600 dark:text-amber-400">
+                  <p className="text-sm text-destructive/80">
                     Approaching quota limit. Consider upgrading your plan.
                   </p>
                 )}

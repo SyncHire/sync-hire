@@ -105,6 +105,9 @@ export function addQuotaHeaders(
  * Check quota and return 402 response if exceeded
  * Returns null if quota is available (proceed with request)
  *
+ * Fails open: if quota check fails due to infrastructure issues,
+ * allows the request through with a warning log.
+ *
  * @param organizationId - The organization to check quota for
  * @param endpoint - The AI endpoint being called
  * @param options - Optional configuration
@@ -115,7 +118,20 @@ export async function withQuota(
   endpoint: AIEndpoint,
   options?: QuotaCheckOptions
 ): Promise<Response | null> {
-  const result = await checkQuota(organizationId);
+  let result;
+  try {
+    result = await checkQuota(organizationId);
+  } catch (error) {
+    // Fail open: allow request through if quota check fails
+    logger.error(error, {
+      api: "quota",
+      operation: "check-quota",
+      organizationId,
+      endpoint,
+      note: "Quota check failed, allowing request (fail-open)",
+    });
+    return null;
+  }
 
   // Check if quota allows this request
   if (!result.allowed) {

@@ -6,7 +6,7 @@
  */
 
 import { prisma } from "@sync-hire/database";
-import { requireAuth } from "@/lib/auth-server";
+import { getServerSession } from "@/lib/auth-server";
 import { getUsage } from "@/lib/ai-usage-tracker";
 import { errors, successResponse } from "@/lib/api-response";
 import { logger } from "@/lib/logger";
@@ -15,15 +15,27 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ orgId: string }> }
 ) {
+  // Check authentication first
+  const session = await getServerSession();
+  if (!session) {
+    return errors.unauthorized();
+  }
+
+  const userId = session.user.id;
+
+  let orgId: string;
   try {
-    const session = await requireAuth();
-    const userId = session.user.id;
-    const { orgId } = await params;
+    const resolvedParams = await params;
+    orgId = resolvedParams.orgId;
+  } catch {
+    return errors.badRequest("Invalid request parameters");
+  }
 
-    if (!orgId) {
-      return errors.badRequest("Missing orgId parameter");
-    }
+  if (!orgId) {
+    return errors.badRequest("Missing orgId parameter");
+  }
 
+  try {
     // Verify user is a member of this organization
     const membership = await prisma.member.findFirst({
       where: { userId, organizationId: orgId },

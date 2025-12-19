@@ -368,11 +368,18 @@ export async function POST(request: NextRequest) {
 
     // Check AI matching will be enabled and if there are CVs to match
     const aiMatchingEnabled = body.aiMatchingEnabled !== false;
+    const storage = getStorage();
+
+    // Get CVs once for both quota check and matching (avoid duplicate calls)
+    let cvCount = 0;
+    let hasCVsToMatch = false;
+
     if (aiMatchingEnabled) {
       // Check quota before creating job (will trigger N AI calls for matching)
-      const storage = getStorage();
       const cvExtractions = await storage.getAllCVExtractions();
-      const estimatedCalls = cvExtractions.length + 1; // +1 for job creation itself
+      cvCount = cvExtractions.length;
+      hasCVsToMatch = cvCount > 0;
+      const estimatedCalls = cvCount + 1; // +1 for job creation itself
 
       if (estimatedCalls > 0) {
         const quotaResponse = await withQuota(organizationId, "jobs/create", {
@@ -395,21 +402,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // aiMatchingEnabled already set above for quota check
     const aiMatchingThreshold = body.aiMatchingThreshold || 80;
 
     // Generate job ID
     const jobId = `job-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-
-    // Get CV count for matching (storage already created above for quota check)
-    const storage = getStorage();
-    let hasCVsToMatch = false;
-    let cvCount = 0;
-    if (aiMatchingEnabled) {
-      const cvExtractions = await storage.getAllCVExtractions();
-      cvCount = cvExtractions.length;
-      hasCVsToMatch = cvCount > 0;
-    }
 
     // organizationId already validated above for quota check
     const createdById = session.user.id;

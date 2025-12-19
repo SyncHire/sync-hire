@@ -211,27 +211,38 @@ async function getCurrentUsage(
   const redis = getRedisClient();
 
   if (redis) {
-    const key = getUsageKey(organizationId, periodKey);
-    const redisCount = await redis.get(key);
+    try {
+      const key = getUsageKey(organizationId, periodKey);
+      const redisCount = await redis.get(key);
 
-    if (redisCount !== null) {
-      return parseInt(redisCount, 10);
+      if (redisCount !== null) {
+        return parseInt(redisCount, 10);
+      }
+
+      // Redis miss - load from PostgreSQL and cache
+      const record = await prisma.aIUsageRecord.findUnique({
+        where: { organizationId_periodKey: { organizationId, periodKey } },
+      });
+
+      const count = record?.usageCount ?? 0;
+
+      // Cache in Redis with TTL
+      await redis.set(key, count.toString(), "EX", calculateTTL());
+
+      return count;
+    } catch (error) {
+      logger.warn("Redis error in getCurrentUsage, falling back to PostgreSQL", {
+        api: "quota",
+        operation: "get-usage-redis",
+        organizationId,
+        periodKey,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Fall through to PostgreSQL
     }
-
-    // Redis miss - load from PostgreSQL and cache
-    const record = await prisma.aIUsageRecord.findUnique({
-      where: { organizationId_periodKey: { organizationId, periodKey } },
-    });
-
-    const count = record?.usageCount ?? 0;
-
-    // Cache in Redis with TTL
-    await redis.set(key, count.toString(), "EX", calculateTTL());
-
-    return count;
   }
 
-  // No Redis - use PostgreSQL directly
+  // No Redis or Redis error - use PostgreSQL directly
   const record = await prisma.aIUsageRecord.findUnique({
     where: { organizationId_periodKey: { organizationId, periodKey } },
   });
@@ -296,35 +307,54 @@ export async function trackUsage(
   const weight = typeof endpointConfig.weight === "number" ? endpointConfig.weight : 1;
   const actualCount = count * weight;
 
-  let newCount: number;
+  let newCount = 0;
+  let usedRedis = false;
 
   if (redis) {
-    const key = getUsageKey(organizationId, periodKey);
-    const breakdownKey = getBreakdownKey(organizationId, periodKey);
-    const ttl = calculateTTL();
+    try {
+      const key = getUsageKey(organizationId, periodKey);
+      const breakdownKey = getBreakdownKey(organizationId, periodKey);
+      const ttl = calculateTTL();
 
-    // Atomic increment in Redis
-    newCount = await redis.incrby(key, actualCount);
+      // Atomic increment in Redis
+      newCount = await redis.incrby(key, actualCount);
 
-    // Set TTL if this is a new key
-    await redis.expire(key, ttl);
+      // Set TTL if this is a new key
+      await redis.expire(key, ttl);
 
-    // Update endpoint breakdown
-    await redis.hincrby(breakdownKey, endpoint, actualCount);
-    await redis.expire(breakdownKey, ttl);
+      // Update endpoint breakdown
+      await redis.hincrby(breakdownKey, endpoint, actualCount);
+      await redis.expire(breakdownKey, ttl);
 
-    // Async sync to PostgreSQL (don't block the response)
-    syncToPostgreSQL(organizationId, periodKey, newCount, endpoint, actualCount).catch(
-      (error) => {
-        logger.error(error, {
-          api: "quota",
-          operation: "sync-to-postgresql",
-          organizationId,
-          periodKey,
-        });
-      }
-    );
-  } else {
+      usedRedis = true;
+
+      // Async sync to PostgreSQL (don't block the response)
+      syncToPostgreSQL(organizationId, periodKey, newCount, endpoint, actualCount).catch(
+        (error) => {
+          logger.error(error, {
+            api: "quota",
+            operation: "sync-to-postgresql",
+            organizationId,
+            periodKey,
+            endpoint,
+            count: actualCount,
+          });
+        }
+      );
+    } catch (error) {
+      logger.warn("Redis error in trackUsage, falling back to PostgreSQL", {
+        api: "quota",
+        operation: "track-redis",
+        organizationId,
+        endpoint,
+        count: actualCount,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Fall through to PostgreSQL
+    }
+  }
+
+  if (!usedRedis) {
     // No Redis - update PostgreSQL directly
     const quota = await getOrCreateQuota(organizationId);
 
@@ -416,14 +446,28 @@ export async function getUsage(organizationId: string): Promise<UsageStats> {
   // Get breakdown from Redis or PostgreSQL
   let breakdown: Record<string, number> = {};
   const redis = getRedisClient();
+  let gotFromRedis = false;
 
   if (redis) {
-    const breakdownKey = getBreakdownKey(organizationId, periodKey);
-    const redisBreakdown = await redis.hgetall(breakdownKey);
-    breakdown = Object.fromEntries(
-      Object.entries(redisBreakdown).map(([k, v]) => [k, parseInt(v, 10)])
-    );
-  } else {
+    try {
+      const breakdownKey = getBreakdownKey(organizationId, periodKey);
+      const redisBreakdown = await redis.hgetall(breakdownKey);
+      breakdown = Object.fromEntries(
+        Object.entries(redisBreakdown).map(([k, v]) => [k, parseInt(v, 10)])
+      );
+      gotFromRedis = true;
+    } catch (error) {
+      logger.warn("Redis error in getUsage breakdown, falling back to PostgreSQL", {
+        api: "quota",
+        operation: "get-breakdown-redis",
+        organizationId,
+        periodKey,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  if (!gotFromRedis) {
     const record = await prisma.aIUsageRecord.findUnique({
       where: { organizationId_periodKey: { organizationId, periodKey } },
     });
