@@ -9,11 +9,19 @@ import { type NextRequest, NextResponse } from "next/server";
 import { CVProcessor } from "@/lib/backend/cv-processor";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { getCloudStorageProvider } from "@/lib/storage/cloud/storage-provider-factory";
+import { withRateLimit } from "@/lib/rate-limiter";
+import { logger } from "@/lib/logger";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit check (expensive tier - PDF processing + AI extraction)
+    const rateLimitResponse = await withRateLimit(request, "expensive", "cv/extract");
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File;
 
@@ -68,7 +76,7 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Extract CV error:", error);
+    logger.error(error, { api: "cv/extract", operation: "extract" });
     return NextResponse.json(
       {
         success: false,

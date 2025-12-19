@@ -10,6 +10,7 @@ import { logger } from "@/lib/logger";
 import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
 import { geminiClient } from "@/lib/gemini-client";
 import { ApplicationStatus, ApplicationSource } from "@sync-hire/database";
+import { withRateLimit } from "@/lib/rate-limiter";
 import type { ExtractedCVData, ExtractedJobData, CandidateApplication, InterviewQuestions } from "@sync-hire/database";
 import type { Question } from "@/lib/types/interview-types";
 import { getStorage } from "@/lib/storage/storage-factory";
@@ -145,7 +146,7 @@ async function generateAndSaveQuestions(
       await storage.saveApplication(application);
     }
 
-    console.log(`Generated ${mergedQuestions.length} questions for application ${applicationId}`);
+    logger.info("Generated questions for application", { api: "jobs/match-candidates", applicationId, questionCount: mergedQuestions.length });
   } catch (error) {
     logger.error(error, {
       api: "jobs/[id]/match-candidates",
@@ -170,15 +171,21 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limit check (expensive tier - N x Gemini calls)
+    const rateLimitResponse = await withRateLimit(request, "expensive", "jobs/match-candidates");
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const { id: jobId } = await params;
     const storage = getStorage();
 
-    console.log(`\n🔍 [match-candidates] Starting match for job: ${jobId}`);
+    logger.info("Starting candidate match", { api: "jobs/match-candidates", jobId });
 
     // Get job
     const job = await storage.getJob(jobId);
     if (!job) {
-      console.error(`[match-candidates] Job not found: ${jobId}`);
+      logger.warn("Job not found", { api: "jobs/match-candidates", jobId });
       return NextResponse.json(
         {
           success: false,
@@ -189,14 +196,14 @@ export async function POST(
       );
     }
 
-    console.log(`📋 [match-candidates] Job: "${job.title}" at ${job.organization.name}`);
+    logger.info("Processing job", { api: "jobs/match-candidates", jobId, jobTitle: job.title, organization: job.organization.name });
 
     // Get all CVs
     const cvExtractions = await storage.getAllCVExtractions();
-    console.log(`📁 [match-candidates] Found ${cvExtractions.length} CV(s) in system`);
+    logger.info("Found CVs to process", { api: "jobs/match-candidates", jobId, cvCount: cvExtractions.length });
 
     if (cvExtractions.length === 0) {
-      console.log(`⚠️ [match-candidates] No CVs to match against`);
+      logger.info("No CVs to match against", { api: "jobs/match-candidates", jobId });
       return NextResponse.json({
         success: true,
         data: {
@@ -208,7 +215,7 @@ export async function POST(
     }
 
     const matchThreshold = job.aiMatchingThreshold || 80;
-    console.log(`🎯 [match-candidates] Match threshold: ${matchThreshold}%`);
+    logger.info("Match threshold set", { api: "jobs/match-candidates", jobId, matchThreshold });
 
     const applications: CandidateApplication[] = [];
     let skippedCount = 0;
@@ -218,20 +225,20 @@ export async function POST(
     // Process each CV
     for (const { cvId, userId, data: cvData } of cvExtractions) {
       const candidateName = cvData.personalInfo?.fullName || "Unknown";
-      console.log(`\n👤 [match-candidates] Processing: ${candidateName} (cvId: ${cvId})`);
+      logger.info("Processing candidate", { api: "jobs/match-candidates", jobId, cvId, candidateName });
 
       // Check if application already exists
       const existingApplications = await storage.getApplicationsForJob(jobId);
       const alreadyApplied = existingApplications.some(app => app.cvUploadId === cvId);
 
       if (alreadyApplied) {
-        console.log(`   ⏭️  Skipped: Already applied to this job`);
+        logger.info("Candidate already applied, skipping", { api: "jobs/match-candidates", jobId, cvId });
         skippedCount++;
         continue;
       }
 
       // Calculate match score
-      console.log(`   🤖 Calculating match score...`);
+      logger.info("Calculating match score", { api: "jobs/match-candidates", jobId, cvId });
       let matchScore: number;
       let matchReasons: string[];
       let skillGaps: string[];
@@ -258,15 +265,11 @@ export async function POST(
         continue;
       }
 
-      console.log(`   📊 Match score: ${matchScore}% (threshold: ${matchThreshold}%)`);
-      console.log(`   ✅ Reasons: ${matchReasons.join(", ")}`);
-      if (skillGaps.length > 0) {
-        console.log(`   ⚠️  Gaps: ${skillGaps.join(", ")}`);
-      }
+      logger.info("Match score calculated", { api: "jobs/match-candidates", jobId, cvId, matchScore, matchThreshold, matchReasons, skillGaps });
 
       // Only create application if above threshold
       if (matchScore >= matchThreshold) {
-        console.log(`   🎉 MATCHED! Creating application...`);
+        logger.info("Candidate matched, creating application", { api: "jobs/match-candidates", jobId, cvId, matchScore });
 
         // Save application (ID auto-generated by database via upsert on jobId + userId)
         const savedApplication = await storage.saveApplication({
@@ -308,19 +311,21 @@ export async function POST(
           })
         );
       } else {
-        console.log(`   ❌ Below threshold (${matchScore}% < ${matchThreshold}%) - not matched`);
+        logger.info("Candidate below threshold", { api: "jobs/match-candidates", jobId, cvId, matchScore, matchThreshold });
         belowThresholdCount++;
       }
     }
 
     // Summary
-    console.log(`\n📊 [match-candidates] === SUMMARY ===`);
-    console.log(`   Total CVs: ${cvExtractions.length}`);
-    console.log(`   Skipped (already applied): ${skippedCount}`);
-    console.log(`   Below threshold: ${belowThresholdCount}`);
-    console.log(`   Failed (match calculation error): ${failedCount}`);
-    console.log(`   Matched: ${applications.length}`);
-    console.log(`==============================\n`);
+    logger.info("Candidate matching complete", {
+      api: "jobs/match-candidates",
+      jobId,
+      totalCVs: cvExtractions.length,
+      skipped: skippedCount,
+      belowThreshold: belowThresholdCount,
+      failed: failedCount,
+      matched: applications.length,
+    });
 
     return NextResponse.json({
       success: true,

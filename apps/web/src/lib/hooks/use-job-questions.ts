@@ -6,6 +6,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Job as BaseJob } from "@/lib/storage/storage-interface";
 import { toast } from "sonner";
+import { handleResponseError } from "@/lib/queryClient";
 
 // Extend base Job type with computed fields from API
 export type Job = BaseJob & {
@@ -174,8 +175,7 @@ export function useGenerateJobQuestions() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to generate questions");
+        await handleResponseError(response);
       }
 
       return response.json();
@@ -262,8 +262,7 @@ export function useMatchCandidates() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to match candidates");
+        await handleResponseError(response);
       }
 
       return response.json();

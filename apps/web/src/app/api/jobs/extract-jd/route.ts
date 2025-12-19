@@ -6,12 +6,13 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
-import * as Sentry from "@sentry/nextjs";
 import { prisma } from "@sync-hire/database";
 import { JobDescriptionProcessor } from "@/lib/backend/jd-processor";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { getCloudStorageProvider } from "@/lib/storage/cloud/storage-provider-factory";
 import { requireAuth } from "@/lib/auth-server";
+import { withRateLimit } from "@/lib/rate-limiter";
+import { logger } from "@/lib/logger";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -20,6 +21,12 @@ export async function POST(request: NextRequest) {
     // Require authentication
     const session = await requireAuth();
     const userId = session.user.id;
+
+    // Rate limit check (expensive tier - PDF processing + AI extraction)
+    const rateLimitResponse = await withRateLimit(request, "expensive", "jobs/extract-jd", userId);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
@@ -102,10 +109,7 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
-    Sentry.captureException(error, {
-      tags: { api: "jobs/extract-jd", operation: "extract" },
-    });
-    console.error("Extract JD error:", error);
+    logger.error(error, { api: "jobs/extract-jd", operation: "extract" });
     return NextResponse.json(
       {
         success: false,

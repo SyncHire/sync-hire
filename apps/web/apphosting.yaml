@@ -130,3 +130,9 @@ env:
     value: "SyncHire <noreply@sync-hire.com>"
     availability:
       - RUNTIME
+
+  # Rate limiting (Redis TCP) - optional, enabled in production
+  - variable: REDIS_URL
+    secret: REDIS_URL
+    availability:
+      - RUNTIME

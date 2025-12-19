@@ -5,6 +5,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/hooks/use-toast";
+import { handleResponseError } from "@/lib/queryClient";
 
 interface QuestionSetItem {
   jobId: string;
@@ -67,8 +68,7 @@ export function useApplyToJob() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to apply");
+        await handleResponseError(response);
       }
 
       return response.json();

@@ -7,6 +7,8 @@ import { getStorage } from "@/lib/storage/storage-factory";
 import { geminiClient } from "@/lib/gemini-client";
 import { z } from "zod";
 import type { AIEvaluation } from "@/lib/types/interview-types";
+import { withRateLimit } from "@/lib/rate-limiter";
+import { logger } from "@/lib/logger";
 
 const EvaluationSchema = z.object({
   overallScore: z.number().min(0).max(100),
@@ -26,10 +28,16 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limit check (moderate tier - transcript analysis)
+    const rateLimitResponse = await withRateLimit(request, "moderate", "interviews/analyze");
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const { id: interviewId } = await params;
     const storage = getStorage();
 
-    console.log(`🔄 Analyzing interview: ${interviewId}`);
+    logger.info("Analyzing interview", { api: "interviews/analyze", interviewId });
 
     // Get the interview
     const interview = await storage.getInterview(interviewId);
@@ -42,7 +50,7 @@ export async function POST(
 
     // Check if already has evaluation
     if (interview.aiEvaluation) {
-      console.log(`✅ Interview already has evaluation`);
+      logger.info("Interview already has evaluation", { api: "interviews/analyze", interviewId });
       return NextResponse.json({
         success: true,
         message: "Interview already has evaluation",
@@ -53,7 +61,7 @@ export async function POST(
     // Get the transcript
     const transcript = interview.transcript;
     if (!transcript || transcript.length === 0) {
-      console.error(`❌ No transcript available for interview: ${interviewId}`);
+      logger.warn("No transcript available for interview", { api: "interviews/analyze", interviewId });
 
       // Don't change status - interview may still be in progress or pending
       // Just return error indicating transcript is not yet available
@@ -67,7 +75,7 @@ export async function POST(
       );
     }
 
-    console.log(`📝 Analyzing transcript (${transcript.length} characters)...`);
+    logger.info("Analyzing transcript", { api: "interviews/analyze", interviewId, transcriptLength: transcript.length });
 
     // Generate AI evaluation using Gemini
     const prompt = `Analyze this interview transcript and provide an evaluation.
@@ -112,7 +120,7 @@ Be fair but honest in your assessment. Base scores on what was actually discusse
       interview.status = "COMPLETED";
       await storage.saveInterview(interviewId, interview);
 
-      console.log(`✅ AI evaluation generated: ${aiEvaluation.overallScore}% overall`);
+      logger.info("AI evaluation generated", { api: "interviews/analyze", interviewId, score: aiEvaluation.overallScore });
 
       return NextResponse.json({
         success: true,
@@ -120,7 +128,7 @@ Be fair but honest in your assessment. Base scores on what was actually discusse
         interview,
       });
     } catch (aiError) {
-      console.error("❌ AI evaluation failed:", aiError);
+      logger.error(aiError, { api: "interviews/analyze", operation: "ai-evaluation", interviewId });
 
       // Don't change status - analysis failure is retriable
       // Return error so caller can retry later
@@ -134,7 +142,7 @@ Be fair but honest in your assessment. Base scores on what was actually discusse
       );
     }
   } catch (error) {
-    console.error("Error analyzing interview:", error);
+    logger.error(error, { api: "interviews/analyze", operation: "analyze" });
     return NextResponse.json(
       { error: "Failed to analyze interview" },
       { status: 500 }

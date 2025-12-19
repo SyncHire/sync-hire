@@ -13,9 +13,16 @@ import { getStorage } from "@/lib/storage/storage-factory";
 import type { InterviewQuestions } from "@/lib/storage/storage-interface";
 import { getQuestionCounts } from "@sync-hire/database";
 import { toEmploymentType, toWorkArrangement } from "@/lib/utils/type-adapters";
+import { withRateLimit } from "@/lib/rate-limiter";
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit check (moderate tier - personalized question generation)
+    const rateLimitResponse = await withRateLimit(request, "moderate", "jobs/apply");
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // Parse request body
     const body = await request.json();
     const { cvId, jobId } = body;
@@ -47,7 +54,7 @@ export async function POST(request: NextRequest) {
     const cvData = await storage.getCVExtraction(cvId);
 
     if (!cvData) {
-      console.error("CV not found for interview question generation:", { cvId, jobId });
+      logger.warn("CV not found for interview question generation", { api: "jobs/apply", cvId, jobId });
       return NextResponse.json(
         {
           error: "CV not found",

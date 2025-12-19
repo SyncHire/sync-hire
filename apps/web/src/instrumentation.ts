@@ -36,6 +36,10 @@ export async function register() {
         }
       }
     }
+
+    // Validate rate limit connection (non-blocking - just logs status)
+    const { validateRateLimitConnection } = await import('./lib/rate-limiter');
+    await validateRateLimitConnection();
   }
 
   if (process.env.NEXT_RUNTIME === 'edge') {
