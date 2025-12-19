@@ -64,6 +64,7 @@ export function ContextSwitcher() {
   const currentLabel = isCandidate
     ? "Personal"
     : activeOrg?.name || "Select Organization";
+  const activeOrgLogo = getOrganizationLogoUrl(activeOrg);
 
   async function handleSwitchToPersonal() {
     router.push("/candidate/jobs");
@@ -84,9 +85,9 @@ export function ContextSwitcher() {
         >
           {isCandidate ? (
             <User className="h-3 w-3" />
-          ) : getOrganizationLogoUrl(activeOrg) ? (
+          ) : activeOrgLogo ? (
             <img
-              src={getOrganizationLogoUrl(activeOrg)!}
+              src={activeOrgLogo}
               alt={activeOrg?.name || ""}
               className="h-4 w-4 rounded object-cover"
             />
@@ -118,28 +119,31 @@ export function ContextSwitcher() {
         <DropdownMenuSeparator />
 
         {/* Organization list */}
-        {orgs?.map((org) => (
-          <DropdownMenuItem
-            key={org.id}
-            onClick={() => handleSwitchToOrg(org.id)}
-            className="cursor-pointer"
-            disabled={setActiveOrg.isPending}
-          >
-            {getOrganizationLogoUrl(org) ? (
-              <img
-                src={getOrganizationLogoUrl(org)!}
-                alt={org.name}
-                className="h-4 w-4 mr-2 rounded object-cover"
-              />
-            ) : (
-              <Building2 className="h-4 w-4 mr-2" />
-            )}
-            <span className="flex-1 truncate">{org.name}</span>
-            {!isCandidate && activeOrg?.id === org.id && (
-              <span className="ml-auto text-xs text-primary">Active</span>
-            )}
-          </DropdownMenuItem>
-        ))}
+        {orgs?.map((org) => {
+          const logoUrl = getOrganizationLogoUrl(org);
+          return (
+            <DropdownMenuItem
+              key={org.id}
+              onClick={() => handleSwitchToOrg(org.id)}
+              className="cursor-pointer"
+              disabled={setActiveOrg.isPending}
+            >
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={org.name}
+                  className="h-4 w-4 mr-2 rounded object-cover"
+                />
+              ) : (
+                <Building2 className="h-4 w-4 mr-2" />
+              )}
+              <span className="flex-1 truncate">{org.name}</span>
+              {!isCandidate && activeOrg?.id === org.id && (
+                <span className="ml-auto text-xs text-primary">Active</span>
+              )}
+            </DropdownMenuItem>
+          );
+        })}
 
         {/* Settings link - only show when in org view */}
         {!isCandidate && activeOrg && (
