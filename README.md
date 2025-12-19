@@ -1,5 +1,24 @@
 # SyncHire - AI-Powered Interview Platform
 
+> Hiring is broken. Companies spend 40+ hours per role on screening calls, while great candidates slip through the cracks. SyncHire fixes this.
+
+## What is SyncHire?
+
+SyncHire is an AI-powered interview platform that conducts preliminary video interviews 24/7. Candidates interview on their schedule with our AI interviewer. Every response is transcribed, scored, and analyzed. Recruiters review only the best matches.
+
+## Why SyncHire?
+
+- **Always-on interviews** — Candidates interview anytime, anywhere. No scheduling headaches.
+- **AI-generated questions** — Upload a job description, get tailored interview questions instantly.
+- **Smart CV matching** — 70-95% match scores based on skills, experience, and role fit.
+- **Structured scoring** — Every candidate scored on technical skills, communication, problem-solving, and experience relevance.
+- **Real-time transcription** — Live captions and full transcripts for every interview.
+- **Two-sided platform** — Works for both employers posting jobs AND candidates finding opportunities.
+
+---
+
+## Tech Stack
+
 Real-time AI interview platform using Next.js, Python Vision-Agents, and Google Cloud Platform.
 
 ## Project Structure
@@ -138,6 +157,8 @@ Setup scripts run in dry-run mode by default; pass `--create` to execute.
 
 ## Project Status
 
+**Currently in Open Beta** — [Try it free](https://synchire.com)
+
 ### ✅ Completed
 - Monorepo foundation (Turborepo + PNPM)
 - Next.js 16 application with TypeScript
@@ -148,10 +169,9 @@ Setup scripts run in dry-run mode by default; pass `--create` to execute.
 - CV parsing and analysis (Gemini AI)
 - Question generation from job descriptions
 - HR dashboard with job management
-
-### 🚧 In Progress
-- Real-time AI interviews (Stream Video)
-- Interview summaries and scoring
+- Real-time AI video interviews (Stream Video + Deepgram)
+- Interview scoring and AI evaluation
+- Candidate job matching with scores
 
 ### 📋 Planned
 - Email notifications
