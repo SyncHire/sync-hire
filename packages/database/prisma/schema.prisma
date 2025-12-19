@@ -116,6 +116,7 @@ model Organization {
   members     Member[]
   jobs        Job[]
   invitations Invitation[]
+  quota       OrganizationQuota?
 
   @@map("organization")
 }
@@ -160,6 +161,51 @@ enum OrgMemberRole {
   owner
   admin
   member
+}
+
+// =============================================================================
+// ORGANIZATION QUOTAS (AI Usage Limits)
+// =============================================================================
+
+enum QuotaTier {
+  FREE         // 100 requests/month
+  STARTER      // 500 requests/month
+  PROFESSIONAL // 2000 requests/month
+  ENTERPRISE   // unlimited
+}
+
+model OrganizationQuota {
+  id               String    @id @default(cuid())
+  organizationId   String    @unique
+  tier             QuotaTier @default(FREE)
+  monthlyLimit     Int?      @default(100) // null = unlimited for ENTERPRISE
+  warningThreshold Int       @default(80)  // warn at 80% usage
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  usageRecords AIUsageRecord[]
+
+  @@map("organization_quota")
+}
+
+model AIUsageRecord {
+  id             String @id @default(cuid())
+  organizationId String
+  quotaId        String
+  periodKey      String // "YYYY-MM" format for monthly tracking
+  usageCount     Int    @default(0)
+  /// [EndpointUsageBreakdown]
+  endpointBreakdown Json? // Breakdown by endpoint for analytics
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  quota OrganizationQuota @relation(fields: [quotaId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, periodKey])
+  @@index([organizationId])
+  @@index([periodKey])
+  @@map("ai_usage_record")
 }
 
 // =============================================================================

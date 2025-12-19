@@ -14,6 +14,8 @@ import type { InterviewQuestions } from "@/lib/storage/storage-interface";
 import { getQuestionCounts } from "@sync-hire/database";
 import { toEmploymentType, toWorkArrangement } from "@/lib/utils/type-adapters";
 import { withRateLimit } from "@/lib/rate-limiter";
+import { withQuota } from "@/lib/with-quota";
+import { trackUsage } from "@/lib/ai-usage-tracker";
 
 export async function POST(request: NextRequest) {
   try {
@@ -70,23 +72,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get job for organization ID (needed for quota check)
+    const job = await storage.getJob(jobId);
+    if (!job) {
+      return NextResponse.json(
+        {
+          error: "Job not found",
+          message: `No job found for ID: ${jobId}`,
+        },
+        { status: 400 },
+      );
+    }
+    const organizationId = job.organizationId;
+
+    // Check quota before generating questions
+    const quotaResponse = await withQuota(organizationId, "jobs/apply");
+    if (quotaResponse) {
+      return quotaResponse;
+    }
+
     // Try to get JD extraction first (for jobs created via upload)
     let jdData = await storage.getExtraction(jobId);
 
-    // If no extraction, try to get job directly and build minimal JD data
+    // If no extraction, build minimal JD data from job
     if (!jdData) {
-      const job = await storage.getJob(jobId);
-      if (!job) {
-        return NextResponse.json(
-          {
-            error: "Job not found",
-            message: `No job found for ID: ${jobId}`,
-          },
-          { status: 400 },
-        );
-      }
-
-      // Build minimal JD data from job for question generation
       jdData = {
         title: job.title,
         company: job.organization.name,
@@ -145,6 +154,9 @@ export async function POST(request: NextRequest) {
 
     // Save questions to storage
     await storage.saveInterviewQuestions(cvId, jobId, interviewQuestions);
+
+    // Track usage after successful question generation
+    await trackUsage(organizationId, "jobs/apply");
 
     const counts = getQuestionCounts(interviewQuestions);
     return NextResponse.json(

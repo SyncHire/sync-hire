@@ -9,6 +9,9 @@ import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { geminiClient } from "@/lib/gemini-client";
 import { withRateLimit } from "@/lib/rate-limiter";
+import { withQuota } from "@/lib/with-quota";
+import { trackUsage } from "@/lib/ai-usage-tracker";
+import { getStorage } from "@/lib/storage/storage-factory";
 
 const requestSchema = z.object({
   jobId: z.string(),
@@ -35,7 +38,24 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, requirements } = requestSchema.parse(body);
+    const { jobId, title, description, requirements } = requestSchema.parse(body);
+
+    // Get organization from job for quota check
+    const storage = getStorage();
+    const job = await storage.getJob(jobId);
+    if (!job) {
+      return NextResponse.json(
+        { success: false, error: "Job not found" },
+        { status: 404 }
+      );
+    }
+    const organizationId = job.organizationId;
+
+    // Check quota before generating questions
+    const quotaResponse = await withQuota(organizationId, "jobs/generate-questions");
+    if (quotaResponse) {
+      return quotaResponse;
+    }
 
     const jobContext = `
 Job Title: ${title}
@@ -74,6 +94,9 @@ IMPORTANT: Do not include the candidate's name in any question. Keep questions p
     const content = response.text || "";
     const parsed = JSON.parse(content);
     const validated = questionsSchema.parse(parsed);
+
+    // Track usage after successful generation
+    await trackUsage(organizationId, "jobs/generate-questions");
 
     return NextResponse.json({
       success: true,

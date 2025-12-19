@@ -9,6 +9,8 @@ import { geminiClient } from "@/lib/gemini-client";
 import { z } from "zod";
 import type { AIEvaluation } from "@/lib/types/interview-types";
 import { withRateLimit } from "@/lib/rate-limiter";
+import { withQuota } from "@/lib/with-quota";
+import { trackUsage } from "@/lib/ai-usage-tracker";
 
 const EvaluationSchema = z.object({
   overallScore: z.number().min(0).max(100),
@@ -50,6 +52,22 @@ export async function POST(
         { error: "Interview not found" },
         { status: 404 }
       );
+    }
+
+    // Get organization from job for quota check
+    const job = await storage.getJob(interview.jobId);
+    if (!job) {
+      return NextResponse.json(
+        { error: "Job not found for interview" },
+        { status: 404 }
+      );
+    }
+    const organizationId = job.organizationId;
+
+    // Check quota before analysis
+    const quotaResponse = await withQuota(organizationId, "interviews/analyze");
+    if (quotaResponse) {
+      return quotaResponse;
     }
 
     // Check if already has evaluation
@@ -141,6 +159,9 @@ Be fair but honest in your assessment. Base scores on what was actually discusse
         interviewId,
         score: aiEvaluation.overallScore,
       });
+
+      // Track usage after successful evaluation
+      await trackUsage(organizationId, "interviews/analyze");
 
       return NextResponse.json({
         success: true,

@@ -338,6 +338,37 @@ async function main() {
   console.log('✓ Upserted organization members');
 
   // =============================================================================
+  // ORGANIZATION QUOTAS (AI usage quotas)
+  // =============================================================================
+
+  console.log('Upserting organization quotas...');
+
+  const orgQuotas = [
+    { org: stripeOrg, tier: 'PROFESSIONAL' as const, limit: 2000 },
+    { org: databricksOrg, tier: 'PROFESSIONAL' as const, limit: 2000 },
+    { org: vercelOrg, tier: 'STARTER' as const, limit: 500 },
+    { org: googleOrg, tier: 'ENTERPRISE' as const, limit: null },
+    { org: spotifyOrg, tier: 'FREE' as const, limit: 100 },
+  ];
+
+  for (const { org, tier, limit } of orgQuotas) {
+    await prisma.organizationQuota.upsert({
+      where: { organizationId: org.id },
+      create: {
+        organizationId: org.id,
+        tier,
+        monthlyLimit: limit,
+        warningThreshold: 80,
+      },
+      update: {
+        // Don't override existing tier/limits on re-seed
+      },
+    });
+  }
+
+  console.log('✓ Upserted organization quotas (mixed tiers)');
+
+  // =============================================================================
   // CV UPLOAD (Demo Candidate)
   // =============================================================================
 
@@ -1086,6 +1117,7 @@ Candidate: First, I'd use observability tools like Datadog or New Relic to ident
   console.log('- Users: 6 (1 candidate, 5 employers)');
   console.log('- Organizations: 5 (Stripe, Databricks, Vercel, Google, Spotify)');
   console.log('- Organization Members: 5');
+  console.log('- Organization Quotas: 5 (2 PRO, 1 STARTER, 1 ENTERPRISE, 1 FREE)');
   console.log('- CV Uploads: 1');
   console.log('- Jobs: 6');
   console.log('- Applications: 3');

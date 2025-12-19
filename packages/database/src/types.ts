@@ -31,6 +31,22 @@ export type OrganizationWithJobs = Prisma.OrganizationGetPayload<{
   };
 }>;
 
+export type OrganizationWithQuota = Prisma.OrganizationGetPayload<{
+  include: {
+    quota: {
+      include: {
+        usageRecords: true;
+      };
+    };
+  };
+}>;
+
+export type QuotaWithUsage = Prisma.OrganizationQuotaGetPayload<{
+  include: {
+    usageRecords: true;
+  };
+}>;
+
 export type MemberWithRelations = Prisma.MemberGetPayload<{
   include: {
     organization: true;
