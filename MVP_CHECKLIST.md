@@ -55,7 +55,7 @@
 ### High Priority
 - [ ] Email notifications (interview invites, status updates)
 - [ ] Analytics dashboard for HR
-- [ ] Testing framework (Vitest, Playwright)
+- [x] Testing framework (Vitest, Playwright)
 - [ ] CI/CD pipeline (GitHub Actions)
 
 ### Future
@@ -89,6 +89,14 @@ pnpm dev          # Start all services
 pnpm build        # Build all workspaces
 pnpm typecheck    # Type check
 pnpm db:generate  # Regenerate Prisma client
+```
+
+### Testing (apps/web)
+
+```bash
+pnpm test         # Run Vitest in watch mode
+pnpm test:run     # Run tests once
+pnpm test:e2e     # Run Playwright E2E tests
 ```
 
 See `.env.example` files for required environment variables.
