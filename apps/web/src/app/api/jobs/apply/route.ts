@@ -13,19 +13,14 @@ import { getStorage } from "@/lib/storage/storage-factory";
 import type { InterviewQuestions } from "@/lib/storage/storage-interface";
 import { getQuestionCounts } from "@sync-hire/database";
 import { toEmploymentType, toWorkArrangement } from "@/lib/utils/type-adapters";
-import {
-  checkRateLimit,
-  createRateLimitResponse,
-  getRequestIdentifier,
-} from "@/lib/rate-limiter";
+import { withRateLimit } from "@/lib/rate-limiter";
 
 export async function POST(request: NextRequest) {
   try {
     // Rate limit check (moderate tier - personalized question generation)
-    const identifier = getRequestIdentifier(request);
-    const rateLimit = await checkRateLimit(identifier, "moderate", "jobs/apply");
-    if (!rateLimit.allowed) {
-      return createRateLimitResponse(rateLimit);
+    const rateLimitResponse = await withRateLimit(request, "moderate", "jobs/apply");
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     // Parse request body

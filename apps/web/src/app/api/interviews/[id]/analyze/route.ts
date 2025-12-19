@@ -7,11 +7,7 @@ import { getStorage } from "@/lib/storage/storage-factory";
 import { geminiClient } from "@/lib/gemini-client";
 import { z } from "zod";
 import type { AIEvaluation } from "@/lib/types/interview-types";
-import {
-  checkRateLimit,
-  createRateLimitResponse,
-  getRequestIdentifier,
-} from "@/lib/rate-limiter";
+import { withRateLimit } from "@/lib/rate-limiter";
 import { logger } from "@/lib/logger";
 
 const EvaluationSchema = z.object({
@@ -33,10 +29,9 @@ export async function POST(
 ) {
   try {
     // Rate limit check (moderate tier - transcript analysis)
-    const identifier = getRequestIdentifier(request);
-    const rateLimit = await checkRateLimit(identifier, "moderate", "interviews/analyze");
-    if (!rateLimit.allowed) {
-      return createRateLimitResponse(rateLimit);
+    const rateLimitResponse = await withRateLimit(request, "moderate", "interviews/analyze");
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const { id: interviewId } = await params;

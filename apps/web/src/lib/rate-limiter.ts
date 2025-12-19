@@ -179,3 +179,23 @@ export function getRequestIdentifier(
   const ip = forwarded?.split(",")[0]?.trim() ?? "unknown";
   return `ip:${ip}`;
 }
+
+/**
+ * Combined rate limit check that returns a 429 response if exceeded, or null if allowed.
+ * Simplifies the common pattern in route handlers.
+ */
+export async function withRateLimit(
+  request: Request,
+  tier: RateLimitTier,
+  endpoint: string,
+  userId?: string | null
+): Promise<Response | null> {
+  const identifier = getRequestIdentifier(request, userId);
+  const result = await checkRateLimit(identifier, tier, endpoint);
+
+  if (!result.allowed) {
+    return createRateLimitResponse(result);
+  }
+
+  return null;
+}

@@ -10,11 +10,7 @@ import { logger } from "@/lib/logger";
 import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
 import { geminiClient } from "@/lib/gemini-client";
 import { ApplicationStatus, ApplicationSource } from "@sync-hire/database";
-import {
-  checkRateLimit,
-  createRateLimitResponse,
-  getRequestIdentifier,
-} from "@/lib/rate-limiter";
+import { withRateLimit } from "@/lib/rate-limiter";
 import type { ExtractedCVData, ExtractedJobData, CandidateApplication, InterviewQuestions } from "@sync-hire/database";
 import type { Question } from "@/lib/types/interview-types";
 import { getStorage } from "@/lib/storage/storage-factory";
@@ -175,11 +171,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Rate limit check (expensive tier - N × Gemini calls)
-    const identifier = getRequestIdentifier(request);
-    const rateLimit = await checkRateLimit(identifier, "expensive", "jobs/match-candidates");
-    if (!rateLimit.allowed) {
-      return createRateLimitResponse(rateLimit);
+    // Rate limit check (expensive tier - N x Gemini calls)
+    const rateLimitResponse = await withRateLimit(request, "expensive", "jobs/match-candidates");
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const { id: jobId } = await params;

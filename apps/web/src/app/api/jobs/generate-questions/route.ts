@@ -7,11 +7,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { geminiClient } from "@/lib/gemini-client";
-import {
-  checkRateLimit,
-  createRateLimitResponse,
-  getRequestIdentifier,
-} from "@/lib/rate-limiter";
+import { withRateLimit } from "@/lib/rate-limiter";
 import { logger } from "@/lib/logger";
 
 const requestSchema = z.object({
@@ -33,10 +29,9 @@ const questionsSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // Rate limit check (moderate tier - single Gemini call)
-    const identifier = getRequestIdentifier(request);
-    const rateLimit = await checkRateLimit(identifier, "moderate", "jobs/generate-questions");
-    if (!rateLimit.allowed) {
-      return createRateLimitResponse(rateLimit);
+    const rateLimitResponse = await withRateLimit(request, "moderate", "jobs/generate-questions");
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const body = await request.json();

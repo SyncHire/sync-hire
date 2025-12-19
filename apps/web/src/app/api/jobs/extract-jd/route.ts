@@ -6,17 +6,12 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
-import * as Sentry from "@sentry/nextjs";
 import { prisma } from "@sync-hire/database";
 import { JobDescriptionProcessor } from "@/lib/backend/jd-processor";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { getCloudStorageProvider } from "@/lib/storage/cloud/storage-provider-factory";
 import { requireAuth } from "@/lib/auth-server";
-import {
-  checkRateLimit,
-  createRateLimitResponse,
-  getRequestIdentifier,
-} from "@/lib/rate-limiter";
+import { withRateLimit } from "@/lib/rate-limiter";
 import { logger } from "@/lib/logger";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -28,10 +23,9 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
 
     // Rate limit check (expensive tier - PDF processing + AI extraction)
-    const identifier = getRequestIdentifier(request, userId);
-    const rateLimit = await checkRateLimit(identifier, "expensive", "jobs/extract-jd");
-    if (!rateLimit.allowed) {
-      return createRateLimitResponse(rateLimit);
+    const rateLimitResponse = await withRateLimit(request, "expensive", "jobs/extract-jd", userId);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const formData = await request.formData();
@@ -115,9 +109,6 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
-    Sentry.captureException(error, {
-      tags: { api: "jobs/extract-jd", operation: "extract" },
-    });
     logger.error(error, { api: "jobs/extract-jd", operation: "extract" });
     return NextResponse.json(
       {
