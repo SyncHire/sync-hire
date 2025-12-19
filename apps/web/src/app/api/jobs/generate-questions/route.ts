@@ -7,6 +7,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { geminiClient } from "@/lib/gemini-client";
+import {
+  checkRateLimit,
+  createRateLimitResponse,
+  getRequestIdentifier,
+} from "@/lib/rate-limiter";
+import { logger } from "@/lib/logger";
 
 const requestSchema = z.object({
   jobId: z.string(),
@@ -26,6 +32,13 @@ const questionsSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit check (moderate tier - single Gemini call)
+    const identifier = getRequestIdentifier(request);
+    const rateLimit = await checkRateLimit(identifier, "moderate", "jobs/generate-questions");
+    if (!rateLimit.allowed) {
+      return createRateLimitResponse(rateLimit);
+    }
+
     const body = await request.json();
     const { title, description, requirements } = requestSchema.parse(body);
 
@@ -72,7 +85,7 @@ IMPORTANT: Do not include the candidate's name in any question. Keep questions p
       data: validated,
     });
   } catch (error) {
-    console.error("Generate questions error:", error);
+    logger.error(error, { api: "jobs/generate-questions", operation: "generate" });
     return NextResponse.json(
       {
         success: false,

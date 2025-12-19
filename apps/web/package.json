@@ -58,6 +58,8 @@
     "@sync-hire/database": "workspace:*",
     "@tanstack/react-query": "^5.90.7",
     "@types/pg": "8.16.0",
+    "@upstash/ratelimit": "^2.0.7",
+    "@upstash/redis": "^1.35.8",
     "better-auth": "^1.4.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

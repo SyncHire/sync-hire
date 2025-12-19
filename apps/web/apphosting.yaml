@@ -130,3 +130,13 @@ env:
     value: "SyncHire <noreply@sync-hire.com>"
     availability:
       - RUNTIME
+
+  # Rate limiting (Upstash Redis) - optional, enabled in production
+  - variable: UPSTASH_REDIS_REST_URL
+    secret: UPSTASH_REDIS_REST_URL
+    availability:
+      - RUNTIME
+  - variable: UPSTASH_REDIS_REST_TOKEN
+    secret: UPSTASH_REDIS_REST_TOKEN
+    availability:
+      - RUNTIME

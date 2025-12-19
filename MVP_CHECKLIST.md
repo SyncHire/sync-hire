@@ -12,7 +12,7 @@
 | Cloud Storage | 100% | ✅ Complete |
 | Monitoring | 100% | ✅ Complete |
 | Testing | 0% | ❌ Not Started |
-| Production Hardening | 40% | 🚧 In Progress |
+| Production Hardening | 60% | 🚧 In Progress |
 
 ---
 
@@ -80,7 +80,7 @@
 - [ ] API integration tests for auth routes
 
 ### Production Hardening
-- [ ] Rate limiting (Upstash Redis) - AI endpoints
+- [x] Rate limiting (Redis) - AI endpoints
 - [ ] Smart polling (exponential backoff in hooks)
 - [ ] Bundle optimization (tree shaking, code splitting)
 
@@ -97,7 +97,7 @@
 | Google OAuth | Authentication | ✅ Configured | Free |
 | Sentry | Error monitoring | ✅ Active | $29/mo |
 | Stream Video | WebRTC calls | ✅ Active | Usage-based |
-| Upstash Redis | Rate limiting | ❌ Not setup | $0-10/mo |
+| Upstash Redis | Rate limiting | ✅ Configured | $0-10/mo |
 | Resend | Transactional email | ✅ Configured | $0-20/mo |
 
 *Covered by ~$2k GCP credits
@@ -151,9 +151,10 @@ EMAIL_FROM                # e.g., "SyncHire <noreply@yourdomain.com>"
 
 ### Optional
 ```bash
-# Rate Limiting (not yet implemented)
-UPSTASH_REDIS_REST_URL
-UPSTASH_REDIS_REST_TOKEN
+# Rate Limiting (enabled automatically in production when Upstash is configured)
+UPSTASH_REDIS_REST_URL    # Upstash Redis HTTP endpoint
+UPSTASH_REDIS_REST_TOKEN  # Upstash Redis auth token
+RATE_LIMIT_ENABLED        # Force enable/disable ("true"/"false")
 ```
 
 ---

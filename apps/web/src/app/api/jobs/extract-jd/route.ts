@@ -12,6 +12,12 @@ import { JobDescriptionProcessor } from "@/lib/backend/jd-processor";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { getCloudStorageProvider } from "@/lib/storage/cloud/storage-provider-factory";
 import { requireAuth } from "@/lib/auth-server";
+import {
+  checkRateLimit,
+  createRateLimitResponse,
+  getRequestIdentifier,
+} from "@/lib/rate-limiter";
+import { logger } from "@/lib/logger";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -20,6 +26,13 @@ export async function POST(request: NextRequest) {
     // Require authentication
     const session = await requireAuth();
     const userId = session.user.id;
+
+    // Rate limit check (expensive tier - PDF processing + AI extraction)
+    const identifier = getRequestIdentifier(request, userId);
+    const rateLimit = await checkRateLimit(identifier, "expensive", "jobs/extract-jd");
+    if (!rateLimit.allowed) {
+      return createRateLimitResponse(rateLimit);
+    }
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
@@ -105,7 +118,7 @@ export async function POST(request: NextRequest) {
     Sentry.captureException(error, {
       tags: { api: "jobs/extract-jd", operation: "extract" },
     });
-    console.error("Extract JD error:", error);
+    logger.error(error, { api: "jobs/extract-jd", operation: "extract" });
     return NextResponse.json(
       {
         success: false,
