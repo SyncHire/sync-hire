@@ -30,6 +30,7 @@ import { signOut } from "@/lib/auth-client";
 import { AboutDialog } from "./AboutDialog";
 import { ContextSwitcher } from "./ContextSwitcher";
 import { Logo } from "./Logo";
+import { QuotaUsageIndicator } from "./QuotaUsageIndicator";
 
 export type AppView = "candidate" | "hr";
 
@@ -129,6 +130,8 @@ export function MainHeader({ view }: MainHeaderProps) {
               placeholder="Search..."
             />
           </div>
+
+          {isHRView && <QuotaUsageIndicator />}
 
           <Button
             variant="ghost"

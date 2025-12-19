@@ -232,6 +232,57 @@ const user: UserWithInterviews = await prisma.user.findFirst({
 - Use `Prisma.XGetPayload<{ include: {...} }>` for type-safe relations
 - Export from `@sync-hire/database` for reuse across apps
 
+## API Routes
+
+### Standardized Responses
+- **Always use `@/lib/api-response`** for consistent API responses (Stripe/Vercel pattern)
+- Use `errors.*` helpers for error responses, `successResponse()` for success
+
+```typescript
+import { errors, successResponse } from "@/lib/api-response";
+
+// Error responses
+return errors.badRequest("Missing required field");
+return errors.unauthorized();  // 401
+return errors.forbidden("Not a member of this organization");  // 403
+return errors.notFound("Job");  // 404 "Job not found"
+return errors.validation("Validation failed", [{ field: "email", message: "Invalid" }]);
+return errors.rateLimited();  // 429
+return errors.internal();  // 500
+
+// Success responses
+return successResponse({ data: result });
+return createdResponse({ id: newId }, "/api/resource/newId");
+```
+
+### Permission Checks
+- **Always verify resource access** before returning data
+- Use `requireAuth()` from `@/lib/auth-server` to get authenticated user
+- Check organization membership for org-scoped resources
+
+```typescript
+import { requireAuth } from "@/lib/auth-server";
+import { prisma } from "@sync-hire/database";
+import { errors, successResponse } from "@/lib/api-response";
+
+export async function GET(request: Request, { params }: { params: Promise<{ orgId: string }> }) {
+  const session = await requireAuth();
+  const userId = session.user.id;
+  const { orgId } = await params;
+
+  // Verify membership before returning org data
+  const membership = await prisma.member.findFirst({
+    where: { userId, organizationId: orgId },
+  });
+
+  if (!membership) {
+    return errors.forbidden("Not a member of this organization");
+  }
+
+  // ... fetch and return data
+}
+```
+
 ## Next.js 16
 
 - **Middleware renamed to proxy**: Use `src/proxy.ts` with `export function proxy()` instead of `middleware.ts`
