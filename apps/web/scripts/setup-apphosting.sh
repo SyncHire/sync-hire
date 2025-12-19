@@ -160,9 +160,8 @@ set_secret "SENTRY_DSN" "$NEXT_PUBLIC_SENTRY_DSN"
 # Email (Resend)
 set_secret "RESEND_API_KEY" "$RESEND_API_KEY"
 
-# Rate Limiting (Upstash Redis) - optional
-set_secret "UPSTASH_REDIS_REST_URL" "$UPSTASH_REDIS_REST_URL"
-set_secret "UPSTASH_REDIS_REST_TOKEN" "$UPSTASH_REDIS_REST_TOKEN"
+# Rate Limiting (Redis TCP) - optional
+set_secret "REDIS_URL" "$REDIS_URL"
 
 echo ""
 echo "🔐 Checking backend access to secrets..."
@@ -174,7 +173,7 @@ BACKEND_NAME="${BACKEND_NAME:-synchire}"
 BACKEND_SA="firebase-app-hosting-compute@${PROJECT_ID}.iam.gserviceaccount.com"
 
 # List of all secrets to grant access
-SECRETS="GEMINI_API_KEY STREAM_API_SECRET BETTER_AUTH_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET API_SECRET_KEY SENTRY_DSN RESEND_API_KEY UPSTASH_REDIS_REST_URL UPSTASH_REDIS_REST_TOKEN"
+SECRETS="GEMINI_API_KEY STREAM_API_SECRET BETTER_AUTH_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET API_SECRET_KEY SENTRY_DSN RESEND_API_KEY REDIS_URL"
 
 for secret in $SECRETS; do
   # Check if secret exists first
@@ -261,7 +260,7 @@ echo ""
 if [ "$DRY_RUN" = true ]; then
   echo "📋 DRY-RUN Summary:"
   echo "  Bucket: gs://$GCS_BUCKET"
-  echo "  Secrets: GEMINI_API_KEY, STREAM_API_SECRET, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SENTRY_DSN, RESEND_API_KEY, UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN"
+  echo "  Secrets: GEMINI_API_KEY, STREAM_API_SECRET, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SENTRY_DSN, RESEND_API_KEY, REDIS_URL"
   echo "  VPC: $VPC_NETWORK / $VPC_SUBNET"
   echo ""
   echo "To create these resources, run:"

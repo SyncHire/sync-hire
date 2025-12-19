@@ -1,16 +1,15 @@
 /**
- * Rate Limiter with Upstash Redis
+ * Rate Limiter with Redis (TCP)
  *
- * Optional rate limiting for AI endpoints using @upstash/ratelimit.
- * Enabled when UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are set,
- * and either NODE_ENV is "production" OR RATE_LIMIT_ENABLED is "true".
+ * Optional rate limiting for AI endpoints using rate-limiter-flexible with ioredis.
+ * Enabled when REDIS_URL is set, and either NODE_ENV is "production" OR RATE_LIMIT_ENABLED is "true".
  *
- * Uses sliding window algorithm for fair rate limiting.
+ * Uses fixed window algorithm for efficient rate limiting.
  * Falls back to no-op when disabled for local development.
  */
 
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+import Redis from "ioredis";
+import { RateLimiterRedis } from "rate-limiter-flexible";
 import { logger } from "./logger";
 
 export type RateLimitTier = "expensive" | "moderate" | "light";
@@ -21,13 +20,21 @@ interface RateLimitResult {
   resetInSeconds: number;
 }
 
+// Tier configuration: points per minute
+const TIER_CONFIG = {
+  expensive: { points: 10, duration: 60 }, // 10 requests per minute
+  moderate: { points: 20, duration: 60 }, // 20 requests per minute
+  light: { points: 50, duration: 60 }, // 50 requests per minute
+} as const;
+
+// Redis key prefix (allows sharing Redis instance across apps)
+const KEY_PREFIX = process.env.REDIS_PREFIX || "synchire";
+
 /**
  * Check if rate limiting is enabled
  */
 function isRateLimitEnabled(): boolean {
-  const hasUpstash = Boolean(
-    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-  );
+  const hasRedis = Boolean(process.env.REDIS_URL);
   const isProduction = process.env.NODE_ENV === "production";
   const forceEnabled = process.env.RATE_LIMIT_ENABLED === "true";
   const forceDisabled = process.env.RATE_LIMIT_ENABLED === "false";
@@ -36,52 +43,77 @@ function isRateLimitEnabled(): boolean {
     return false;
   }
 
-  return hasUpstash && (isProduction || forceEnabled);
+  return hasRedis && (isProduction || forceEnabled);
 }
 
 /**
- * Create rate limiters for each tier (lazy initialization)
+ * Create Redis client with proper TLS configuration for Upstash
  */
-function createRateLimiters() {
-  if (!isRateLimitEnabled()) {
+function createRedisClient(): Redis | null {
+  const redisUrl = process.env.REDIS_URL;
+  if (!redisUrl) {
     return null;
   }
 
-  const redis = Redis.fromEnv();
+  // Parse the URL to extract host for SNI
+  const url = new URL(redisUrl);
 
-  return {
-    // CV extraction, JD extraction, match-candidates (expensive AI operations)
-    expensive: new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(10, "60 s"),
-      prefix: "ratelimit:expensive",
-      analytics: true,
-    }),
-    // Question generation, interview analysis
-    moderate: new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(20, "60 s"),
-      prefix: "ratelimit:moderate",
-      analytics: true,
-    }),
-    // Lighter operations
-    light: new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(50, "60 s"),
-      prefix: "ratelimit:light",
-      analytics: true,
-    }),
-  };
+  return new Redis(redisUrl, {
+    maxRetriesPerRequest: 3,
+    // TLS configuration for Upstash (uses rediss:// protocol)
+    tls: redisUrl.startsWith("rediss://")
+      ? { servername: url.hostname }
+      : undefined,
+  });
 }
 
-// Lazy singleton - only created when first accessed
-let rateLimitersInstance: ReturnType<typeof createRateLimiters> | undefined;
+// Lazy singletons
+let redisClient: Redis | null | undefined;
+let rateLimiters:
+  | {
+      expensive: RateLimiterRedis;
+      moderate: RateLimiterRedis;
+      light: RateLimiterRedis;
+    }
+  | null
+  | undefined;
+
+function getRedisClient(): Redis | null {
+  if (redisClient === undefined) {
+    redisClient = isRateLimitEnabled() ? createRedisClient() : null;
+  }
+  return redisClient;
+}
 
 function getRateLimiters() {
-  if (rateLimitersInstance === undefined) {
-    rateLimitersInstance = createRateLimiters();
+  if (rateLimiters === undefined) {
+    const client = getRedisClient();
+    if (!client) {
+      rateLimiters = null;
+    } else {
+      rateLimiters = {
+        expensive: new RateLimiterRedis({
+          storeClient: client,
+          keyPrefix: `${KEY_PREFIX}:ratelimit:expensive`,
+          points: TIER_CONFIG.expensive.points,
+          duration: TIER_CONFIG.expensive.duration,
+        }),
+        moderate: new RateLimiterRedis({
+          storeClient: client,
+          keyPrefix: `${KEY_PREFIX}:ratelimit:moderate`,
+          points: TIER_CONFIG.moderate.points,
+          duration: TIER_CONFIG.moderate.duration,
+        }),
+        light: new RateLimiterRedis({
+          storeClient: client,
+          keyPrefix: `${KEY_PREFIX}:ratelimit:light`,
+          points: TIER_CONFIG.light.points,
+          duration: TIER_CONFIG.light.duration,
+        }),
+      };
+    }
   }
-  return rateLimitersInstance;
+  return rateLimiters;
 }
 
 /**
@@ -97,33 +129,47 @@ export async function validateRateLimitConnection(): Promise<{
   const enabled = isRateLimitEnabled();
 
   if (!enabled) {
-    const reason = !process.env.UPSTASH_REDIS_REST_URL
-      ? "UPSTASH_REDIS_REST_URL not set"
-      : !process.env.UPSTASH_REDIS_REST_TOKEN
-        ? "UPSTASH_REDIS_REST_TOKEN not set"
-        : process.env.RATE_LIMIT_ENABLED === "false"
-          ? "RATE_LIMIT_ENABLED=false"
-          : "Not in production (set RATE_LIMIT_ENABLED=true to enable)";
+    const reason = !process.env.REDIS_URL
+      ? "REDIS_URL not set"
+      : process.env.RATE_LIMIT_ENABLED === "false"
+        ? "RATE_LIMIT_ENABLED=false"
+        : "Not in production (set RATE_LIMIT_ENABLED=true to enable)";
 
     logger.info("Rate limiting disabled", { api: "rate-limiter", reason });
     return { enabled: false, connected: false, latencyMs: 0, reason };
   }
 
-  try {
-    const redis = Redis.fromEnv();
+  const client = getRedisClient();
+  if (!client) {
+    logger.warn("Rate limiting enabled but Redis client creation failed", {
+      api: "rate-limiter",
+    });
+    return {
+      enabled: true,
+      connected: false,
+      latencyMs: 0,
+      reason: "Redis client creation failed",
+    };
+  }
 
-    // First ping (cold - includes DNS, TLS handshake)
+  try {
+    // First ping (cold - includes TCP handshake, TLS)
     const start1 = Date.now();
-    await redis.ping();
+    await client.ping();
     const coldLatencyMs = Date.now() - start1;
 
     // Second ping (warm - connection reused)
     const start2 = Date.now();
-    await redis.ping();
+    await client.ping();
     const warmLatencyMs = Date.now() - start2;
 
+    const redisUrl = new URL(process.env.REDIS_URL!);
     logger.info("Rate limiting enabled", {
       api: "rate-limiter",
+      protocol: "TCP",
+      host: redisUrl.hostname,
+      port: redisUrl.port || "6379",
+      prefix: KEY_PREFIX,
       coldLatencyMs,
       warmLatencyMs,
       tiers: { expensive: "10/min", moderate: "20/min", light: "50/min" },
@@ -168,28 +214,42 @@ export async function checkRateLimit(
   const key = endpoint ? `${identifier}:${endpoint}` : identifier;
 
   try {
-    const { success, remaining, reset } = await limiter.limit(key);
+    const result = await limiter.consume(key, 1);
 
-    if (!success) {
+    return {
+      allowed: true,
+      remaining: result.remainingPoints,
+      resetInSeconds: Math.ceil(result.msBeforeNext / 1000),
+    };
+  } catch (error) {
+    // RateLimiterRes is thrown when limit exceeded
+    if (
+      error &&
+      typeof error === "object" &&
+      "remainingPoints" in error &&
+      "msBeforeNext" in error
+    ) {
+      const rateLimitError = error as {
+        remainingPoints: number;
+        msBeforeNext: number;
+      };
+
       logger.warn("Rate limit exceeded", {
         api: "rate-limiter",
         identifier,
         tier,
         endpoint,
-        remaining,
+        remaining: rateLimitError.remainingPoints,
       });
+
+      return {
+        allowed: false,
+        remaining: rateLimitError.remainingPoints,
+        resetInSeconds: Math.ceil(rateLimitError.msBeforeNext / 1000),
+      };
     }
 
-    // Convert reset timestamp to seconds from now
-    const resetInSeconds = Math.max(0, Math.ceil((reset - Date.now()) / 1000));
-
-    return {
-      allowed: success,
-      remaining,
-      resetInSeconds,
-    };
-  } catch (error) {
-    // On error, allow the request but log warning
+    // On unexpected error, allow the request but log warning
     logger.warn("Rate limit check failed, allowing request", {
       api: "rate-limiter",
       error: error instanceof Error ? error.message : "Unknown error",

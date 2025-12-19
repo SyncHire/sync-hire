@@ -131,12 +131,8 @@ env:
     availability:
       - RUNTIME
 
-  # Rate limiting (Upstash Redis) - optional, enabled in production
-  - variable: UPSTASH_REDIS_REST_URL
-    secret: UPSTASH_REDIS_REST_URL
-    availability:
-      - RUNTIME
-  - variable: UPSTASH_REDIS_REST_TOKEN
-    secret: UPSTASH_REDIS_REST_TOKEN
+  # Rate limiting (Redis TCP) - optional, enabled in production
+  - variable: REDIS_URL
+    secret: REDIS_URL
     availability:
       - RUNTIME
