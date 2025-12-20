@@ -47,9 +47,19 @@ interface ApplyToJobParams {
   jobId: string;
 }
 
+interface ApplyToJobData {
+  applicationId: string;
+  cvId: string;
+  jobId: string;
+  questionCount: number;
+  customQuestionCount: number;
+  suggestedQuestionCount: number;
+  cached: boolean;
+}
+
 interface ApplyToJobResponse {
   success: boolean;
-  data?: unknown;
+  data?: ApplyToJobData;
   message?: string;
 }
 

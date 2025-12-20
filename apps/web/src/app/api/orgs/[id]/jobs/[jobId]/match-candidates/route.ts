@@ -1,11 +1,13 @@
 /**
- * POST /api/jobs/[id]/match-candidates
+ * POST /api/orgs/:id/jobs/:jobId/match-candidates
  *
  * Scans all CVs in the system and finds candidates matching the job requirements.
- * For matches above 80%, creates applications and generates personalized questions.
+ * For matches above threshold, creates applications and generates personalized questions.
+ *
+ * Access: HR only (organization members)
  */
 
-import { type NextRequest, NextResponse } from "next/server";
+import { type NextRequest } from "next/server";
 import { logger } from "@/lib/logger";
 import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
 import { geminiClient } from "@/lib/gemini-client";
@@ -13,9 +15,17 @@ import { ApplicationStatus, ApplicationSource } from "@sync-hire/database";
 import { withRateLimit } from "@/lib/rate-limiter";
 import { withQuota } from "@/lib/with-quota";
 import { trackUsage } from "@/lib/ai-usage-tracker";
-import type { ExtractedCVData, ExtractedJobData, CandidateApplication, InterviewQuestions, ApplicationFailure } from "@sync-hire/database";
+import type {
+  ExtractedCVData,
+  ExtractedJobData,
+  CandidateApplication,
+  InterviewQuestions,
+  ApplicationFailure,
+} from "@sync-hire/database";
 import type { Question } from "@/lib/types/interview-types";
 import { getStorage } from "@/lib/storage/storage-factory";
+import { withOrgMembership } from "@/lib/auth-middleware";
+import { errors, successResponse } from "@/lib/api-response";
 import { z } from "zod";
 
 const matchResultSchema = z.object({
@@ -40,8 +50,8 @@ Requirements: ${jobRequirements.join(", ")}
 CANDIDATE:
 Name: ${cvData.personalInfo.fullName}
 Skills: ${cvData.skills?.join(", ") || "Not specified"}
-Experience: ${cvData.experience?.map(e => `${e.title} at ${e.company}`).join("; ") || "Not specified"}
-Education: ${cvData.education?.map(e => `${e.degree} from ${e.institution}`).join("; ") || "Not specified"}
+Experience: ${cvData.experience?.map((e) => `${e.title} at ${e.company}`).join("; ") || "Not specified"}
+Education: ${cvData.education?.map((e) => `${e.degree} from ${e.institution}`).join("; ") || "Not specified"}
 
 Return a JSON object with:
 - matchScore: number 0-100 (percentage match)
@@ -57,7 +67,7 @@ Be realistic with scoring:
 
   const jsonSchema = z.toJSONSchema(matchResultSchema);
 
-  const response = await geminiClient.models.generateContent({
+  const geminiResponse = await geminiClient.models.generateContent({
     model: "gemini-2.5-flash",
     contents: [{ text: prompt }],
     config: {
@@ -66,7 +76,7 @@ Be realistic with scoring:
     },
   });
 
-  const content = response.text || "";
+  const content = geminiResponse.text || "";
   const parsed = JSON.parse(content);
   return matchResultSchema.parse(parsed);
 }
@@ -77,7 +87,19 @@ Be realistic with scoring:
 async function generateAndSaveQuestions(
   storage: Awaited<ReturnType<typeof getStorage>>,
   cvData: ExtractedCVData,
-  job: { title: string; organization: { name: string }; requirements: string[]; description: string; questions?: Array<{ id: string; content: string; type: string; duration: number; category: string | null }> },
+  job: {
+    title: string;
+    organization: { name: string };
+    requirements: string[];
+    description: string;
+    questions?: Array<{
+      id: string;
+      content: string;
+      type: string;
+      duration: number;
+      category: string | null;
+    }>;
+  },
   cvId: string,
   jobId: string,
   applicationId: string
@@ -96,13 +118,15 @@ async function generateAndSaveQuestions(
     };
 
     // Map job questions to Question interface format
-    const questionsWithCategory: Question[] = (job.questions || []).map(q => ({
-      id: q.id,
-      text: q.content,
-      type: "text" as const,
-      duration: q.duration,
-      category: (q.category ?? "Technical Skills") as Question["category"],
-    }));
+    const questionsWithCategory: Question[] = (job.questions || []).map(
+      (q) => ({
+        id: q.id,
+        text: q.content,
+        type: "text" as const,
+        duration: q.duration,
+        category: (q.category ?? "Technical Skills") as Question["category"],
+      })
+    );
 
     // Generate smart merged questions
     const mergedQuestions = await generateSmartMergedQuestions(
@@ -119,7 +143,7 @@ async function generateAndSaveQuestions(
         generatedAt: new Date().toISOString(),
       },
       customQuestions: mergedQuestions
-        .filter(q => q.source === "job")
+        .filter((q) => q.source === "job")
         .map((q, i) => ({
           id: q.originalId || `job-${i}`,
           type: "LONG_ANSWER" as const,
@@ -128,8 +152,8 @@ async function generateAndSaveQuestions(
           order: i,
         })),
       suggestedQuestions: mergedQuestions
-        .filter(q => q.source === "ai-personalized")
-        .map(q => ({
+        .filter((q) => q.source === "ai-personalized")
+        .map((q) => ({
           content: q.content,
           reason: q.reason,
           category: q.category,
@@ -148,14 +172,14 @@ async function generateAndSaveQuestions(
     }
 
     logger.info("Generated questions for application", {
-      api: "jobs/[id]/match-candidates",
+      api: "orgs/[id]/jobs/[jobId]/match-candidates",
       operation: "generateQuestions",
       applicationId,
       questionCount: mergedQuestions.length,
     });
   } catch (error) {
     logger.error(error, {
-      api: "jobs/[id]/match-candidates",
+      api: "orgs/[id]/jobs/[jobId]/match-candidates",
       operation: "generateQuestions",
       jobId,
       cvId,
@@ -182,52 +206,57 @@ async function generateAndSaveQuestions(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string; jobId: string }> }
 ) {
   try {
+    const { id: organizationId, jobId } = await params;
+
+    // Verify org membership
+    const { response } = await withOrgMembership(organizationId);
+    if (response) {
+      return response;
+    }
+
     // Rate limit check (expensive tier - N x Gemini calls)
-    const rateLimitResponse = await withRateLimit(request, "expensive", "jobs/match-candidates");
+    const rateLimitResponse = await withRateLimit(
+      request,
+      "expensive",
+      "orgs/jobs/match-candidates"
+    );
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
 
-    const { id: jobId } = await params;
     const storage = getStorage();
 
     logger.info("Starting candidate matching", {
-      api: "jobs/[id]/match-candidates",
+      api: "orgs/[id]/jobs/[jobId]/match-candidates",
       operation: "match",
+      organizationId,
       jobId,
     });
 
-    // Get job
+    // Get job and verify it belongs to this org
     const job = await storage.getJob(jobId);
     if (!job) {
-      logger.error(new Error("Job not found"), {
-        api: "jobs/[id]/match-candidates",
-        operation: "getJob",
-        jobId,
-      });
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Job not found",
-          message: `No job found with ID: ${jobId}`,
-        },
-        { status: 400 },
-      );
+      return errors.notFound("Job");
     }
-
-    const organizationId = job.organizationId;
+    if (job.organizationId !== organizationId) {
+      return errors.forbidden("Job does not belong to this organization");
+    }
 
     // Get all CVs
     const cvExtractions = await storage.getAllCVExtractions();
 
     // Check quota with estimated count (N CVs to process)
     if (cvExtractions.length > 0) {
-      const quotaResponse = await withQuota(organizationId, "jobs/match-candidates", {
-        estimatedCount: cvExtractions.length,
-      });
+      const quotaResponse = await withQuota(
+        organizationId,
+        "jobs/match-candidates",
+        {
+          estimatedCount: cvExtractions.length,
+        }
+      );
       if (quotaResponse) {
         return quotaResponse;
       }
@@ -235,11 +264,11 @@ export async function POST(
 
     if (cvExtractions.length === 0) {
       logger.info("No CVs to match against", {
-        api: "jobs/[id]/match-candidates",
+        api: "orgs/[id]/jobs/[jobId]/match-candidates",
         operation: "match",
         jobId,
       });
-      return NextResponse.json({
+      return successResponse({
         success: true,
         data: {
           matchedCount: 0,
@@ -258,11 +287,11 @@ export async function POST(
 
     // Process each CV
     for (const { cvId, userId, data: cvData } of cvExtractions) {
-      const candidateName = cvData.personalInfo?.fullName || "Unknown";
-
       // Check if application already exists
       const existingApplications = await storage.getApplicationsForJob(jobId);
-      const alreadyApplied = existingApplications.some(app => app.cvUploadId === cvId);
+      const alreadyApplied = existingApplications.some(
+        (app) => app.cvUploadId === cvId
+      );
 
       if (alreadyApplied) {
         skippedCount++;
@@ -286,11 +315,10 @@ export async function POST(
         skillGaps = result.skillGaps;
       } catch (error) {
         logger.error(error, {
-          api: "jobs/[id]/match-candidates",
+          api: "orgs/[id]/jobs/[jobId]/match-candidates",
           operation: "calculateMatchScore",
           jobId,
           cvId,
-          candidateName,
         });
         failedCount++;
         continue;
@@ -298,7 +326,6 @@ export async function POST(
 
       // Only create application if above threshold
       if (matchScore >= matchThreshold) {
-
         // Save application (ID auto-generated by database via upsert on jobId + userId)
         const savedApplication = await storage.saveApplication({
           jobId,
@@ -329,7 +356,7 @@ export async function POST(
           savedApplication.id
         ).catch((err) =>
           logger.error(err, {
-            api: "jobs/[id]/match-candidates",
+            api: "orgs/[id]/jobs/[jobId]/match-candidates",
             operation: "generateQuestions",
             jobId,
             cvId,
@@ -343,7 +370,7 @@ export async function POST(
 
     // Log summary
     logger.info("Candidate matching complete", {
-      api: "jobs/[id]/match-candidates",
+      api: "orgs/[id]/jobs/[jobId]/match-candidates",
       operation: "match",
       jobId,
       totalCvs: cvExtractions.length,
@@ -359,12 +386,12 @@ export async function POST(
       await trackUsage(organizationId, "jobs/match-candidates", processedCount);
     }
 
-    return NextResponse.json({
+    return successResponse({
       success: true,
       data: {
         matchedCount: applications.length,
         threshold: matchThreshold,
-        applications: applications.map(app => ({
+        applications: applications.map((app) => ({
           id: app.id,
           candidateName: app.candidateName,
           matchScore: app.matchScore,
@@ -373,13 +400,10 @@ export async function POST(
       },
     });
   } catch (error) {
-    logger.error(error, { api: "jobs/[id]/match-candidates", operation: "match" });
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to match candidates",
-      },
-      { status: 500 }
-    );
+    logger.error(error, {
+      api: "orgs/[id]/jobs/[jobId]/match-candidates",
+      operation: "match",
+    });
+    return errors.internal("Failed to match candidates");
   }
 }

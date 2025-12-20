@@ -11,7 +11,7 @@ export default function ImmersiveLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background font-sans text-foreground transition-colors duration-300">
+    <div className="h-screen overflow-hidden bg-background font-sans text-foreground transition-colors duration-300">
       {children}
     </div>
   );

@@ -1,11 +1,14 @@
 /**
- * API Route: Start an interview
- * Creates a Stream call and invites the Python AI agent
- * POST /api/start-interview
- * Supports both interview IDs and application IDs
+ * POST /api/candidate/interviews/:id/start
+ *
+ * Starts an interview for the authenticated candidate.
+ * Creates a Stream call and invites the Python AI agent.
+ * Supports both interview IDs and application IDs.
+ *
+ * Access: Authenticated user who is the candidate for this interview
  */
+
 import crypto from "crypto";
-import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import type { Question } from "@/lib/types/interview-types";
 import type { Job, Interview } from "@/lib/storage/storage-interface";
@@ -14,6 +17,7 @@ import { getStreamClient } from "@/lib/stream-token";
 import { mergeInterviewQuestions } from "@/lib/utils/question-utils";
 import { getAgentEndpoint, getAgentHeaders } from "@/lib/agent-config";
 import { getServerSession } from "@/lib/auth-server";
+import { errors, successResponse } from "@/lib/api-response";
 
 /**
  * Generate a short, deterministic call ID from an application or interview ID.
@@ -26,7 +30,11 @@ function generateCallId(applicationId: string): string {
     return applicationId;
   }
   // For longer application IDs, create a deterministic hash-based short ID
-  const hash = crypto.createHash("md5").update(applicationId).digest("hex").slice(0, 16);
+  const hash = crypto
+    .createHash("md5")
+    .update(applicationId)
+    .digest("hex")
+    .slice(0, 16);
   return `call-${hash}`;
 }
 
@@ -35,26 +43,21 @@ function generateCallId(applicationId: string): string {
 // Also stores whether video avatar is enabled for that call
 const invitedCalls = new Map<string, { videoAvatarEnabled: boolean }>();
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { interviewId, candidateId, candidateName } = await request.json();
-
-    if (!interviewId || !candidateId) {
-      return NextResponse.json(
-        { error: "interviewId and candidateId are required" },
-        { status: 400 },
-      );
-    }
+    const { id: interviewId } = await params;
+    const { candidateName } = await request.json();
 
     // Get authenticated user
     const session = await getServerSession();
     if (!session?.user) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 },
-      );
+      return errors.unauthorized();
     }
     const user = session.user;
+    const candidateId = user.id;
 
     const storage = getStorage();
     let job: Job | null = null;
@@ -64,32 +67,42 @@ export async function POST(request: Request) {
     let interview: Interview | null = await storage.getInterview(interviewId);
 
     if (interview) {
+      // Verify the authenticated user is the candidate
+      if (interview.candidateId !== user.id) {
+        return errors.forbidden("You are not the candidate for this interview");
+      }
       // Get job from storage
       job = await storage.getJob(interview.jobId);
-    } else if (interviewId.startsWith("application-")) {
-      // Parse application ID: application-job-{timestamp}-{random}-{userId} -> jobId = job-{timestamp}-{random}
-      const jobIdMatch = interviewId.match(/^application-(job-\d+-[a-z0-9]+)-/);
-      if (jobIdMatch) {
-        const jobId = jobIdMatch[1];
-        job = await storage.getJob(jobId);
+    } else {
+      // Try as application ID
+      const application = await storage.getApplication(interviewId);
+      if (application) {
+        // Verify the authenticated user is the applicant
+        if (application.userId !== user.id) {
+          return errors.forbidden("You are not the candidate for this application");
+        }
+
+        job = await storage.getJob(application.jobId);
 
         if (job) {
           // Try to load generated questions
           const userCvId = await storage.getUserCVId(user.id);
           if (userCvId) {
-            const questionSet = await storage.getInterviewQuestions(userCvId, jobId);
+            const questionSet = await storage.getInterviewQuestions(
+              userCvId,
+              application.jobId
+            );
 
             if (questionSet) {
-              // Use utility to merge custom questions (from JD) and AI-personalized questions
               questions = mergeInterviewQuestions(questionSet);
             }
           }
 
-          // Create synthetic interview for application
+          // Create interview from application
           interview = {
             id: interviewId,
-            jobId,
-            candidateId: user.id,
+            jobId: application.jobId,
+            candidateId: application.userId,
             status: "PENDING" as const,
             callId: null,
             transcript: null,
@@ -104,16 +117,17 @@ export async function POST(request: Request) {
     }
 
     if (!interview || !job) {
-      return NextResponse.json(
-        { error: "Interview or job not found" },
-        { status: 404 },
-      );
+      return errors.notFound("Interview or job");
     }
 
     // Use generated questions if available, otherwise map job's questions to agent format
     let interviewQuestions: Question[] = questions;
     if (interviewQuestions.length === 0 && job.questions) {
-      logger.warn("No personalized questions found, using job defaults", { api: "start-interview", interviewId, questionCount: job.questions.length });
+      logger.warn("No personalized questions found, using job defaults", {
+        api: "candidate/interviews/[id]/start",
+        interviewId,
+        questionCount: job.questions.length,
+      });
       // Map database JobQuestion to agent Question format
       interviewQuestions = job.questions.map((q) => ({
         id: q.id,
@@ -162,7 +176,11 @@ export async function POST(request: Request) {
 
     // Check if this is a new call or existing call
     const isNewCall = callData.created;
-    logger.info("Call status", { api: "start-interview", callId, isNewCall: isNewCall ? "NEW" : "EXISTING" });
+    logger.info("Call status", {
+      api: "candidate/interviews/[id]/start",
+      callId,
+      isNewCall: isNewCall ? "NEW" : "EXISTING",
+    });
 
     // If call already exists, ensure member has admin role (fixes permission issues)
     if (!isNewCall) {
@@ -170,23 +188,41 @@ export async function POST(request: Request) {
         await call.updateCallMembers({
           update_members: [{ user_id: candidateId, role: "admin" }],
         });
-        logger.debug("Updated member role to admin", { api: "start-interview", callId });
+        logger.debug("Updated member role to admin", {
+          api: "candidate/interviews/[id]/start",
+          callId,
+        });
       } catch (memberUpdateErr) {
-        logger.warn("Could not update member role", { api: "start-interview", callId, error: memberUpdateErr instanceof Error ? memberUpdateErr.message : String(memberUpdateErr) });
+        logger.warn("Could not update member role", {
+          api: "candidate/interviews/[id]/start",
+          callId,
+          error:
+            memberUpdateErr instanceof Error
+              ? memberUpdateErr.message
+              : String(memberUpdateErr),
+        });
       }
     }
 
     // Check if we've already invited an agent to this call (prevents duplicates)
     const existingCall = invitedCalls.get(callId);
     const alreadyInvited = !!existingCall;
-    logger.debug("Agent invitation check", { api: "start-interview", callId, alreadyInvited });
+    logger.debug("Agent invitation check", {
+      api: "candidate/interviews/[id]/start",
+      callId,
+      alreadyInvited,
+    });
 
     let videoAvatarEnabled = existingCall?.videoAvatarEnabled ?? false;
 
     // Invite agent if we haven't invited one yet (regardless of whether call is new or existing)
     if (!alreadyInvited) {
       const agentUrl = getAgentEndpoint("/join-interview");
-      logger.debug("Sending request to agent", { api: "start-interview", callId, agentUrl });
+      logger.debug("Sending request to agent", {
+        api: "candidate/interviews/[id]/start",
+        callId,
+        agentUrl,
+      });
       try {
         const agentResponse = await fetch(agentUrl, {
           method: "POST",
@@ -194,24 +230,33 @@ export async function POST(request: Request) {
           body: JSON.stringify({
             callId,
             questions: interviewQuestions,
-            candidateName: candidateName || "Candidate",
+            candidateName: candidateName || user.name || "Candidate",
             jobTitle: job.title,
           }),
         });
 
-        logger.debug("Agent response received", { api: "start-interview", callId, status: agentResponse.status });
+        logger.debug("Agent response received", {
+          api: "candidate/interviews/[id]/start",
+          callId,
+          status: agentResponse.status,
+        });
 
         if (!agentResponse.ok) {
           const errorText = await agentResponse.text();
-          logger.error(new Error("Failed to invite agent"), { api: "start-interview", callId, errorText });
-          return NextResponse.json(
-            { error: "Failed to invite AI agent to interview" },
-            { status: 500 },
-          );
+          logger.error(new Error("Failed to invite agent"), {
+            api: "candidate/interviews/[id]/start",
+            callId,
+            errorText,
+          });
+          return errors.internal("Failed to invite AI agent to interview");
         }
 
         const agentData = await agentResponse.json();
-        logger.info("Agent invitation successful", { api: "start-interview", callId, videoAvatarEnabled: agentData.videoAvatarEnabled });
+        logger.info("Agent invitation successful", {
+          api: "candidate/interviews/[id]/start",
+          callId,
+          videoAvatarEnabled: agentData.videoAvatarEnabled,
+        });
 
         // Capture video avatar status from agent response
         videoAvatarEnabled = agentData.videoAvatarEnabled ?? false;
@@ -219,17 +264,21 @@ export async function POST(request: Request) {
         // Mark this call as having an invited agent and store video avatar status
         invitedCalls.set(callId, { videoAvatarEnabled });
       } catch (agentError) {
-        logger.error(agentError, { api: "start-interview", operation: "invite-agent", callId });
-        return NextResponse.json(
-          { error: "AI agent service unavailable" },
-          { status: 503 },
-        );
+        logger.error(agentError, {
+          api: "candidate/interviews/[id]/start",
+          operation: "invite-agent",
+          callId,
+        });
+        return errors.internal("AI agent service unavailable");
       }
     } else {
-      logger.debug("Agent already invited, skipping duplicate", { api: "start-interview", callId });
+      logger.debug("Agent already invited, skipping duplicate", {
+        api: "candidate/interviews/[id]/start",
+        callId,
+      });
     }
 
-    return NextResponse.json({
+    return successResponse({
       success: true,
       callId,
       interviewId,
@@ -237,10 +286,7 @@ export async function POST(request: Request) {
       message: "Interview started and AI agent invited",
     });
   } catch (error) {
-    logger.error(error, { api: "start-interview", operation: "start" });
-    return NextResponse.json(
-      { error: "Failed to start interview" },
-      { status: 500 },
-    );
+    logger.error(error, { api: "candidate/interviews/[id]/start", operation: "start" });
+    return errors.internal("Failed to start interview");
   }
 }

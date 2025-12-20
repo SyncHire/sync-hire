@@ -1,40 +1,68 @@
 /**
  * GET /api/interviews
  *
- * Retrieves all interviews from storage
- * Optional query param: userId - filter interviews for a specific user
+ * Retrieves interviews from storage with proper authorization.
+ * - Candidates: Can only view their own interviews (userId must match session)
+ * - HR: Can view all interviews for their active organization's jobs
  */
 
-import { type NextRequest, NextResponse } from "next/server";
+import { type NextRequest } from "next/server";
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
+import { getServerSession, getActiveOrganizationId } from "@/lib/auth-server";
+import { errors, successResponse } from "@/lib/api-response";
 
 export async function GET(request: NextRequest) {
   try {
-    const storage = getStorage();
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-
-    let interviews;
-    if (userId) {
-      interviews = await storage.getInterviewsForUser(userId);
-    } else {
-      interviews = await storage.getAllInterviews();
+    // Require authentication
+    const session = await getServerSession();
+    if (!session) {
+      return errors.unauthorized();
     }
 
-    return NextResponse.json({
+    const userId = session.user.id;
+    const storage = getStorage();
+    const { searchParams } = new URL(request.url);
+    const requestedUserId = searchParams.get("userId");
+
+    // If userId param is provided, ensure it matches the authenticated user
+    // (users can only view their own interviews via userId param)
+    if (requestedUserId) {
+      if (requestedUserId !== userId) {
+        return errors.forbidden("Cannot view other users' interviews");
+      }
+      const interviews = await storage.getInterviewsForUser(userId);
+      return successResponse({
+        success: true,
+        data: interviews,
+      });
+    }
+
+    // No userId param - HR view: require active organization
+    const activeOrgId = await getActiveOrganizationId();
+    if (!activeOrgId) {
+      return errors.badRequest("No active organization selected");
+    }
+
+    // Get all interviews and filter by organization's jobs
+    const allInterviews = await storage.getAllInterviews();
+    const allJobs = await storage.getAllStoredJobs();
+    const orgJobIds = new Set(
+      allJobs
+        .filter((job) => job.organizationId === activeOrgId)
+        .map((job) => job.id)
+    );
+
+    const orgInterviews = allInterviews.filter((interview) =>
+      orgJobIds.has(interview.jobId)
+    );
+
+    return successResponse({
       success: true,
-      data: interviews,
+      data: orgInterviews,
     });
   } catch (error) {
     logger.error(error, { api: "interviews", operation: "fetch" });
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          error instanceof Error ? error.message : "Failed to fetch interviews",
-      },
-      { status: 500 },
-    );
+    return errors.internal("Failed to fetch interviews");
   }
 }

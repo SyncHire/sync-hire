@@ -1,8 +1,10 @@
 /**
- * POST /api/interviews/[id]/analyze
+ * POST /api/orgs/:id/interviews/:interviewId/analyze
+ *
  * Triggers AI analysis for an interview that is stuck or missing evaluation.
  * Access: HR only (organization members)
  */
+
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
 import { geminiClient } from "@/lib/gemini-client";
@@ -11,7 +13,7 @@ import type { AIEvaluation } from "@/lib/types/interview-types";
 import { withRateLimit } from "@/lib/rate-limiter";
 import { withQuota } from "@/lib/with-quota";
 import { trackUsage } from "@/lib/ai-usage-tracker";
-import { withInterviewAccess } from "@/lib/auth-middleware";
+import { withOrgMembership } from "@/lib/auth-middleware";
 import { errors, successResponse } from "@/lib/api-response";
 
 const EvaluationSchema = z.object({
@@ -29,13 +31,13 @@ const EvaluationSchema = z.object({
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string; interviewId: string }> }
 ) {
   try {
-    const { id: interviewId } = await params;
+    const { id: organizationId, interviewId } = await params;
 
-    // Verify HR access (org member only, not candidates)
-    const { response, jobOrgId } = await withInterviewAccess(interviewId);
+    // Verify org membership
+    const { response } = await withOrgMembership(organizationId);
     if (response) {
       return response;
     }
@@ -44,7 +46,7 @@ export async function POST(
     const rateLimitResponse = await withRateLimit(
       request,
       "moderate",
-      "interviews/analyze"
+      "orgs/interviews/analyze"
     );
     if (rateLimitResponse) {
       return rateLimitResponse;
@@ -53,8 +55,9 @@ export async function POST(
     const storage = getStorage();
 
     logger.info("Analyzing interview", {
-      api: "interviews/[id]/analyze",
+      api: "orgs/[id]/interviews/[interviewId]/analyze",
       operation: "analyze",
+      organizationId,
       interviewId,
     });
 
@@ -64,15 +67,17 @@ export async function POST(
       return errors.notFound("Interview");
     }
 
-    // Get organization from job for quota check
+    // Verify interview belongs to this org's jobs
     const job = await storage.getJob(interview.jobId);
-    if (!job) {
-      return errors.notFound("Job");
+    if (!job || job.organizationId !== organizationId) {
+      return errors.forbidden("Interview does not belong to this organization");
     }
-    const organizationId = jobOrgId ?? job.organizationId;
 
     // Check quota before analysis
-    const quotaResponse = await withQuota(organizationId, "interviews/analyze");
+    const quotaResponse = await withQuota(
+      organizationId,
+      "interviews/analyze"
+    );
     if (quotaResponse) {
       return quotaResponse;
     }
@@ -80,7 +85,7 @@ export async function POST(
     // Check if already has evaluation
     if (interview.aiEvaluation) {
       logger.info("Interview already has evaluation", {
-        api: "interviews/[id]/analyze",
+        api: "orgs/[id]/interviews/[interviewId]/analyze",
         operation: "analyze",
         interviewId,
       });
@@ -95,7 +100,7 @@ export async function POST(
     const transcript = interview.transcript;
     if (!transcript || transcript.length === 0) {
       logger.warn("No transcript available for interview", {
-        api: "interviews/[id]/analyze",
+        api: "orgs/[id]/interviews/[interviewId]/analyze",
         operation: "analyze",
         interviewId,
       });
@@ -110,7 +115,7 @@ export async function POST(
     }
 
     logger.info("Analyzing transcript", {
-      api: "interviews/[id]/analyze",
+      api: "orgs/[id]/interviews/[interviewId]/analyze",
       operation: "analyze",
       interviewId,
       transcriptLength: transcript.length,
@@ -160,7 +165,7 @@ Be fair but honest in your assessment. Base scores on what was actually discusse
       await storage.saveInterview(interviewId, interview);
 
       logger.info("AI evaluation generated", {
-        api: "interviews/[id]/analyze",
+        api: "orgs/[id]/interviews/[interviewId]/analyze",
         operation: "analyze",
         interviewId,
         score: aiEvaluation.overallScore,
@@ -176,7 +181,7 @@ Be fair but honest in your assessment. Base scores on what was actually discusse
       });
     } catch (aiError) {
       logger.error(aiError, {
-        api: "interviews/[id]/analyze",
+        api: "orgs/[id]/interviews/[interviewId]/analyze",
         operation: "generate-evaluation",
         interviewId,
       });
@@ -187,7 +192,7 @@ Be fair but honest in your assessment. Base scores on what was actually discusse
     }
   } catch (error) {
     logger.error(error, {
-      api: "interviews/[id]/analyze",
+      api: "orgs/[id]/interviews/[interviewId]/analyze",
       operation: "analyze",
     });
     return errors.internal("Failed to analyze interview");

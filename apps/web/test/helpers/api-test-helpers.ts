@@ -41,7 +41,8 @@ export function createTestRequest(
     requestInit.body = JSON.stringify(body);
   }
 
-  return new NextRequest(url, requestInit);
+  // Cast to NextRequest's RequestInit which has stricter types than standard RequestInit
+  return new NextRequest(url, requestInit as ConstructorParameters<typeof NextRequest>[1]);
 }
 
 /**

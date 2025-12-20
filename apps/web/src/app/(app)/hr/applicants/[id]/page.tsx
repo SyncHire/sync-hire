@@ -24,7 +24,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useJobApplicants } from "@/lib/hooks/use-job-applicants";
+import { useOrgJobApplicants } from "@/lib/hooks/use-org-jobs";
+import { useActiveOrganization } from "@/lib/hooks/use-organizations";
 
 // Generate avatar URL from name
 function getAvatarUrl(name: string, index: number): string {
@@ -46,8 +47,10 @@ function getInitials(name: string): string {
 export default function HRApplicantDetail() {
   const params = useParams();
   const jobId = params?.id as string;
+  const { data: activeOrg } = useActiveOrganization();
+  const orgId = activeOrg?.id ?? null;
 
-  const { data: response, isLoading, error } = useJobApplicants(jobId);
+  const { data: response, isLoading, error } = useOrgJobApplicants(orgId, jobId);
 
   if (isLoading) {
     return (

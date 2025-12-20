@@ -3,6 +3,7 @@
  */
 
 import "server-only";
+import { prisma } from "@sync-hire/database";
 import { getAllActiveJobsData, JobWithApplicantCount } from "./get-jobs";
 
 /**
@@ -20,37 +21,77 @@ export interface CandidateJobApplication {
 }
 
 /**
- * Get all jobs as CandidateJobApplications for a candidate
- * Returns jobs with candidate-specific application context
+ * Get all active jobs with candidate's application status.
+ * Returns real application IDs for jobs the user has applied to.
  */
 export async function getCandidateJobApplications(
-  userId: string,
+  userId: string
 ): Promise<CandidateJobApplication[]> {
+  // Get all active jobs
   const jobs = await getAllActiveJobsData();
 
-  return jobs.map((job) => ({
-    id: `application-${job.id}-${userId}`,
-    job: job,
-    candidateId: userId,
-    matchPercentage: generateMatchPercentage(job.id, userId),
-    status: "NOT_APPLIED" as const,
-    createdAt: new Date(job.createdAt),
-  }));
+  // Get user's applications
+  const userApplications = await prisma.candidateApplication.findMany({
+    where: { userId },
+    select: {
+      id: true,
+      jobId: true,
+      matchScore: true,
+      status: true,
+      interviewId: true,
+      createdAt: true,
+    },
+  });
+
+  // Create a map of jobId -> application for quick lookup
+  const applicationsByJobId = new Map(
+    userApplications.map((app) => [app.jobId, app])
+  );
+
+  return jobs.map((job) => {
+    const application = applicationsByJobId.get(job.id);
+
+    if (application) {
+      // User has applied - return real application data
+      return {
+        id: application.id,
+        job,
+        candidateId: userId,
+        matchPercentage: application.matchScore,
+        status: mapApplicationStatus(application.status),
+        interviewId: application.interviewId ?? undefined,
+        appliedAt: application.createdAt,
+        createdAt: application.createdAt,
+      };
+    }
+
+    // User hasn't applied - return job info without application
+    return {
+      id: job.id, // Use job ID for non-applied jobs
+      job,
+      candidateId: userId,
+      matchPercentage: 0, // Will be calculated when they apply
+      status: "NOT_APPLIED" as const,
+      createdAt: new Date(job.createdAt),
+    };
+  });
 }
 
 /**
- * Generate a consistent match percentage based on job and user IDs
- * This ensures the same job-user pair always gets the same percentage
+ * Map database ApplicationStatus to UI status
  */
-function generateMatchPercentage(jobId: string, userId: string): number {
-  // Simple hash function to generate consistent number
-  const combined = `${jobId}-${userId}`;
-  let hash = 0;
-  for (let i = 0; i < combined.length; i++) {
-    const char = combined.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32-bit integer
+function mapApplicationStatus(
+  dbStatus: string
+): "NOT_APPLIED" | "APPLIED" | "INTERVIEWING" | "COMPLETED" {
+  switch (dbStatus) {
+    case "COMPLETED":
+      return "COMPLETED";
+    case "INTERVIEWING":
+      return "INTERVIEWING";
+    case "READY":
+    case "PROCESSING":
+    case "FAILED":
+    default:
+      return "APPLIED";
   }
-  // Map to 70-100 range
-  return 70 + Math.abs(hash % 31);
 }

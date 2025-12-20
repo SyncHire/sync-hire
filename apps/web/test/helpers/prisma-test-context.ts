@@ -8,7 +8,7 @@
  * @see https://www.prisma.io/docs/guides/testing/unit-testing
  */
 
-import { PrismaClient, Prisma } from "@sync-hire/database";
+import { PrismaClient, Prisma } from "@prisma/client";
 
 // Extend Prisma transaction client type for better typing
 export type TransactionClient = Omit<

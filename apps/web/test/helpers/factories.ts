@@ -76,7 +76,7 @@ export async function createTestJob(
     employmentType?: string;
     description?: string;
     requirements?: string[];
-    status?: "DRAFT" | "ACTIVE" | "CLOSED" | "ARCHIVED";
+    status?: "DRAFT" | "ACTIVE" | "CLOSED";
   } = {}
 ) {
   return prisma.job.create({
