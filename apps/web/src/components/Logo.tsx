@@ -26,7 +26,10 @@ function LogoIcon({ size }: { size: number }) {
       viewBox="0 0 80 100"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-labelledby="synchire-logo-title"
     >
+      <title id="synchire-logo-title">SyncHire</title>
       <defs>
         <linearGradient
           id="logoGrad"

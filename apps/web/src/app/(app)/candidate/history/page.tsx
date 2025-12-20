@@ -406,6 +406,7 @@ export default function InterviewHistory() {
                           <svg
                             className="h-full w-full rotate-[-90deg]"
                             viewBox="0 0 36 36"
+                            aria-hidden="true"
                           >
                             <path
                               className="text-secondary"
