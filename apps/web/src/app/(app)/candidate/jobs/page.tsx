@@ -224,7 +224,7 @@ export default function CandidateJobListings() {
   );
 
   const handleApplyToJob = useCallback(
-    async (applicationId: string, jobId: string) => {
+    async (currentAppId: string, jobId: string) => {
       if (!activeCvId) {
         toast({
           title: "Error",
@@ -236,22 +236,42 @@ export default function CandidateJobListings() {
 
       setUiApplicationStates((prev) => ({
         ...prev,
-        [applicationId]: "applying",
+        [currentAppId]: "applying",
       }));
 
       applyToJobMutation.mutate(
         { cvId: activeCvId, jobId },
         {
-          onSuccess: () => {
-            setUiApplicationStates((prev) => ({
-              ...prev,
-              [applicationId]: "applied",
-            }));
+          onSuccess: (response) => {
+            const realApplicationId = response.data?.applicationId;
+
+            // Update jobApplications with the real application ID
+            if (realApplicationId && realApplicationId !== currentAppId) {
+              setJobApplications((prev) =>
+                prev.map((app) =>
+                  app.job.id === jobId
+                    ? { ...app, id: realApplicationId, status: "APPLIED" }
+                    : app
+                )
+              );
+              // Update UI state with new ID
+              setUiApplicationStates((prev) => {
+                const newStates = { ...prev };
+                delete newStates[currentAppId];
+                newStates[realApplicationId] = "applied";
+                return newStates;
+              });
+            } else {
+              setUiApplicationStates((prev) => ({
+                ...prev,
+                [currentAppId]: "applied",
+              }));
+            }
           },
           onError: () => {
             setUiApplicationStates((prev) => ({
               ...prev,
-              [applicationId]: "error",
+              [currentAppId]: "error",
             }));
           },
         },

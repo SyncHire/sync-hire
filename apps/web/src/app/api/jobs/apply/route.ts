@@ -108,6 +108,9 @@ export async function POST(request: NextRequest) {
       };
     }
 
+    // Ensure application exists for this user (creates if needed)
+    const application = await storage.getOrCreateApplication(cvId, jobId);
+
     // Check if questions already exist (caching)
     const existingQuestions = await storage.hasInterviewQuestions(cvId, jobId);
     if (existingQuestions) {
@@ -117,6 +120,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             data: {
+              applicationId: application.id,
               cvId,
               jobId,
               questionCount: counts.total,
@@ -129,9 +133,6 @@ export async function POST(request: NextRequest) {
         );
       }
     }
-
-    // Ensure application exists for this user (creates if needed)
-    await storage.getOrCreateApplication(cvId, jobId);
 
     // Generate questions using Gemini
     const suggestedQuestions = await generateInterviewQuestions(cvData, jdData);
@@ -162,6 +163,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         data: {
+          applicationId: application.id,
           cvId,
           jobId,
           questionCount: counts.total,
