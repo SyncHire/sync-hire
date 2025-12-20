@@ -60,7 +60,10 @@ const InputOTPSeparator = React.forwardRef<
   React.ElementRef<"div">,
   React.ComponentPropsWithoutRef<"div">
 >(({ ...props }, ref) => (
-  <div ref={ref} role="separator" {...props}>
+  // biome-ignore lint/a11y/useSemanticElements: OTP separator uses ARIA role for visual separation
+  // biome-ignore lint/a11y/useFocusableInteractive: Separator is decorative, not interactive
+  // biome-ignore lint/a11y/useAriaPropsForRole: Separator is visual only, orientation not needed
+  <div ref={ref} role="separator" aria-hidden="true" {...props}>
     <Minus />
   </div>
 ));

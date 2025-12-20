@@ -164,7 +164,16 @@
   --str-video__participant-view--min-height: 0;
 }
 
-/* PIP container video styling */
+/* Generic video styling - base rules */
+.str-video__participant-view {
+  border-radius: 0;
+}
+
+.str-video__participant-view video {
+  object-fit: cover;
+}
+
+/* PIP container video styling - more specific overrides */
 .pip-video-container .str-video__participant-view {
   height: 100%;
   width: 100%;
@@ -184,15 +193,6 @@
 .pip-video-container .str-video__menu-container,
 .pip-video-container .str-video__participant-view__video-wrapper::after {
   display: none;
-}
-
-/* Main video area - make video fill container */
-.str-video__participant-view {
-  border-radius: 0;
-}
-
-.str-video__participant-view video {
-  object-fit: cover;
 }
 
 /* AI video container for HeyGen avatar stream */

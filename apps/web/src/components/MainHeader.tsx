@@ -209,7 +209,10 @@ export function MainHeader({ view }: MainHeaderProps) {
 
               <Popover>
                 <PopoverTrigger asChild>
-                  <button className="h-7 w-7 rounded-full overflow-hidden border border-border/50 bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors cursor-pointer">
+                  <button
+                    type="button"
+                    className="h-7 w-7 rounded-full overflow-hidden border border-border/50 bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors cursor-pointer"
+                  >
                     <span className="text-xs font-medium">{userInitials}</span>
                   </button>
                 </PopoverTrigger>
@@ -229,6 +232,7 @@ export function MainHeader({ view }: MainHeaderProps) {
                       Homepage
                     </Link>
                     <button
+                      type="button"
                       onClick={handleSignOut}
                       disabled={isSigningOut}
                       className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 rounded transition-colors disabled:opacity-50"

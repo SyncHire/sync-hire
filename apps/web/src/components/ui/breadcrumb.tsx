@@ -61,11 +61,13 @@ const BreadcrumbPage = React.forwardRef<
   HTMLSpanElement,
   React.ComponentPropsWithoutRef<"span">
 >(({ className, ...props }, ref) => (
+  /* biome-ignore lint/a11y/useSemanticElements: Current page in breadcrumb uses span, not a link, since it's not clickable */
   <span
     ref={ref}
     role="link"
     aria-disabled="true"
     aria-current="page"
+    tabIndex={-1}
     className={cn("font-normal text-foreground", className)}
     {...props}
   />

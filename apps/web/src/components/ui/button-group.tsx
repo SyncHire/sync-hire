@@ -26,6 +26,7 @@ function ButtonGroup({
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof buttonGroupVariants>) {
   return (
+    // biome-ignore lint/a11y/useSemanticElements: Generic button group container uses ARIA role for accessibility
     <div
       role="group"
       data-slot="button-group"

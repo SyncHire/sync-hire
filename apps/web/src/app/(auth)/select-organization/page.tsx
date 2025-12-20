@@ -124,6 +124,7 @@ export default function SelectOrganizationPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <button
+            type="button"
             onClick={() => router.push("/create-organization")}
             className="w-full flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
           >
@@ -142,6 +143,7 @@ export default function SelectOrganizationPage() {
           </button>
 
           <button
+            type="button"
             onClick={() => router.push("/candidate/jobs")}
             className="w-full flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
           >
@@ -180,6 +182,7 @@ export default function SelectOrganizationPage() {
         <div className="space-y-2">
           {organizations.map((org) => (
             <button
+              type="button"
               key={org.id}
               onClick={() => selectOrganization(org.id)}
               disabled={selectingId !== null}

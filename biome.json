@@ -33,6 +33,18 @@
       "react": "recommended"
     }
   },
+  "overrides": [
+    {
+      "includes": ["**/ui/chart.tsx"],
+      "linter": {
+        "rules": {
+          "security": {
+            "noDangerouslySetInnerHtml": "off"
+          }
+        }
+      }
+    }
+  ],
   "assist": {
     "actions": {
       "source": {

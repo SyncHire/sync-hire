@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
+    // biome-ignore lint/a11y/useSemanticElements: Input group uses ARIA role for form grouping
     <div
       data-slot="input-group"
       role="group"
@@ -60,6 +61,8 @@ function InputGroupAddon({
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof inputGroupAddonVariants>) {
   return (
+    // biome-ignore lint/a11y/useSemanticElements: Input group addon uses ARIA role for grouping
+    // biome-ignore lint/a11y/useKeyWithClickEvents: Click handler focuses the input, keyboard users can tab to input directly
     <div
       role="group"
       data-slot="input-group-addon"
