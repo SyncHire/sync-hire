@@ -65,7 +65,7 @@ export function FileUploadContainer({
       if (isProcessing) return;
 
       const files = e.dataTransfer.files;
-      if (files && files[0]) {
+      if (files?.[0]) {
         handleFile(files[0]);
       }
     },
@@ -77,7 +77,7 @@ export function FileUploadContainer({
       if (isProcessing) return;
 
       const files = e.target.files;
-      if (files && files[0]) {
+      if (files?.[0]) {
         handleFile(files[0]);
       }
     },
@@ -96,13 +96,14 @@ export function FileUploadContainer({
   // Map mime types to file extensions
   const mimeToExtension: Record<string, string> = {
     "application/pdf": ".pdf",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+      ".docx",
     "text/plain": ".txt",
     "text/markdown": ".md",
   };
 
   const fileTypeExtensions = config.allowedTypes
-    .map((t) => mimeToExtension[t] || "." + t.split("/")[1])
+    .map((t) => mimeToExtension[t] || `.${t.split("/")[1]}`)
     .join(",");
 
   return (

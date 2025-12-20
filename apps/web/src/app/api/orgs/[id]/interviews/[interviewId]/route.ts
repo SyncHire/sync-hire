@@ -6,15 +6,15 @@
  * Access: HR only (organization members)
  */
 
+import { errors, successResponse } from "@/lib/api-response";
+import { withOrgMembership } from "@/lib/auth-middleware";
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
-import { withOrgMembership } from "@/lib/auth-middleware";
-import { errors, successResponse } from "@/lib/api-response";
 import type { HRInterviewResponse } from "@/lib/types/api-responses";
 
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ id: string; interviewId: string }> }
+  { params }: { params: Promise<{ id: string; interviewId: string }> },
 ) {
   try {
     const { id: organizationId, interviewId } = await params;

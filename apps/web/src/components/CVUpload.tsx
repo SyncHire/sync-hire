@@ -4,7 +4,6 @@ import { AlertCircle, CheckCircle, FileText, Upload, X } from "lucide-react";
 import type React from "react";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -41,7 +40,7 @@ export function CVUploadSection({
       onFileSelect(file);
       return null;
     },
-    [onFileSelect],
+    [onFileSelect, validateFile],
   );
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -63,7 +62,7 @@ export function CVUploadSection({
       if (isProcessing) return;
 
       const files = e.dataTransfer.files;
-      if (files && files[0]) {
+      if (files?.[0]) {
         handleFile(files[0]);
       }
     },
@@ -75,7 +74,7 @@ export function CVUploadSection({
       if (isProcessing) return;
 
       const files = e.target.files;
-      if (files && files[0]) {
+      if (files?.[0]) {
         handleFile(files[0]);
       }
     },

@@ -6,9 +6,9 @@
  */
 
 import { prisma } from "@sync-hire/database";
+import { singleton } from "@/lib/utils/singleton";
 import { DatabaseStorage } from "./database-storage";
 import type { StorageInterface } from "./storage-interface";
-import { singleton } from "@/lib/utils/singleton";
 
 function createStorage(): StorageInterface {
   return new DatabaseStorage(prisma);

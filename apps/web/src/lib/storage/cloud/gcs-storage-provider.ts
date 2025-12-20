@@ -7,8 +7,8 @@
  */
 
 import type { Storage } from "@google-cloud/storage";
-import type { CloudStorageProvider } from "./cloud-storage-provider";
 import { storageConfig } from "../storage-config";
+import type { CloudStorageProvider } from "./cloud-storage-provider";
 
 export class GCSStorageProvider implements CloudStorageProvider {
   constructor(private readonly client: Storage) {}
@@ -25,7 +25,11 @@ export class GCSStorageProvider implements CloudStorageProvider {
     return path;
   }
 
-  async getSignedUrl(_type: 'cv' | 'jd', path: string, expiresInMinutes = 60): Promise<string> {
+  async getSignedUrl(
+    _type: "cv" | "jd",
+    path: string,
+    expiresInMinutes = 60,
+  ): Promise<string> {
     const bucket = this.client.bucket(storageConfig.gcsBucket);
     const file = bucket.file(path);
 
@@ -56,19 +60,15 @@ export class GCSStorageProvider implements CloudStorageProvider {
   private async uploadFile(
     path: string,
     buffer: Buffer,
-    contentType: string
+    contentType: string,
   ): Promise<void> {
     const bucket = this.client.bucket(storageConfig.gcsBucket);
     const file = bucket.file(path);
-
-    console.log(`[GCS] Uploading: gs://${storageConfig.gcsBucket}/${path} (${buffer.length} bytes)`);
 
     await file.save(buffer, {
       metadata: { contentType },
       resumable: false, // For files under 10MB, non-resumable is faster
     });
-
-    console.log(`[GCS] Upload complete: gs://${storageConfig.gcsBucket}/${path}`);
   }
 
   private async deleteFile(path: string): Promise<void> {

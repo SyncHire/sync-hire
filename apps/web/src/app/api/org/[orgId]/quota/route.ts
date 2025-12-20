@@ -6,13 +6,13 @@
  */
 
 import { getUsage } from "@/lib/ai-usage-tracker";
-import { withOrgMembership } from "@/lib/auth-middleware";
 import { errors, successResponse } from "@/lib/api-response";
+import { withOrgMembership } from "@/lib/auth-middleware";
 import { logger } from "@/lib/logger";
 
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ orgId: string }> }
+  { params }: { params: Promise<{ orgId: string }> },
 ) {
   let orgId: string;
   try {

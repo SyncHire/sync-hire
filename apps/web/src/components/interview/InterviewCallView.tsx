@@ -10,8 +10,6 @@ import {
 } from "@stream-io/video-react-sdk";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  BarChart3,
-  BrainCircuit,
   CheckCircle2,
   ChevronLeft,
   Circle,
@@ -20,7 +18,6 @@ import {
   Mic,
   MicOff,
   PhoneOff,
-  Sparkles,
   Video as VideoIcon,
   VideoOff,
 } from "lucide-react";
@@ -157,10 +154,6 @@ function InterviewCallContent({
       if (payload?.type === "transcript" && payload.text) {
         const text = payload.text;
         const isAgent = payload.speaker === "agent";
-        console.log(
-          `📨 ${isAgent ? "AI" : "User"} transcript event:`,
-          text.substring(0, 50) + "...",
-        );
 
         setTranscript((prev) => {
           const lastMessage = prev[prev.length - 1];
@@ -180,7 +173,7 @@ function InterviewCallContent({
             const updated = [...prev];
             updated[updated.length - 1] = {
               ...lastMessage,
-              text: lastMessage.text + " " + text,
+              text: `${lastMessage.text} ${text}`,
               timestamp: now, // Update timestamp to track last update
             };
             return updated;
@@ -206,11 +199,6 @@ function InterviewCallContent({
         payload?.type === "progress" &&
         typeof payload.questionIndex === "number"
       ) {
-        console.log(
-          "📊 Progress event:",
-          payload.questionIndex + 1,
-          payload.category,
-        );
         setCurrentQuestionIndex(payload.questionIndex);
       }
     };
@@ -269,8 +257,8 @@ function InterviewCallContent({
 
       setTranscript((prev) => {
         const lastMessage = prev[prev.length - 1];
-        const speakerIcon = isAI ? "🤖" : "👤";
-        const speakerName = isAI ? "AI" : caption.user.name || "User";
+        const _speakerIcon = isAI ? "🤖" : "👤";
+        const _speakerName = isAI ? "AI" : caption.user.name || "User";
         const now = Date.now();
         const timeSinceLastMessage = lastMessage
           ? now - lastMessage.timestamp
@@ -281,9 +269,6 @@ function InterviewCallContent({
         if (lastMessage && lastMessage.speakerId === speakerId) {
           // If time gap exceeded, start new message even for same speaker
           if (timeSinceLastMessage >= TIME_GAP_THRESHOLD) {
-            console.log(
-              `📝 ${speakerIcon} ${speakerName} (new after ${Math.round(timeSinceLastMessage / 1000)}s gap): ${text}`,
-            );
             lastLoggedSpeakerRef.current = speakerId;
             const newId = `msg-${now}-${Math.random().toString(36).substr(2, 9)}`;
             return [
@@ -302,14 +287,12 @@ function InterviewCallContent({
           if (isNewSegment) {
             // New segment from same speaker - APPEND to existing message
             const updated = [...prev];
-            const newText = lastMessage.text + " " + text;
+            const newText = `${lastMessage.text} ${text}`;
             updated[updated.length - 1] = {
               ...lastMessage,
               text: newText,
               timestamp: now, // Update timestamp to track last update
             };
-            // Log continuation
-            console.log(`📝 ${speakerIcon} ${speakerName}: ...${text}`);
             return updated;
           } else {
             // Same segment - text is cumulative, check if it's an extension
@@ -330,7 +313,6 @@ function InterviewCallContent({
         // Different speaker - add new message
         // Log speaker change
         if (lastLoggedSpeakerRef.current !== speakerId) {
-          console.log(`📝 ${speakerIcon} ${speakerName}: ${text}`);
           lastLoggedSpeakerRef.current = speakerId;
         }
 
@@ -355,13 +337,12 @@ function InterviewCallContent({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [transcript]);
+  }, []);
 
   const handleToggleMic = async () => {
     try {
       await microphone.toggle();
-    } catch (err) {
-      console.error("Failed to toggle microphone:", err);
+    } catch (_err) {
       toast({
         title: "Microphone Error",
         description: "Unable to toggle microphone. Please check permissions.",
@@ -373,8 +354,7 @@ function InterviewCallContent({
   const handleToggleCamera = async () => {
     try {
       await camera.toggle();
-    } catch (err) {
-      console.error("Failed to toggle camera:", err);
+    } catch (_err) {
       toast({
         title: "Camera Error",
         description: "Unable to toggle camera. Please check permissions.",
@@ -418,7 +398,7 @@ function InterviewCallContent({
           <div className="relative group">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50 border border-border cursor-pointer">
               <div className="flex items-center gap-1.5">
-                {INTERVIEW_STAGES.map((stage, idx) => {
+                {INTERVIEW_STAGES.map((stage, _idx) => {
                   const isCompleted = completedStages.has(stage);
                   const isCurrent = currentQuestion?.category === stage;
                   return (
@@ -555,7 +535,9 @@ function InterviewCallContent({
               )}
 
               {/* Show video avatar only if enabled and video is available, otherwise show static avatar */}
-              {videoAvatarEnabled && remoteParticipant && hasVideo(remoteParticipant) ? (
+              {videoAvatarEnabled &&
+              remoteParticipant &&
+              hasVideo(remoteParticipant) ? (
                 <div className="absolute inset-0 ai-video-container">
                   <ParticipantView
                     participant={remoteParticipant}

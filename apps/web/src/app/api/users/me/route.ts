@@ -5,8 +5,8 @@
  */
 
 import { NextResponse } from "next/server";
-import { logger } from "@/lib/logger";
 import { getServerSession } from "@/lib/auth-server";
+import { logger } from "@/lib/logger";
 
 export async function GET() {
   try {

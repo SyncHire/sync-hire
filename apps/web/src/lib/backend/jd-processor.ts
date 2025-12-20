@@ -6,21 +6,22 @@
  * Implements structured output with Zod schemas.
  */
 
+import type { ExtractedJobData } from "@sync-hire/database";
 import { z } from "zod";
 import { geminiClient } from "@/lib/gemini-client";
-import type {
-  ExtractedJobData,
-  EmploymentType,
-  WorkArrangement,
-} from "@sync-hire/database";
-import type { StorageInterface } from "@/lib/storage/storage-interface";
 import type { CloudStorageProvider } from "@/lib/storage/cloud/cloud-storage-provider";
+import type { StorageInterface } from "@/lib/storage/storage-interface";
 import { generateFileHash } from "@/lib/utils/hash-utils";
 
 // Valid employment types for the database
-const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract', 'Internship'] as const;
+const EMPLOYMENT_TYPES = [
+  "Full-time",
+  "Part-time",
+  "Contract",
+  "Internship",
+] as const;
 // Valid work arrangements for the database
-const WORK_ARRANGEMENTS = ['On-site', 'Remote', 'Hybrid'] as const;
+const WORK_ARRANGEMENTS = ["On-site", "Remote", "Hybrid"] as const;
 
 // Define Zod schema for extracted job data with enum constraints
 const extractedJobDataSchema = z.object({
@@ -45,9 +46,7 @@ const extractedJobDataSchema = z.object({
     ),
   workArrangement: z
     .enum(WORK_ARRANGEMENTS)
-    .describe(
-      "Work arrangement - must be one of: On-site, Remote, Hybrid",
-    ),
+    .describe("Work arrangement - must be one of: On-site, Remote, Hybrid"),
 });
 
 // Define Zod schema for combined AI generation (suggestions + questions)
@@ -118,16 +117,9 @@ export class JobDescriptionProcessor {
     if (cached) {
       const extractedData = await this.storage.getExtraction(hash);
       if (extractedData) {
-        console.log(
-          "📋 Using cached extracted data, generating fresh AI content...",
-        );
         // Generate AI content (suggestions + questions) for cached data
         const { aiSuggestions, aiQuestions } =
           await this.generateAIContent(extractedData);
-        console.log("✅ AI content generation completed for cached data:", {
-          suggestionsCount: aiSuggestions.length,
-          questionsCount: aiQuestions.length,
-        });
         return {
           hash,
           extractedData,
@@ -140,31 +132,19 @@ export class JobDescriptionProcessor {
 
     // Extract structured data based on file type
     const isTextBased = ext === "md" || ext === "txt";
-    console.log(`📄 Starting structured data extraction from ${ext?.toUpperCase()}...`);
     const extractedData = isTextBased
       ? await this.extractStructuredDataFromText(buffer.toString("utf-8"))
       : await this.extractStructuredData(buffer);
-    console.log("✅ Structured data extraction completed:", {
-      title: extractedData.title,
-      responsibilitiesCount: extractedData.responsibilities.length,
-      requirementsCount: extractedData.requirements.length,
-      location: extractedData.location,
-      seniority: extractedData.seniority,
-    });
-
-    // Generate AI content (suggestions + questions) in single call
-    console.log(
-      "🤖 Starting AI content generation (suggestions + questions)...",
-    );
     const { aiSuggestions, aiQuestions } =
       await this.generateAIContent(extractedData);
-    console.log("✅ AI content generation completed:", {
-      suggestionsCount: aiSuggestions.length,
-      questionsCount: aiQuestions.length,
-    });
 
     // Save to cache
-    await this.storage.saveExtraction(hash, extractedData, organizationId, createdById);
+    await this.storage.saveExtraction(
+      hash,
+      extractedData,
+      organizationId,
+      createdById,
+    );
 
     // Upload original file to cloud storage
     await this.cloudStorage.uploadJobDescription(hash, buffer);
@@ -180,7 +160,6 @@ export class JobDescriptionProcessor {
   ): Promise<ExtractedJobData> {
     try {
       const base64Data = buffer.toString("base64");
-      console.log("📖 Sending PDF to Gemini for structured data extraction...");
 
       // Extract structured data
       const jsonSchema = z.toJSONSchema(extractedJobDataSchema);
@@ -214,30 +193,13 @@ All fields must be present. Default to "Full-time" for employmentType and "On-si
       });
 
       const structuredContent = structuredResponse.text || "";
-      console.log(
-        "📥 Gemini structured data response length:",
-        structuredContent.length,
-      );
 
       const structuredParsed = JSON.parse(structuredContent);
-      console.log(
-        "📋 Structured data parsed successfully:",
-        Object.keys(structuredParsed),
-      );
 
       const extractedData = extractedJobDataSchema.parse(structuredParsed);
-      console.log("✅ Structured data validation passed");
 
       return extractedData;
-    } catch (error) {
-      console.error("❌ Structured data extraction error:", error);
-      console.error("Error details:", {
-        message: error instanceof Error ? error.message : "Unknown error",
-        name: error instanceof Error ? error.name : "Unknown",
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-      // Return empty data on failure
-      console.log("🔄 Returning empty structured data as fallback");
+    } catch (_error) {
       return {
         title: "",
         company: "",
@@ -258,8 +220,6 @@ All fields must be present. Default to "Full-time" for employmentType and "On-si
     textContent: string,
   ): Promise<ExtractedJobData> {
     try {
-      console.log("📖 Sending text content to Gemini for structured data extraction...");
-
       const jsonSchema = z.toJSONSchema(extractedJobDataSchema);
       const structuredResponse = await geminiClient.models.generateContent({
         model: "gemini-2.5-flash",
@@ -288,23 +248,13 @@ ${textContent}`,
       });
 
       const structuredContent = structuredResponse.text || "";
-      console.log(
-        "📥 Gemini structured data response length:",
-        structuredContent.length,
-      );
 
       const structuredParsed = JSON.parse(structuredContent);
-      console.log(
-        "📋 Structured data parsed successfully:",
-        Object.keys(structuredParsed),
-      );
 
       const extractedData = extractedJobDataSchema.parse(structuredParsed);
-      console.log("✅ Structured data validation passed");
 
       return extractedData;
-    } catch (error) {
-      console.error("❌ Text extraction error:", error);
+    } catch (_error) {
       return {
         title: "",
         company: "",
@@ -344,13 +294,6 @@ Employment Type: ${extractedData.employmentType}
 Work Arrangement: ${extractedData.workArrangement}
       `.trim();
 
-      console.log("📝 Preparing AI content generation with job data:", {
-        hasTitle: !!extractedData.title,
-        responsibilitiesCount: extractedData.responsibilities.length,
-        requirementsCount: extractedData.requirements.length,
-        hasSeniority: !!extractedData.seniority,
-      });
-
       const prompt = `Based on this job description, generate AI content to help improve the job posting and create interview questions.
 
 PART 1 - JOB SUGGESTIONS:
@@ -384,8 +327,6 @@ Job Description:
 ${jobDescription}
 
 Return ONLY valid JSON in the exact format shown above. All arrays must contain at least one item. Each object must have all required fields.`;
-
-      console.log("🚀 Sending request to Gemini for AI content generation...");
       const jsonSchema = z.toJSONSchema(aiContentSchema);
 
       const response = await geminiClient.models.generateContent({
@@ -398,58 +339,29 @@ Return ONLY valid JSON in the exact format shown above. All arrays must contain 
       });
 
       const content = response.text || "";
-      console.log("📥 Gemini AI content response length:", content.length);
-      console.log("📄 First 200 chars of response:", content.substring(0, 200));
 
       // Try to parse JSON with multiple fallback strategies
       let parsed;
       try {
         parsed = JSON.parse(content);
-        console.log("✅ Direct JSON parsing successful");
-      } catch (parseError) {
-        console.log(
-          "⚠️ Direct JSON parsing failed, attempting extraction:",
-          parseError instanceof Error ? parseError.message : String(parseError),
-        );
-
+      } catch (_parseError) {
         // Try to extract JSON from response if it contains extra text
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          console.log("🔍 Attempting to parse extracted JSON...");
           parsed = JSON.parse(jsonMatch[0]);
-          console.log("✅ Extracted JSON parsing successful");
         } else {
-          console.log("❌ Could not find JSON in response");
           throw new Error(
             "Could not parse JSON from response - no valid JSON found",
           );
         }
       }
-
-      console.log("📊 Parsed structure keys:", Object.keys(parsed));
-
-      // Validate with Zod
-      console.log("🔍 Validating with Zod schema...");
       const validated = aiContentSchema.parse(parsed);
-      console.log("✅ Zod validation successful:", {
-        suggestionsCount: validated.suggestions.length,
-        questionsCount: validated.questions.length,
-      });
 
       return {
         aiSuggestions: validated.suggestions,
         aiQuestions: validated.questions,
       };
-    } catch (error) {
-      console.error("❌ AI content generation error:", error);
-      console.error("Error details:", {
-        message: error instanceof Error ? error.message : "Unknown error",
-        name: error instanceof Error ? error.name : "Unknown",
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-
-      console.log("🔄 Returning fallback AI content");
-
+    } catch (_error) {
       // Return fallback content
       return {
         aiSuggestions: [

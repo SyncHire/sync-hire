@@ -8,15 +8,15 @@
  * Access: HR only (organization members)
  */
 
-import { type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
+import { createdResponse, errors, successResponse } from "@/lib/api-response";
+import { withOrgMembership } from "@/lib/auth-middleware";
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
-import { withOrgMembership } from "@/lib/auth-middleware";
-import { errors, successResponse, createdResponse } from "@/lib/api-response";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string; jobId: string }> }
+  { params }: { params: Promise<{ id: string; jobId: string }> },
 ) {
   try {
     const { id: organizationId, jobId } = await params;
@@ -53,7 +53,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string; jobId: string }> }
+  { params }: { params: Promise<{ id: string; jobId: string }> },
 ) {
   try {
     const { id: organizationId, jobId } = await params;
@@ -88,12 +88,13 @@ export async function POST(
       id: questionId,
       jobId,
       content,
-      type: type === "video" ? ("LONG_ANSWER" as const) : ("SHORT_ANSWER" as const),
+      type:
+        type === "video" ? ("LONG_ANSWER" as const) : ("SHORT_ANSWER" as const),
       options: [] as string[],
       duration: 2,
       category: null,
       required: required ?? false,
-      order: order ?? (job.questions?.length ?? 0),
+      order: order ?? job.questions?.length ?? 0,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -118,7 +119,7 @@ export async function POST(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string; jobId: string }> }
+  { params }: { params: Promise<{ id: string; jobId: string }> },
 ) {
   try {
     const { id: organizationId, jobId } = await params;
@@ -149,7 +150,7 @@ export async function PUT(
         questions: body.questions.map(
           (
             q: { id: string; text: string; type?: string; duration?: number },
-            index: number
+            index: number,
           ) => ({
             id: q.id,
             jobId,
@@ -165,7 +166,7 @@ export async function PUT(
             order: index,
             createdAt: new Date(),
             updatedAt: new Date(),
-          })
+          }),
         ),
       };
 
@@ -220,7 +221,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string; jobId: string }> }
+  { params }: { params: Promise<{ id: string; jobId: string }> },
 ) {
   try {
     const { id: organizationId, jobId } = await params;
@@ -256,7 +257,7 @@ export async function DELETE(
     }
 
     const updatedQuestions = (job.questions || []).filter(
-      (q) => q.id !== questionId
+      (q) => q.id !== questionId,
     );
     await storage.saveJob(jobId, { ...job, questions: updatedQuestions });
 

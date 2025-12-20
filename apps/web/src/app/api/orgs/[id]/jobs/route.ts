@@ -5,26 +5,35 @@
  * Requires authentication and organization membership.
  */
 
-import { type NextRequest } from "next/server";
+import type {
+  ApplicationFailure,
+  ExtractedCVData,
+  ExtractedJobData,
+} from "@sync-hire/database";
+import {
+  ApplicationSource,
+  ApplicationStatus,
+  JobStatus,
+  MatchingStatus,
+} from "@sync-hire/database";
+import type { NextRequest } from "next/server";
+import { z } from "zod";
+import { trackUsage } from "@/lib/ai-usage-tracker";
+import { createdResponse, errors, successResponse } from "@/lib/api-response";
+import { withOrgMembership } from "@/lib/auth-middleware";
+import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
+import { geminiClient } from "@/lib/gemini-client";
 import { logger } from "@/lib/logger";
 import { getAllJobsData } from "@/lib/server-utils/get-jobs";
-import { withOrgMembership } from "@/lib/auth-middleware";
-import { errors, successResponse, createdResponse } from "@/lib/api-response";
 import { getStorage } from "@/lib/storage/storage-factory";
-import { MatchingStatus, JobStatus, ApplicationStatus, ApplicationSource } from "@sync-hire/database";
-import type { ExtractedCVData, ExtractedJobData, ApplicationFailure } from "@sync-hire/database";
-import type { Question } from "@/lib/types/interview-types";
 import type { Job } from "@/lib/storage/storage-interface";
-import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
+import type { Question } from "@/lib/types/interview-types";
 import { jobToExtractedJobData } from "@/lib/utils/type-adapters";
-import { geminiClient } from "@/lib/gemini-client";
-import { z } from "zod";
 import { withQuota } from "@/lib/with-quota";
-import { trackUsage } from "@/lib/ai-usage-tracker";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: organizationId } = await params;
@@ -73,7 +82,10 @@ interface CreateJobRequest {
 /**
  * Determine the initial AI matching status based on configuration
  */
-function getInitialMatchingStatus(aiMatchingEnabled: boolean, hasCVsToMatch: boolean): MatchingStatus {
+function getInitialMatchingStatus(
+  aiMatchingEnabled: boolean,
+  hasCVsToMatch: boolean,
+): MatchingStatus {
   if (!aiMatchingEnabled) {
     return MatchingStatus.DISABLED;
   }
@@ -87,7 +99,7 @@ function getInitialMatchingStatus(aiMatchingEnabled: boolean, hasCVsToMatch: boo
  * Trigger candidate matching and return match count
  */
 async function triggerCandidateMatching(
-  jobRef: Pick<Job, "id" | "organizationId">
+  jobRef: Pick<Job, "id" | "organizationId">,
 ): Promise<{ matchedCount: number; candidateNames: string[] }> {
   const { id: jobId, organizationId } = jobRef;
   try {
@@ -151,7 +163,9 @@ async function triggerCandidateMatching(
 
       // Check if application already exists
       const existingApplications = await storage.getApplicationsForJob(jobId);
-      const alreadyApplied = existingApplications.some(app => app.cvUploadId === cvId);
+      const alreadyApplied = existingApplications.some(
+        (app) => app.cvUploadId === cvId,
+      );
 
       if (alreadyApplied) {
         continue;
@@ -173,7 +187,7 @@ Requirements: ${job.requirements.join(", ")}
 CANDIDATE:
 Name: ${cvData.personalInfo.fullName}
 Skills: ${cvData.skills?.join(", ") || "Not specified"}
-Experience: ${cvData.experience?.map(e => `${e.title} at ${e.company}`).join("; ") || "Not specified"}
+Experience: ${cvData.experience?.map((e) => `${e.title} at ${e.company}`).join("; ") || "Not specified"}
 
 Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
 
@@ -183,7 +197,10 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
           contents: [{ text: prompt }],
           config: {
             responseMimeType: "application/json",
-            responseJsonSchema: jsonSchema as unknown as Record<string, unknown>,
+            responseJsonSchema: jsonSchema as unknown as Record<
+              string,
+              unknown
+            >,
           },
         });
 
@@ -227,89 +244,105 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
         matchedCandidates.push(candidateName);
 
         // Generate questions in background (don't await)
-        const questionsWithCategory: Question[] = (job.questions || []).map(q => ({
-          id: q.id,
-          text: q.content,
-          type: "text" as const,
-          duration: q.duration,
-          category: (q.category ?? "Technical Skills") as Question["category"],
-        }));
+        const questionsWithCategory: Question[] = (job.questions || []).map(
+          (q) => ({
+            id: q.id,
+            text: q.content,
+            type: "text" as const,
+            duration: q.duration,
+            category: (q.category ??
+              "Technical Skills") as Question["category"],
+          }),
+        );
         const jdData = jobToExtractedJobData(job);
-        generateSmartMergedQuestions(cvData as ExtractedCVData, jdData, questionsWithCategory).then(async (mergedQuestions) => {
-          const interviewQuestions = {
-            metadata: {
+        generateSmartMergedQuestions(
+          cvData as ExtractedCVData,
+          jdData,
+          questionsWithCategory,
+        )
+          .then(async (mergedQuestions) => {
+            const interviewQuestions = {
+              metadata: {
+                cvId,
+                jobId,
+                generatedAt: new Date().toISOString(),
+              },
+              customQuestions: mergedQuestions
+                .filter((q) => q.source === "job")
+                .map((q, i) => ({
+                  id: q.originalId || `job-${i}`,
+                  type: "LONG_ANSWER" as const,
+                  content: q.content,
+                  required: true,
+                  order: i,
+                })),
+              suggestedQuestions: mergedQuestions
+                .filter((q) => q.source === "ai-personalized")
+                .map((q) => ({
+                  content: q.content,
+                  reason: q.reason,
+                  category: q.category,
+                })),
+            };
+
+            await storage.saveInterviewQuestions(
               cvId,
               jobId,
-              generatedAt: new Date().toISOString(),
-            },
-            customQuestions: mergedQuestions
-              .filter(q => q.source === "job")
-              .map((q, i) => ({
-                id: q.originalId || `job-${i}`,
-                type: "LONG_ANSWER" as const,
-                content: q.content,
-                required: true,
-                order: i,
-              })),
-            suggestedQuestions: mergedQuestions
-              .filter(q => q.source === "ai-personalized")
-              .map(q => ({
-                content: q.content,
-                reason: q.reason,
-                category: q.category,
-              })),
-          };
+              interviewQuestions,
+            );
 
-          await storage.saveInterviewQuestions(cvId, jobId, interviewQuestions);
-
-          // Update application status to ready
-          const app = await storage.getApplication(applicationId);
-          if (app) {
-            app.status = ApplicationStatus.READY;
-            app.updatedAt = new Date();
-            await storage.saveApplication(app);
-          }
-          logger.info("Questions generated for candidate", {
-            api: "orgs/[id]/jobs",
-            operation: "auto-match",
-            step: "questionGeneration",
-            jobId,
-            cvId,
-            candidateName,
-          });
-        }).catch(async (err) => {
-          logger.error(err, {
-            api: "orgs/[id]/jobs",
-            operation: "auto-match",
-            step: "questionGeneration",
-            jobId,
-            cvId,
-            candidateName,
-            applicationId,
-          });
-          // Update application status to FAILED with structured failure info
-          const app = await storage.getApplication(applicationId);
-          if (app) {
-            const failureInfo: ApplicationFailure = {
-              code: "question_generation_failed",
-              message: "Failed to generate personalized interview questions",
-              step: "question_generation",
-              retryable: true,
-              occurredAt: new Date().toISOString(),
-              details: { cvId, jobId },
-            };
-            app.status = ApplicationStatus.FAILED;
-            app.failureInfo = failureInfo;
-            app.updatedAt = new Date();
-            await storage.saveApplication(app);
-            logger.warn("Application marked as FAILED due to question generation failure", {
+            // Update application status to ready
+            const app = await storage.getApplication(applicationId);
+            if (app) {
+              app.status = ApplicationStatus.READY;
+              app.updatedAt = new Date();
+              await storage.saveApplication(app);
+            }
+            logger.info("Questions generated for candidate", {
               api: "orgs/[id]/jobs",
               operation: "auto-match",
-              applicationId,
-              failureCode: failureInfo.code,
+              step: "questionGeneration",
+              jobId,
+              cvId,
+              candidateName,
             });
-          }
-        });
+          })
+          .catch(async (err) => {
+            logger.error(err, {
+              api: "orgs/[id]/jobs",
+              operation: "auto-match",
+              step: "questionGeneration",
+              jobId,
+              cvId,
+              candidateName,
+              applicationId,
+            });
+            // Update application status to FAILED with structured failure info
+            const app = await storage.getApplication(applicationId);
+            if (app) {
+              const failureInfo: ApplicationFailure = {
+                code: "question_generation_failed",
+                message: "Failed to generate personalized interview questions",
+                step: "question_generation",
+                retryable: true,
+                occurredAt: new Date().toISOString(),
+                details: { cvId, jobId },
+              };
+              app.status = ApplicationStatus.FAILED;
+              app.failureInfo = failureInfo;
+              app.updatedAt = new Date();
+              await storage.saveApplication(app);
+              logger.warn(
+                "Application marked as FAILED due to question generation failure",
+                {
+                  api: "orgs/[id]/jobs",
+                  operation: "auto-match",
+                  applicationId,
+                  failureCode: failureInfo.code,
+                },
+              );
+            }
+          });
       }
     }
 
@@ -356,7 +389,7 @@ Return JSON with: matchScore (0-100), matchReasons (array), skillGaps (array)`;
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: organizationId } = await params;
@@ -377,7 +410,9 @@ export async function POST(
 
     // Validate required fields
     if (!body.title || !body.description || !body.location) {
-      return errors.badRequest("Missing required fields: title, description, location");
+      return errors.badRequest(
+        "Missing required fields: title, description, location",
+      );
     }
 
     const aiMatchingEnabled = body.aiMatchingEnabled !== false;
@@ -420,23 +455,30 @@ export async function POST(
     }
 
     // Build extracted data if original JD text provided
-    const jdExtraction: ExtractedJobData | null = body.originalJDText ? {
-      title: body.title,
-      company: organization.name,
-      responsibilities: body.responsibilities || [],
-      requirements: body.requirements || [],
-      seniority: body.seniority || "",
-      location: body.location,
-      employmentType: (body.employmentType || "Full-time") as ExtractedJobData["employmentType"],
-      workArrangement: (body.workArrangement || "On-site") as ExtractedJobData["workArrangement"],
-    } : null;
+    const jdExtraction: ExtractedJobData | null = body.originalJDText
+      ? {
+          title: body.title,
+          company: organization.name,
+          responsibilities: body.responsibilities || [],
+          requirements: body.requirements || [],
+          seniority: body.seniority || "",
+          location: body.location,
+          employmentType: (body.employmentType ||
+            "Full-time") as ExtractedJobData["employmentType"],
+          workArrangement: (body.workArrangement ||
+            "On-site") as ExtractedJobData["workArrangement"],
+        }
+      : null;
 
     // Build questions in the database format
     const dbQuestions = (body.customQuestions || []).map((q, index) => ({
       id: `q-${Date.now()}-${index}`,
       jobId,
       content: q.text,
-      type: q.type === "video" ? "LONG_ANSWER" as const : "SHORT_ANSWER" as const,
+      type:
+        q.type === "video"
+          ? ("LONG_ANSWER" as const)
+          : ("SHORT_ANSWER" as const),
       options: [] as string[],
       duration: q.duration || 2,
       category: null,
@@ -464,7 +506,10 @@ export async function POST(
       status: JobStatus.ACTIVE,
       aiMatchingEnabled,
       aiMatchingThreshold,
-      aiMatchingStatus: getInitialMatchingStatus(aiMatchingEnabled, hasCVsToMatch),
+      aiMatchingStatus: getInitialMatchingStatus(
+        aiMatchingEnabled,
+        hasCVsToMatch,
+      ),
       jdFileUrl: null,
       jdFileHash: null,
       jdExtraction,
@@ -480,12 +525,15 @@ export async function POST(
 
     // Trigger automatic candidate matching in background (don't wait)
     if (aiMatchingEnabled && hasCVsToMatch) {
-      logger.info("AI Matching enabled - triggering automatic candidate matching", {
-        api: "orgs/[id]/jobs",
-        operation: "triggerAutoMatch",
-        jobId: job.id,
-        cvCount,
-      });
+      logger.info(
+        "AI Matching enabled - triggering automatic candidate matching",
+        {
+          api: "orgs/[id]/jobs",
+          operation: "triggerAutoMatch",
+          jobId: job.id,
+          cvCount,
+        },
+      );
       triggerCandidateMatching(job).catch(async (err) => {
         logger.error(err, {
           api: "orgs/[id]/jobs",
@@ -510,17 +558,20 @@ export async function POST(
       });
     }
 
-    return createdResponse({
-      success: true,
-      data: {
-        id: job.id,
-        title: job.title,
-        location: job.location,
-        customQuestionsCount: dbQuestions.length,
-        status: job.status,
-        aiMatchingStatus: job.aiMatchingStatus,
+    return createdResponse(
+      {
+        success: true,
+        data: {
+          id: job.id,
+          title: job.title,
+          location: job.location,
+          customQuestionsCount: dbQuestions.length,
+          status: job.status,
+          aiMatchingStatus: job.aiMatchingStatus,
+        },
       },
-    }, `/api/orgs/${organizationId}/jobs/${job.id}`);
+      `/api/orgs/${organizationId}/jobs/${job.id}`,
+    );
   } catch (error) {
     logger.error(error, {
       api: "orgs/[id]/jobs",

@@ -5,8 +5,8 @@
  * Provides hooks and functions for authentication and organization management.
  */
 
-import { createAuthClient } from "better-auth/react";
 import { organizationClient } from "better-auth/client/plugins";
+import { createAuthClient } from "better-auth/react";
 
 /**
  * Get the base URL for auth API calls.

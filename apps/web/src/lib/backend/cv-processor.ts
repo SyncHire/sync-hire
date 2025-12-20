@@ -6,11 +6,11 @@
  * Implements structured output with Zod schemas.
  */
 
+import type { ExtractedCVData } from "@sync-hire/database";
 import { z } from "zod";
 import { geminiClient } from "@/lib/gemini-client";
-import type { ExtractedCVData } from "@sync-hire/database";
-import type { StorageInterface } from "@/lib/storage/storage-interface";
 import type { CloudStorageProvider } from "@/lib/storage/cloud/cloud-storage-provider";
+import type { StorageInterface } from "@/lib/storage/storage-interface";
 import { generateFileHash } from "@/lib/utils/hash-utils";
 
 // Define Zod schema for extracted CV data
@@ -429,8 +429,7 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
       let parsed;
       try {
         parsed = JSON.parse(content);
-      } catch (parseError) {
-        console.error("JSON parse error, attempting cleanup:", parseError);
+      } catch (_parseError) {
         // Try to extract JSON from potentially malformed response
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
@@ -447,8 +446,7 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
       const validated = extractedCVDataSchema.parse(processedData);
 
       return validated;
-    } catch (error) {
-      console.error("CV Gemini API error:", error);
+    } catch (_error) {
       // Return empty extraction on failure (background process, no user impact)
       return {
         personalInfo: {
@@ -761,9 +759,7 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
         } else if (typeof cert === "object") {
           fixed.push({
             name: this.cleanStringField(cert.name),
-            issuer: cert.issuer
-              ? this.cleanStringField(cert.issuer)
-              : "",
+            issuer: cert.issuer ? this.cleanStringField(cert.issuer) : "",
             issueDate: this.normalizeDate(cert.issueDate) || undefined,
             expiryDate: this.normalizeDate(cert.expiryDate) || undefined,
           });

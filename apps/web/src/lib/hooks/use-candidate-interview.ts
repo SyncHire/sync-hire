@@ -21,7 +21,7 @@ interface UseCandidateInterviewOptions {
  */
 export function useCandidateInterview(
   interviewId: string | null,
-  options?: UseCandidateInterviewOptions
+  options?: UseCandidateInterviewOptions,
 ) {
   return useQuery<{ success: boolean; data: CandidateInterviewResponse }>({
     queryKey: ["/api/candidate/interviews", interviewId],
@@ -65,11 +65,14 @@ interface StartInterviewResponse {
 export function useStartCandidateInterview() {
   return useMutation<StartInterviewResponse, Error, StartInterviewParams>({
     mutationFn: async ({ interviewId, candidateName }) => {
-      const response = await fetch(`/api/candidate/interviews/${interviewId}/start`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ candidateName }),
-      });
+      const response = await fetch(
+        `/api/candidate/interviews/${interviewId}/start`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ candidateName }),
+        },
+      );
 
       if (!response.ok) {
         const errorData = await response

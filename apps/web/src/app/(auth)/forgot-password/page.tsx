@@ -6,12 +6,11 @@
  * Request password reset email.
  */
 
-import { useState } from "react";
+import { ArrowLeft, Mail } from "lucide-react";
 import Link from "next/link";
-import { authClient } from "@/lib/auth-client";
+import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -20,9 +19,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { Mail, ArrowLeft } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -67,7 +67,10 @@ export default function ForgotPasswordPage() {
           </p>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <Link href="/login" className="text-sm text-muted-foreground hover:text-primary">
+          <Link
+            href="/login"
+            className="text-sm text-muted-foreground hover:text-primary"
+          >
             Back to Login
           </Link>
         </CardFooter>
@@ -103,11 +106,7 @@ export default function ForgotPasswordPage() {
               disabled={isLoading}
             />
           </div>
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isLoading}
-          >
+          <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? <Spinner className="mr-2 h-4 w-4" /> : null}
             Send Reset Link
           </Button>

@@ -4,12 +4,12 @@
  * Tests organization jobs endpoint with authentication and membership checks.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GET } from "./route";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  createTestRequest,
   createRouteParams,
+  createTestRequest,
 } from "../../../../../../test/helpers/api-test-helpers";
+import { GET } from "./route";
 
 // Mock auth-server (withOrgMembership uses getServerSession)
 vi.mock("@/lib/auth-server", () => ({

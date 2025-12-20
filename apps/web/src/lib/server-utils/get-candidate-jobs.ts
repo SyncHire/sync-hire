@@ -4,7 +4,7 @@
 
 import "server-only";
 import { prisma } from "@sync-hire/database";
-import { getAllActiveJobsData, JobWithApplicantCount } from "./get-jobs";
+import { getAllActiveJobsData, type JobWithApplicantCount } from "./get-jobs";
 
 /**
  * Candidate-facing job application type (uses database Job type)
@@ -25,7 +25,7 @@ export interface CandidateJobApplication {
  * Returns real application IDs for jobs the user has applied to.
  */
 export async function getCandidateJobApplications(
-  userId: string
+  userId: string,
 ): Promise<CandidateJobApplication[]> {
   // Get all active jobs
   const jobs = await getAllActiveJobsData();
@@ -45,7 +45,7 @@ export async function getCandidateJobApplications(
 
   // Create a map of jobId -> application for quick lookup
   const applicationsByJobId = new Map(
-    userApplications.map((app) => [app.jobId, app])
+    userApplications.map((app) => [app.jobId, app]),
   );
 
   return jobs.map((job) => {
@@ -81,16 +81,13 @@ export async function getCandidateJobApplications(
  * Map database ApplicationStatus to UI status
  */
 function mapApplicationStatus(
-  dbStatus: string
+  dbStatus: string,
 ): "NOT_APPLIED" | "APPLIED" | "INTERVIEWING" | "COMPLETED" {
   switch (dbStatus) {
     case "COMPLETED":
       return "COMPLETED";
     case "INTERVIEWING":
       return "INTERVIEWING";
-    case "READY":
-    case "PROCESSING":
-    case "FAILED":
     default:
       return "APPLIED";
   }

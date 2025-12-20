@@ -10,7 +10,7 @@ export async function handleResponseError(res: Response): Promise<never> {
     const retryAfter = res.headers.get("Retry-After");
     const seconds = retryAfter ? parseInt(retryAfter, 10) : 60;
     throw new Error(
-      `Too many requests. Please wait ${seconds} seconds before trying again.`
+      `Too many requests. Please wait ${seconds} seconds before trying again.`,
     );
   }
 

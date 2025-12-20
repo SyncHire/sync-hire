@@ -6,20 +6,19 @@
  */
 
 import {
-  Prisma,
-  prisma,
   type CandidateApplication,
   type ExtractedCVData,
   type ExtractedJobData,
   type Interview,
   type InterviewQuestions,
-  type JobWithQuestions,
   type Notification,
   type Organization,
+  Prisma,
+  type prisma,
   type User,
-} from '@sync-hire/database';
-import type { StorageInterface, Job } from './storage-interface';
-import { getServerSession } from '@/lib/auth-server';
+} from "@sync-hire/database";
+import { getServerSession } from "@/lib/auth-server";
+import type { Job, StorageInterface } from "./storage-interface";
 
 export class DatabaseStorage implements StorageInterface {
   constructor(private readonly db: typeof prisma) {}
@@ -36,21 +35,26 @@ export class DatabaseStorage implements StorageInterface {
     return job?.jdExtraction ?? null;
   }
 
-  async saveExtraction(hash: string, data: ExtractedJobData, organizationId: string, createdById: string): Promise<void> {
+  async saveExtraction(
+    hash: string,
+    data: ExtractedJobData,
+    organizationId: string,
+    createdById: string,
+  ): Promise<void> {
     await this.db.job.upsert({
       where: { id: hash },
       update: { jdExtraction: data },
       create: {
         id: hash,
-        title: data.title || 'Untitled',
+        title: data.title || "Untitled",
         organizationId,
         createdById,
-        location: data.location || '',
-        employmentType: data.employmentType || 'Full-time',
-        description: data.responsibilities?.join('\n') || '',
+        location: data.location || "",
+        employmentType: data.employmentType || "Full-time",
+        description: data.responsibilities?.join("\n") || "",
         requirements: data.requirements || [],
         jdExtraction: data,
-        status: 'DRAFT',
+        status: "DRAFT",
       },
     });
   }
@@ -147,7 +151,7 @@ export class DatabaseStorage implements StorageInterface {
   async getAllStoredJobs(): Promise<Job[]> {
     const jobs = await this.db.job.findMany({
       include: { questions: true, organization: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     // Return jobs directly from Prisma - they already include questions and organization
@@ -202,19 +206,18 @@ export class DatabaseStorage implements StorageInterface {
   // Interview Questions Methods
   // =============================================================================
 
-  async getInterviewQuestions(cvId: string, jobId: string): Promise<InterviewQuestions | null> {
+  async getInterviewQuestions(
+    cvId: string,
+    jobId: string,
+  ): Promise<InterviewQuestions | null> {
     // cvId might be fileHash or cvUploadId - look up CVUpload first
     const cvUpload = await this.db.cVUpload.findFirst({
       where: {
-        OR: [
-          { id: cvId },
-          { fileHash: cvId },
-        ],
+        OR: [{ id: cvId }, { fileHash: cvId }],
       },
     });
 
     if (!cvUpload) {
-      console.warn(`[DatabaseStorage.getInterviewQuestions] CV not found for cvId: ${cvId}, jobId: ${jobId}`);
       return null;
     }
 
@@ -232,20 +235,21 @@ export class DatabaseStorage implements StorageInterface {
     return application.questionsData;
   }
 
-  async saveInterviewQuestions(cvId: string, jobId: string, data: InterviewQuestions): Promise<void> {
+  async saveInterviewQuestions(
+    cvId: string,
+    jobId: string,
+    data: InterviewQuestions,
+  ): Promise<void> {
     // cvId might be fileHash or cvUploadId - look up CVUpload first
     const cvUpload = await this.db.cVUpload.findFirst({
       where: {
-        OR: [
-          { id: cvId },
-          { fileHash: cvId },
-        ],
+        OR: [{ id: cvId }, { fileHash: cvId }],
       },
     });
 
     if (!cvUpload) {
       throw new Error(
-        `Cannot save interview questions: CV not found for ${cvId}.`
+        `Cannot save interview questions: CV not found for ${cvId}.`,
       );
     }
 
@@ -260,7 +264,7 @@ export class DatabaseStorage implements StorageInterface {
     if (!application) {
       throw new Error(
         `Cannot save interview questions: No application found for CV ${cvId} and job ${jobId}. ` +
-        `The application must be created before saving questions.`
+          `The application must be created before saving questions.`,
       );
     }
 
@@ -274,15 +278,11 @@ export class DatabaseStorage implements StorageInterface {
     // cvId might be fileHash or cvUploadId - look up CVUpload first
     const cvUpload = await this.db.cVUpload.findFirst({
       where: {
-        OR: [
-          { id: cvId },
-          { fileHash: cvId },
-        ],
+        OR: [{ id: cvId }, { fileHash: cvId }],
       },
     });
 
     if (!cvUpload) {
-      console.warn(`[DatabaseStorage.hasInterviewQuestions] CV not found for cvId: ${cvId}, jobId: ${jobId}`);
       return false;
     }
 
@@ -308,14 +308,14 @@ export class DatabaseStorage implements StorageInterface {
 
   async getAllInterviews(): Promise<Interview[]> {
     return this.db.interview.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
   async getInterviewsForUser(userId: string): Promise<Interview[]> {
     return this.db.interview.findMany({
       where: { candidateId: userId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -360,7 +360,7 @@ export class DatabaseStorage implements StorageInterface {
     const session = await getServerSession();
 
     if (!session?.user) {
-      throw new Error('Not authenticated');
+      throw new Error("Not authenticated");
     }
 
     // Session user from Better Auth has all user fields
@@ -384,7 +384,7 @@ export class DatabaseStorage implements StorageInterface {
   async getUserCVId(userId: string): Promise<string | null> {
     const cv = await this.db.cVUpload.findFirst({
       where: { userId },
-      orderBy: { uploadedAt: 'desc' },
+      orderBy: { uploadedAt: "desc" },
     });
 
     return cv?.fileHash || null;
@@ -405,7 +405,7 @@ export class DatabaseStorage implements StorageInterface {
   async getNotifications(userId: string): Promise<Notification[]> {
     return this.db.notification.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -437,32 +437,36 @@ export class DatabaseStorage implements StorageInterface {
   async getApplicationsForJob(jobId: string): Promise<CandidateApplication[]> {
     return this.db.candidateApplication.findMany({
       where: { jobId },
-      orderBy: { matchScore: 'desc' },
+      orderBy: { matchScore: "desc" },
     });
   }
 
-  async getApplication(applicationId: string): Promise<CandidateApplication | null> {
+  async getApplication(
+    applicationId: string,
+  ): Promise<CandidateApplication | null> {
     return this.db.candidateApplication.findUnique({
       where: { id: applicationId },
     });
   }
 
-  async getApplicationByInterviewId(interviewId: string): Promise<CandidateApplication | null> {
+  async getApplicationByInterviewId(
+    interviewId: string,
+  ): Promise<CandidateApplication | null> {
     return this.db.candidateApplication.findUnique({
       where: { interviewId },
     });
   }
 
-  async getOrCreateApplication(cvHash: string, jobId: string): Promise<CandidateApplication> {
+  async getOrCreateApplication(
+    cvHash: string,
+    jobId: string,
+  ): Promise<CandidateApplication> {
     const user = await this.getCurrentUser();
 
     // Get CV upload by hash
     const cvUpload = await this.db.cVUpload.findFirst({
       where: {
-        OR: [
-          { id: cvHash },
-          { fileHash: cvHash },
-        ],
+        OR: [{ id: cvHash }, { fileHash: cvHash }],
       },
     });
 
@@ -485,7 +489,9 @@ export class DatabaseStorage implements StorageInterface {
     }
 
     // Get CV extraction for candidate name/email
-    const extraction = cvUpload.extraction as { personalInfo?: { fullName?: string; email?: string } } | null;
+    const extraction = cvUpload.extraction as {
+      personalInfo?: { fullName?: string; email?: string };
+    } | null;
     const candidateName = extraction?.personalInfo?.fullName || user.name;
     const candidateEmail = extraction?.personalInfo?.email || user.email;
 
@@ -500,13 +506,15 @@ export class DatabaseStorage implements StorageInterface {
         matchScore: 0, // Will be updated by AI matching
         matchReasons: [],
         skillGaps: [],
-        status: 'GENERATING_QUESTIONS',
-        source: 'MANUAL_APPLY',
+        status: "GENERATING_QUESTIONS",
+        source: "MANUAL_APPLY",
       },
     });
   }
 
-  async saveApplication(application: Omit<CandidateApplication, 'id'>): Promise<CandidateApplication> {
+  async saveApplication(
+    application: Omit<CandidateApplication, "id">,
+  ): Promise<CandidateApplication> {
     return this.db.candidateApplication.upsert({
       where: {
         jobId_userId: {
@@ -543,16 +551,19 @@ export class DatabaseStorage implements StorageInterface {
     });
   }
 
-  async getAllCVExtractions(): Promise<Array<{ cvId: string; userId: string; data: ExtractedCVData }>> {
+  async getAllCVExtractions(): Promise<
+    Array<{ cvId: string; userId: string; data: ExtractedCVData }>
+  > {
     const cvs = await this.db.cVUpload.findMany({
       where: { extraction: { not: Prisma.JsonNull } },
     });
 
     return cvs
-      .filter((cv): cv is typeof cv & { extraction: ExtractedCVData } =>
-        cv.extraction !== null
+      .filter(
+        (cv): cv is typeof cv & { extraction: ExtractedCVData } =>
+          cv.extraction !== null,
       )
-      .map(cv => ({
+      .map((cv) => ({
         cvId: cv.id,
         userId: cv.userId,
         data: cv.extraction,

@@ -8,12 +8,12 @@
  * Access: HR only (organization members)
  */
 
-import { type NextRequest } from "next/server";
+import type { InterviewStatus } from "@sync-hire/database";
+import type { NextRequest } from "next/server";
+import { errors, successResponse } from "@/lib/api-response";
+import { withOrgMembership } from "@/lib/auth-middleware";
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
-import { InterviewStatus } from "@sync-hire/database";
-import { withOrgMembership } from "@/lib/auth-middleware";
-import { errors, successResponse } from "@/lib/api-response";
 
 // Common applicant type for the response
 interface ApplicantResponse {
@@ -38,7 +38,7 @@ interface ApplicantResponse {
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string; jobId: string }> }
+  { params }: { params: Promise<{ id: string; jobId: string }> },
 ) {
   try {
     const { id: organizationId, jobId } = await params;
@@ -63,7 +63,7 @@ export async function GET(
     // Get all interviews and filter by jobId
     const allInterviews = await storage.getAllInterviews();
     const jobInterviews = allInterviews.filter(
-      (interview) => interview.jobId === jobId
+      (interview) => interview.jobId === jobId,
     );
 
     // Get AI-matched applications for this job
@@ -115,7 +115,7 @@ export async function GET(
           experience: cvData?.experience ?? [],
           source: "interview" as const,
         };
-      })
+      }),
     );
 
     // Convert AI applications to applicant format (only those without interviews)
@@ -146,7 +146,7 @@ export async function GET(
             matchReasons: app.matchReasons,
             skillGaps: app.skillGaps,
           };
-        })
+        }),
     );
 
     // Combine interview applicants and AI-matched applicants
@@ -187,7 +187,7 @@ export async function GET(
                   applicants
                     .filter((a) => a.score !== undefined)
                     .reduce((sum, a) => sum + (a.score ?? 0), 0) /
-                    applicants.filter((a) => a.score !== undefined).length
+                    applicants.filter((a) => a.score !== undefined).length,
                 )
               : null,
         },

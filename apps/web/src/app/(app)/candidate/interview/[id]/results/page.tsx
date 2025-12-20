@@ -5,12 +5,12 @@
  * URL: /candidate/interview/[id]/results
  */
 
-import { notFound, redirect } from "next/navigation";
-import { getCompanyLogoUrl } from "@/lib/logo-utils";
-import type { Interview, Job } from "@/lib/storage/storage-interface";
-import { getStorage } from "@/lib/storage/storage-factory";
 import { InterviewStatus } from "@sync-hire/database";
+import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth-server";
+import { getCompanyLogoUrl } from "@/lib/logo-utils";
+import { getStorage } from "@/lib/storage/storage-factory";
+import type { Interview, Job } from "@/lib/storage/storage-interface";
 import ResultsContent from "./ResultsContent";
 
 interface ResultsPageProps {
@@ -28,12 +28,14 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
     redirect("/login");
   }
 
-  const user = session.user;
+  const _user = session.user;
   const storage = getStorage();
 
   // Try to get interview from database
-  let interview: Interview | null = await storage.getInterview(id);
-  let job: Job | null = interview ? await storage.getJob(interview.jobId) : null;
+  const interview: Interview | null = await storage.getInterview(id);
+  let job: Job | null = interview
+    ? await storage.getJob(interview.jobId)
+    : null;
 
   // If not found as interview, try as application ID
   if (!interview) {

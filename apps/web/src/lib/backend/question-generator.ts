@@ -6,9 +6,9 @@
  * Supports smart merging with existing job questions.
  */
 
+import type { ExtractedCVData, ExtractedJobData } from "@sync-hire/database";
 import { z } from "zod";
 import { geminiClient } from "@/lib/gemini-client";
-import type { ExtractedCVData, ExtractedJobData } from "@sync-hire/database";
 import type { Question } from "@/lib/types/interview-types";
 
 // Zod schema for suggested question response validation
@@ -27,12 +27,20 @@ export type SuggestedQuestion = z.infer<typeof suggestedQuestionSchema>;
 
 // Schema for smart merge response
 const smartMergeResponseSchema = z.object({
-  keepQuestions: z.array(z.number()).describe("Indices of job questions to keep"),
-  skipReasons: z.array(z.object({
-    index: z.number(),
-    reason: z.string(),
-  })).describe("Reasons for skipping certain questions"),
-  gapQuestions: z.array(suggestedQuestionSchema).describe("New questions to fill gaps"),
+  keepQuestions: z
+    .array(z.number())
+    .describe("Indices of job questions to keep"),
+  skipReasons: z
+    .array(
+      z.object({
+        index: z.number(),
+        reason: z.string(),
+      }),
+    )
+    .describe("Reasons for skipping certain questions"),
+  gapQuestions: z
+    .array(suggestedQuestionSchema)
+    .describe("New questions to fill gaps"),
 });
 
 export interface MergedQuestion extends SuggestedQuestion {
@@ -156,14 +164,10 @@ export async function generateInterviewQuestions(
 
     // Ensure we have 6-8 questions
     if (validatedQuestions.length < 6 || validatedQuestions.length > 8) {
-      console.warn(
-        `Expected 6-8 questions, got ${validatedQuestions.length}. Returning as-is.`,
-      );
     }
 
     return validatedQuestions;
   } catch (error) {
-    console.error("Failed to generate interview questions:", error);
     throw new Error(
       `Failed to generate interview questions: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
@@ -233,7 +237,7 @@ export async function generateSmartMergedQuestions(
   // If no job questions, fall back to regular generation
   if (!jobQuestions || jobQuestions.length === 0) {
     const questions = await generateInterviewQuestions(cvData, jdData);
-    return questions.map(q => ({
+    return questions.map((q) => ({
       ...q,
       source: "ai-personalized" as const,
     }));
@@ -287,16 +291,14 @@ export async function generateSmartMergedQuestions(
 
     // Log skip reasons for debugging
     if (validated.skipReasons.length > 0) {
-      console.log("Skipped questions:", validated.skipReasons);
     }
 
     return mergedQuestions;
-  } catch (error) {
-    console.error("Smart merge failed, falling back to regular generation:", error);
+  } catch (_error) {
     // Fallback: keep all job questions + generate new ones
     const newQuestions = await generateInterviewQuestions(cvData, jdData);
 
-    const merged: MergedQuestion[] = jobQuestions.map(q => ({
+    const merged: MergedQuestion[] = jobQuestions.map((q) => ({
       content: q.text,
       reason: "Existing job question",
       category: mapCategory(q.category),
@@ -319,7 +321,9 @@ export async function generateSmartMergedQuestions(
 /**
  * Map interview stage to question category
  */
-function mapCategory(stage: string | undefined): "technical" | "behavioral" | "experience" | "problem-solving" | undefined {
+function mapCategory(
+  stage: string | undefined,
+): "technical" | "behavioral" | "experience" | "problem-solving" | undefined {
   if (!stage) return undefined;
   const lower = stage.toLowerCase();
   if (lower.includes("technical")) return "technical";

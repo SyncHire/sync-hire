@@ -43,7 +43,12 @@ export interface StorageInterface {
    * @param organizationId - The organization ID to associate with the job
    * @param createdById - The user ID who created this extraction
    */
-  saveExtraction(hash: string, data: ExtractedJobData, organizationId: string, createdById: string): Promise<void>;
+  saveExtraction(
+    hash: string,
+    data: ExtractedJobData,
+    organizationId: string,
+    createdById: string,
+  ): Promise<void>;
 
   /**
    * Check if job extraction exists
@@ -88,12 +93,19 @@ export interface StorageInterface {
   /**
    * Get interview questions by cvId and jobId
    */
-  getInterviewQuestions(cvId: string, jobId: string): Promise<InterviewQuestions | null>;
+  getInterviewQuestions(
+    cvId: string,
+    jobId: string,
+  ): Promise<InterviewQuestions | null>;
 
   /**
    * Save interview questions for a CV/job combination
    */
-  saveInterviewQuestions(cvId: string, jobId: string, data: InterviewQuestions): Promise<void>;
+  saveInterviewQuestions(
+    cvId: string,
+    jobId: string,
+    data: InterviewQuestions,
+  ): Promise<void>;
 
   /**
    * Check if interview questions exist for a CV/job combination
@@ -197,23 +209,32 @@ export interface StorageInterface {
   /**
    * Get application by interview ID (direct lookup, avoids loading all job applications)
    */
-  getApplicationByInterviewId(interviewId: string): Promise<CandidateApplication | null>;
+  getApplicationByInterviewId(
+    interviewId: string,
+  ): Promise<CandidateApplication | null>;
 
   /**
    * Get or create application for a CV and job combination
    * Creates application if it doesn't exist for the current user
    */
-  getOrCreateApplication(cvHash: string, jobId: string): Promise<CandidateApplication>;
+  getOrCreateApplication(
+    cvHash: string,
+    jobId: string,
+  ): Promise<CandidateApplication>;
 
   /**
    * Save/update a candidate application (upserts by jobId + userId)
    * Returns the saved application with its database-generated ID
    */
-  saveApplication(application: Omit<CandidateApplication, 'id'>): Promise<CandidateApplication>;
+  saveApplication(
+    application: Omit<CandidateApplication, "id">,
+  ): Promise<CandidateApplication>;
 
   /**
    * Get all CV extractions (for AI matching)
    * Returns cvId (the CVUpload.id), userId, and extracted data
    */
-  getAllCVExtractions(): Promise<Array<{ cvId: string; userId: string; data: ExtractedCVData }>>;
+  getAllCVExtractions(): Promise<
+    Array<{ cvId: string; userId: string; data: ExtractedCVData }>
+  >;
 }

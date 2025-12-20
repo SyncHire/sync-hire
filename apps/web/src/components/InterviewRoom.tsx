@@ -40,12 +40,13 @@ export function InterviewRoom({
   const [hasJoined, setHasJoined] = useState(false);
 
   // Use custom hook to manage call lifecycle - only enabled after user clicks Join
-  const { call, callEnded, videoAvatarEnabled, isLoading, error, reset } = useInterviewCall({
-    interviewId,
-    candidateId,
-    candidateName,
-    enabled: hasJoined,
-  });
+  const { call, callEnded, videoAvatarEnabled, isLoading, error, reset } =
+    useInterviewCall({
+      interviewId,
+      candidateId,
+      candidateName,
+      enabled: hasJoined,
+    });
 
   const handleJoin = () => {
     setHasJoined(true);

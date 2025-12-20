@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { HRProvider } from "@/lib/context/hr-context";
 import { AppLayout } from "@/components/AppLayout";
 import { getValidatedSession } from "@/lib/auth-server";
+import { HRProvider } from "@/lib/context/hr-context";
 
 export default async function HRLayout({
   children,

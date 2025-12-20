@@ -8,16 +8,16 @@
  * Access: Authenticated user who is the candidate for this interview
  */
 
-import crypto from "crypto";
-import { logger } from "@/lib/logger";
-import type { Question } from "@/lib/types/interview-types";
-import type { Job, Interview } from "@/lib/storage/storage-interface";
-import { getStorage } from "@/lib/storage/storage-factory";
-import { getStreamClient } from "@/lib/stream-token";
-import { mergeInterviewQuestions } from "@/lib/utils/question-utils";
+import crypto from "node:crypto";
 import { getAgentEndpoint, getAgentHeaders } from "@/lib/agent-config";
-import { getServerSession } from "@/lib/auth-server";
 import { errors, successResponse } from "@/lib/api-response";
+import { getServerSession } from "@/lib/auth-server";
+import { logger } from "@/lib/logger";
+import { getStorage } from "@/lib/storage/storage-factory";
+import type { Interview, Job } from "@/lib/storage/storage-interface";
+import { getStreamClient } from "@/lib/stream-token";
+import type { Question } from "@/lib/types/interview-types";
+import { mergeInterviewQuestions } from "@/lib/utils/question-utils";
 
 /**
  * Generate a short, deterministic call ID from an application or interview ID.
@@ -45,7 +45,7 @@ const invitedCalls = new Map<string, { videoAvatarEnabled: boolean }>();
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: interviewId } = await params;
@@ -79,7 +79,9 @@ export async function POST(
       if (application) {
         // Verify the authenticated user is the applicant
         if (application.userId !== user.id) {
-          return errors.forbidden("You are not the candidate for this application");
+          return errors.forbidden(
+            "You are not the candidate for this application",
+          );
         }
 
         job = await storage.getJob(application.jobId);
@@ -90,7 +92,7 @@ export async function POST(
           if (userCvId) {
             const questionSet = await storage.getInterviewQuestions(
               userCvId,
-              application.jobId
+              application.jobId,
             );
 
             if (questionSet) {
@@ -286,7 +288,10 @@ export async function POST(
       message: "Interview started and AI agent invited",
     });
   } catch (error) {
-    logger.error(error, { api: "candidate/interviews/[id]/start", operation: "start" });
+    logger.error(error, {
+      api: "candidate/interviews/[id]/start",
+      operation: "start",
+    });
     return errors.internal("Failed to start interview");
   }
 }

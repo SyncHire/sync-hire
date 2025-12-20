@@ -87,9 +87,7 @@ export function useInterviewCall({
           await videoCall.microphone.enable();
         } catch (micErr) {
           const errorMessage =
-            micErr instanceof Error
-              ? micErr.message
-              : "Microphone unavailable";
+            micErr instanceof Error ? micErr.message : "Microphone unavailable";
           logger.warn("Could not enable microphone", { error: errorMessage });
           setDeviceErrors((prev) => ({ ...prev, microphone: errorMessage }));
           toast.warning("Microphone unavailable", {
@@ -151,7 +149,15 @@ export function useInterviewCall({
 
     joinInterview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, client]);
+  }, [
+    enabled,
+    client,
+    call,
+    candidateName,
+    interviewId,
+    isJoining,
+    startInterviewMutation.mutateAsync,
+  ]);
 
   return {
     call,

@@ -8,10 +8,12 @@
  * Auto-selects if user has only one org.
  */
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Building2, ChevronRight, Plus, User } from "lucide-react";
 import Link from "next/link";
-import { organization, useSession } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -20,10 +22,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
-import { Building2, ChevronRight, Plus, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { organization, useSession } from "@/lib/auth-client";
 
 interface Organization {
   id: string;
@@ -75,7 +75,7 @@ export default function SelectOrganizationPage() {
     if (!sessionPending && session) {
       loadOrganizations();
     }
-  }, [session, sessionPending, router]);
+  }, [session, sessionPending, selectOrganization]);
 
   async function selectOrganization(orgId: string) {
     setSelectingId(orgId);
@@ -116,9 +116,7 @@ export default function SelectOrganizationPage() {
         <CardHeader className="text-center">
           <Building2 className="h-12 w-12 text-primary mx-auto mb-2" />
           <CardTitle className="text-2xl">Welcome to SyncHire</CardTitle>
-          <CardDescription>
-            How would you like to get started?
-          </CardDescription>
+          <CardDescription>How would you like to get started?</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <button
@@ -166,9 +164,7 @@ export default function SelectOrganizationPage() {
       <CardHeader className="text-center">
         <Building2 className="h-12 w-12 text-primary mx-auto mb-2" />
         <CardTitle className="text-2xl">Select Organization</CardTitle>
-        <CardDescription>
-          Choose an organization to continue
-        </CardDescription>
+        <CardDescription>Choose an organization to continue</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {error && (

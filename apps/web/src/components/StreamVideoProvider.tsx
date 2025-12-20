@@ -7,8 +7,8 @@ import { StreamVideo, StreamVideoClient } from "@stream-io/video-react-sdk";
  */
 import { type ReactNode, useEffect, useState } from "react";
 import { useStreamToken } from "@/lib/hooks/use-candidate-interview";
-import { streamConfig } from "@/lib/stream-config";
 import { logger } from "@/lib/logger";
+import { streamConfig } from "@/lib/stream-config";
 
 import "@stream-io/video-react-sdk/dist/css/styles.css";
 
@@ -61,7 +61,9 @@ export function StreamVideoProvider({
         setClient(videoClient);
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : "Failed to initialize video client";
+          err instanceof Error
+            ? err.message
+            : "Failed to initialize video client";
         logger.error(err instanceof Error ? err : new Error(String(err)), {
           component: "StreamVideoProvider",
           userId,
@@ -79,7 +81,7 @@ export function StreamVideoProvider({
         setClient(null);
       }
     };
-  }, [userId, userName, tokenData]);
+  }, [userId, userName, tokenData, client]);
 
   if (isLoading) {
     return (

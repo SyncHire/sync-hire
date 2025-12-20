@@ -4,14 +4,14 @@
  * Runs before each test file. Sets up mocks and environment.
  */
 
-import { vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 
 // Mock Sentry to prevent external calls during tests
 vi.mock("@sentry/nextjs", () => ({
   captureException: vi.fn(),
   captureMessage: vi.fn(),
   withScope: vi.fn((callback) =>
-    callback({ setTag: vi.fn(), setExtra: vi.fn() })
+    callback({ setTag: vi.fn(), setExtra: vi.fn() }),
   ),
   startSpan: vi.fn((_, callback) => callback({ setAttribute: vi.fn() })),
 }));

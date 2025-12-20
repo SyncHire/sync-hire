@@ -8,14 +8,27 @@
  * See: https://nextjs.org/docs/app/api-reference/file-conventions/proxy
  */
 
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 // Routes that require authentication
-const protectedRoutes = ["/hr", "/candidate", "/interview", "/select-organization"];
+const protectedRoutes = [
+  "/hr",
+  "/candidate",
+  "/interview",
+  "/select-organization",
+];
 
 // Public routes that don't need auth
-const publicRoutes = ["/", "/login", "/signup", "/verify-email", "/forgot-password", "/reset-password", "/employers"];
+const publicRoutes = [
+  "/",
+  "/login",
+  "/signup",
+  "/verify-email",
+  "/forgot-password",
+  "/reset-password",
+  "/employers",
+];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -41,8 +54,9 @@ export function proxy(request: NextRequest) {
   // Real validation happens in pages/API routes via requireAuth()
   // Organization check also happens at page level (session.activeOrganizationId)
   // Note: Cookie has __Secure- prefix in production (HTTPS)
-  const sessionCookie = request.cookies.get("better-auth.session_token")
-    || request.cookies.get("__Secure-better-auth.session_token");
+  const sessionCookie =
+    request.cookies.get("better-auth.session_token") ||
+    request.cookies.get("__Secure-better-auth.session_token");
   if (!sessionCookie) {
     // Redirect to login with callback URL
     const loginUrl = new URL("/login", request.url);

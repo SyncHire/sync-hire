@@ -5,20 +5,22 @@
  * Access: HR (org member) OR the interview candidate.
  */
 
+import { errors, successResponse } from "@/lib/api-response";
+import { withInterviewAccess } from "@/lib/auth-middleware";
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
-import { withInterviewAccess } from "@/lib/auth-middleware";
-import { errors, successResponse } from "@/lib/api-response";
 
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
 
     // Verify access - HR or candidate can view
-    const { response } = await withInterviewAccess(id, { allowCandidate: true });
+    const { response } = await withInterviewAccess(id, {
+      allowCandidate: true,
+    });
     if (response) {
       return response;
     }

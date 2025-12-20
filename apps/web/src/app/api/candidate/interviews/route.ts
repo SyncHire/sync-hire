@@ -15,7 +15,7 @@ export async function GET() {
     if (!session?.user) {
       return NextResponse.json(
         { success: false, error: "Authentication required" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -30,7 +30,7 @@ export async function GET() {
     logger.error(error, { api: "candidate/interviews", operation: "GET" });
     return NextResponse.json(
       { success: false, error: "Failed to fetch interviews" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -19,8 +19,8 @@ export default function HRApplicantsIndex() {
           View Candidates by Job
         </h1>
         <p className="text-muted-foreground max-w-md mx-auto">
-          Candidates are organized by job posting. Select a job to view its applicants
-          and their AI-powered interview scores.
+          Candidates are organized by job posting. Select a job to view its
+          applicants and their AI-powered interview scores.
         </p>
       </div>
 

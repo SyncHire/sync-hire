@@ -16,7 +16,7 @@ export async function createTestUser(
     name?: string;
     email?: string;
     emailVerified?: boolean;
-  } = {}
+  } = {},
 ) {
   return prisma.user.create({
     data: {
@@ -35,7 +35,7 @@ export async function createTestOrganization(
   overrides: {
     name?: string;
     slug?: string;
-  } = {}
+  } = {},
 ) {
   return prisma.organization.create({
     data: {
@@ -52,7 +52,7 @@ export async function createTestMember(
   prisma: TransactionClient,
   userId: string,
   organizationId: string,
-  role: "owner" | "admin" | "member" = "member"
+  role: "owner" | "admin" | "member" = "member",
 ) {
   return prisma.member.create({
     data: {
@@ -77,7 +77,7 @@ export async function createTestJob(
     description?: string;
     requirements?: string[];
     status?: "DRAFT" | "ACTIVE" | "CLOSED";
-  } = {}
+  } = {},
 ) {
   return prisma.job.create({
     data: {
@@ -107,7 +107,7 @@ export async function createTestScenario(prisma: TransactionClient) {
     prisma,
     user.id,
     organization.id,
-    "owner"
+    "owner",
   );
 
   return { user, organization, member };
@@ -121,7 +121,7 @@ export async function createTestScenarioWithJob(prisma: TransactionClient) {
   const job = await createTestJob(
     prisma,
     scenario.organization.id,
-    scenario.user.id
+    scenario.user.id,
   );
 
   return { ...scenario, job };

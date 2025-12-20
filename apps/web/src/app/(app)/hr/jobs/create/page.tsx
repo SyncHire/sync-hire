@@ -1,6 +1,20 @@
 "use client";
 
-import { AlertCircle, ArrowLeft, Check, Eye, Pencil, Plus, Sparkles, X } from "lucide-react";
+import type {
+  EmploymentType,
+  ExtractedJobData,
+  WorkArrangement,
+} from "@sync-hire/database";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Check,
+  Eye,
+  Pencil,
+  Plus,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -21,9 +35,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { EmploymentType, ExtractedJobData, WorkArrangement } from "@sync-hire/database";
-import { EMPLOYMENT_TYPES, WORK_ARRANGEMENTS } from "@/lib/types/interview-types";
 import { useActiveOrganization } from "@/lib/hooks/use-organizations";
+import {
+  EMPLOYMENT_TYPES,
+  WORK_ARRANGEMENTS,
+} from "@/lib/types/interview-types";
 
 type WorkflowStage = "upload" | "processing" | "results";
 
@@ -54,7 +70,8 @@ export default function JobCreationPage() {
 
   // Workflow stages
   const [workflowStage, setWorkflowStage] = useState<WorkflowStage>("upload");
-  const [processingStage, setProcessingStage] = useState<JDProcessingStage>("uploading");
+  const [processingStage, setProcessingStage] =
+    useState<JDProcessingStage>("uploading");
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   // UI state
@@ -62,8 +79,12 @@ export default function JobCreationPage() {
   const [newQuestionContent, setNewQuestionContent] = useState("");
   const [editingResponsibilities, setEditingResponsibilities] = useState(false);
   const [editingRequirements, setEditingRequirements] = useState(false);
-  const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(null);
-  const [skippedRequirements, setSkippedRequirements] = useState<Set<number>>(new Set());
+  const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(
+    null,
+  );
+  const [skippedRequirements, setSkippedRequirements] = useState<Set<number>>(
+    new Set(),
+  );
   const [isPublishing, setIsPublishing] = useState(false);
 
   const [state, setState] = useState<JobCreationState>({
@@ -87,7 +108,9 @@ export default function JobCreationPage() {
 
   const handleFileUpload = async (file: File) => {
     if (!activeOrg?.id) {
-      toast.error("No organization selected. Please select an organization first.");
+      toast.error(
+        "No organization selected. Please select an organization first.",
+      );
       return;
     }
 
@@ -120,15 +143,15 @@ export default function JobCreationPage() {
       const result = await response.json();
 
       // Convert AI questions to unified format
-      const aiQuestions: ScreeningQuestion[] = (result.data.aiQuestions || []).map(
-        (q: { content: string; reason: string }, index: number) => ({
-          id: `generated-${index}`,
-          content: q.content,
-          reason: q.reason,
-          type: "generated" as const,
-          status: "included" as const,
-        })
-      );
+      const aiQuestions: ScreeningQuestion[] = (
+        result.data.aiQuestions || []
+      ).map((q: { content: string; reason: string }, index: number) => ({
+        id: `generated-${index}`,
+        content: q.content,
+        reason: q.reason,
+        type: "generated" as const,
+        status: "included" as const,
+      }));
 
       setState((prev) => ({
         ...prev,
@@ -189,14 +212,14 @@ export default function JobCreationPage() {
     return state.aiSuggestions.find(
       (s) =>
         s.original.toLowerCase().includes(item.toLowerCase().slice(0, 50)) ||
-        item.toLowerCase().includes(s.original.toLowerCase().slice(0, 50))
+        item.toLowerCase().includes(s.original.toLowerCase().slice(0, 50)),
     );
   };
 
   // Accept a suggestion and replace the original item
   const handleAcceptSuggestion = (
     suggestion: AISuggestion,
-    field: "responsibilities" | "requirements"
+    field: "responsibilities" | "requirements",
   ) => {
     if (!state.extractedData) return;
 
@@ -204,8 +227,12 @@ export default function JobCreationPage() {
     const items = [...state.extractedData[field]];
     const itemIndex = items.findIndex(
       (item) =>
-        item.toLowerCase().includes(suggestion.original.toLowerCase().slice(0, 50)) ||
-        suggestion.original.toLowerCase().includes(item.toLowerCase().slice(0, 50))
+        item
+          .toLowerCase()
+          .includes(suggestion.original.toLowerCase().slice(0, 50)) ||
+        suggestion.original
+          .toLowerCase()
+          .includes(item.toLowerCase().slice(0, 50)),
     );
 
     if (itemIndex !== -1) {
@@ -220,7 +247,10 @@ export default function JobCreationPage() {
             ...prev.extractedData,
             [field]: items,
           },
-          acceptedSuggestions: [...prev.acceptedSuggestions, suggestion.improved],
+          acceptedSuggestions: [
+            ...prev.acceptedSuggestions,
+            suggestion.improved,
+          ],
         };
       });
       setExpandedSuggestion(null);
@@ -244,7 +274,7 @@ export default function JobCreationPage() {
       questions: prev.questions.map((q) =>
         q.id === questionId
           ? { ...q, status: q.status === "included" ? "excluded" : "included" }
-          : q
+          : q,
       ),
     }));
   };
@@ -304,7 +334,9 @@ export default function JobCreationPage() {
           location: state.extractedData.location,
           employmentType: state.extractedData.employmentType,
           workArrangement: state.extractedData.workArrangement,
-          requirements: state.extractedData.requirements.filter((_, i) => !skippedRequirements.has(i)),
+          requirements: state.extractedData.requirements.filter(
+            (_, i) => !skippedRequirements.has(i),
+          ),
           responsibilities: state.extractedData.responsibilities,
           seniority: state.extractedData.seniority,
           customQuestions: includedQuestions,
@@ -320,18 +352,17 @@ export default function JobCreationPage() {
       }
 
       const result = await response.json();
-
-      // Show toast based on AI matching status
-      console.log("📊 Create job response:", { aiMatchingStatus: result.data.aiMatchingStatus, data: result.data });
       if (result.data.aiMatchingStatus === "SCANNING") {
-        toast.success("Job created! Scanning for matching candidates...", { duration: 3000 });
+        toast.success("Job created! Scanning for matching candidates...", {
+          duration: 3000,
+        });
       } else {
         toast.success("Job created!", { duration: 2000 });
       }
 
       // Add scanning param to trigger polling on the job page
-      const scanParam = result.data.aiMatchingStatus === "SCANNING" ? "?scanning=true" : "";
-      console.log("🔗 Navigating to:", `/hr/jobs/${result.data.id}${scanParam}`);
+      const scanParam =
+        result.data.aiMatchingStatus === "SCANNING" ? "?scanning=true" : "";
       router.push(`/hr/jobs/${result.data.id}${scanParam}`);
     } catch (error) {
       const errorMessage =
@@ -343,7 +374,9 @@ export default function JobCreationPage() {
   };
 
   // Calculate counts
-  const includedCount = state.questions.filter((q) => q.status === "included").length;
+  const includedCount = state.questions.filter(
+    (q) => q.status === "included",
+  ).length;
   const totalCount = state.questions.length;
 
   return (
@@ -381,15 +414,10 @@ export default function JobCreationPage() {
                 />
               </div>
               <div className="flex gap-2 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsModalOpen(false)}
-                >
+                <Button variant="outline" onClick={() => setIsModalOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleAddCustomQuestion}>
-                  Add Question
-                </Button>
+                <Button onClick={handleAddCustomQuestion}>Add Question</Button>
               </div>
             </div>
           </Card>
@@ -566,12 +594,15 @@ export default function JobCreationPage() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-sm font-medium text-foreground">
-                        Responsibilities ({state.extractedData.responsibilities.length})
+                        Responsibilities (
+                        {state.extractedData.responsibilities.length})
                       </label>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setEditingResponsibilities(!editingResponsibilities)}
+                        onClick={() =>
+                          setEditingResponsibilities(!editingResponsibilities)
+                        }
                         className="h-7 px-2"
                       >
                         {editingResponsibilities ? (
@@ -593,7 +624,9 @@ export default function JobCreationPage() {
                         onChange={(e) =>
                           handleExtractedDataChange(
                             "responsibilities",
-                            e.target.value.split("\n").filter((line) => line.trim()),
+                            e.target.value
+                              .split("\n")
+                              .filter((line) => line.trim()),
                           )
                         }
                         className="mt-1"
@@ -607,63 +640,87 @@ export default function JobCreationPage() {
                             No responsibilities listed
                           </p>
                         ) : (
-                          state.extractedData.responsibilities.map((item, i) => {
-                            const suggestion = findSuggestionForItem(item);
-                            const isExpanded = expandedSuggestion === `resp-${i}`;
-                            const isAccepted = suggestion && state.acceptedSuggestions.includes(suggestion.improved);
+                          state.extractedData.responsibilities.map(
+                            (item, i) => {
+                              const suggestion = findSuggestionForItem(item);
+                              const isExpanded =
+                                expandedSuggestion === `resp-${i}`;
+                              const isAccepted =
+                                suggestion &&
+                                state.acceptedSuggestions.includes(
+                                  suggestion.improved,
+                                );
 
-                            return (
-                              <div key={i}>
-                                <div
-                                  className={`flex items-start gap-3 p-2.5 rounded-md transition-colors ${
-                                    isExpanded ? "bg-primary/5" : "hover:bg-muted/50"
-                                  }`}
-                                >
-                                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-medium flex items-center justify-center mt-0.5">
-                                    {i + 1}
-                                  </span>
-                                  <span className="text-sm text-foreground leading-relaxed flex-1">{item}</span>
-                                  {suggestion && !isAccepted && (
-                                    <button
-                                      type="button"
-                                      onClick={() => setExpandedSuggestion(isExpanded ? null : `resp-${i}`)}
-                                      className={`flex-shrink-0 p-1 rounded transition-all ${
-                                        isExpanded
-                                          ? "bg-primary text-primary-foreground"
-                                          : "text-primary/60 hover:text-primary hover:bg-primary/10"
-                                      }`}
-                                      title="AI has a suggestion"
-                                    >
-                                      <Sparkles className="w-4 h-4" />
-                                    </button>
+                              return (
+                                <div key={i}>
+                                  <div
+                                    className={`flex items-start gap-3 p-2.5 rounded-md transition-colors ${
+                                      isExpanded
+                                        ? "bg-primary/5"
+                                        : "hover:bg-muted/50"
+                                    }`}
+                                  >
+                                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-medium flex items-center justify-center mt-0.5">
+                                      {i + 1}
+                                    </span>
+                                    <span className="text-sm text-foreground leading-relaxed flex-1">
+                                      {item}
+                                    </span>
+                                    {suggestion && !isAccepted && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setExpandedSuggestion(
+                                            isExpanded ? null : `resp-${i}`,
+                                          )
+                                        }
+                                        className={`flex-shrink-0 p-1 rounded transition-all ${
+                                          isExpanded
+                                            ? "bg-primary text-primary-foreground"
+                                            : "text-primary/60 hover:text-primary hover:bg-primary/10"
+                                        }`}
+                                        title="AI has a suggestion"
+                                      >
+                                        <Sparkles className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                  </div>
+                                  {isExpanded && suggestion && (
+                                    <div className="ml-8 mt-1 mb-2 p-3 rounded-lg bg-secondary/50 border border-border">
+                                      <p className="text-sm text-foreground mb-2">
+                                        {suggestion.improved}
+                                      </p>
+                                      <div className="flex gap-2">
+                                        <Button
+                                          size="sm"
+                                          className="h-7 text-xs"
+                                          onClick={() =>
+                                            handleAcceptSuggestion(
+                                              suggestion,
+                                              "responsibilities",
+                                            )
+                                          }
+                                        >
+                                          <Check className="w-3 h-3 mr-1" />
+                                          Apply
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-7 text-xs"
+                                          onClick={() =>
+                                            handleDismissSuggestion(suggestion)
+                                          }
+                                        >
+                                          Dismiss
+                                        </Button>
+                                      </div>
+                                    </div>
                                   )}
                                 </div>
-                                {isExpanded && suggestion && (
-                                  <div className="ml-8 mt-1 mb-2 p-3 rounded-lg bg-secondary/50 border border-border">
-                                    <p className="text-sm text-foreground mb-2">{suggestion.improved}</p>
-                                    <div className="flex gap-2">
-                                      <Button
-                                        size="sm"
-                                        className="h-7 text-xs"
-                                        onClick={() => handleAcceptSuggestion(suggestion, "responsibilities")}
-                                      >
-                                        <Check className="w-3 h-3 mr-1" />
-                                        Apply
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-7 text-xs"
-                                        onClick={() => handleDismissSuggestion(suggestion)}
-                                      >
-                                        Dismiss
-                                      </Button>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })
+                              );
+                            },
+                          )
                         )}
                       </div>
                     )}
@@ -673,12 +730,20 @@ export default function JobCreationPage() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-sm font-medium text-foreground">
-                        Requirements ({state.extractedData.requirements.length - skippedRequirements.size}{skippedRequirements.size > 0 ? ` / ${state.extractedData.requirements.length}` : ''})
+                        Requirements (
+                        {state.extractedData.requirements.length -
+                          skippedRequirements.size}
+                        {skippedRequirements.size > 0
+                          ? ` / ${state.extractedData.requirements.length}`
+                          : ""}
+                        )
                       </label>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setEditingRequirements(!editingRequirements)}
+                        onClick={() =>
+                          setEditingRequirements(!editingRequirements)
+                        }
                         className="h-7 px-2"
                       >
                         {editingRequirements ? (
@@ -700,7 +765,9 @@ export default function JobCreationPage() {
                         onChange={(e) =>
                           handleExtractedDataChange(
                             "requirements",
-                            e.target.value.split("\n").filter((line) => line.trim()),
+                            e.target.value
+                              .split("\n")
+                              .filter((line) => line.trim()),
                           )
                         }
                         className="mt-1"
@@ -716,40 +783,65 @@ export default function JobCreationPage() {
                         ) : (
                           state.extractedData.requirements.map((item, i) => {
                             const suggestion = findSuggestionForItem(item);
-                            const isExpanded = expandedSuggestion === `req-${i}`;
-                            const isAccepted = suggestion && state.acceptedSuggestions.includes(suggestion.improved);
+                            const isExpanded =
+                              expandedSuggestion === `req-${i}`;
+                            const isAccepted =
+                              suggestion &&
+                              state.acceptedSuggestions.includes(
+                                suggestion.improved,
+                              );
                             const isSkipped = skippedRequirements.has(i);
 
                             return (
                               <div key={i}>
                                 <div
                                   className={`flex items-start gap-3 p-2.5 rounded-md transition-colors ${
-                                    isSkipped ? "opacity-50" : isExpanded ? "bg-primary/5" : "hover:bg-muted/50"
+                                    isSkipped
+                                      ? "opacity-50"
+                                      : isExpanded
+                                        ? "bg-primary/5"
+                                        : "hover:bg-muted/50"
                                   }`}
                                 >
-                                  <span className={`flex-shrink-0 w-5 h-5 rounded-full text-xs font-medium flex items-center justify-center mt-0.5 ${
-                                    isSkipped ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
-                                  }`}>
+                                  <span
+                                    className={`flex-shrink-0 w-5 h-5 rounded-full text-xs font-medium flex items-center justify-center mt-0.5 ${
+                                      isSkipped
+                                        ? "bg-muted text-muted-foreground"
+                                        : "bg-primary/10 text-primary"
+                                    }`}
+                                  >
                                     {i + 1}
                                   </span>
-                                  <span className={`text-sm leading-relaxed flex-1 ${
-                                    isSkipped ? "line-through text-muted-foreground" : "text-foreground"
-                                  }`}>{item}</span>
+                                  <span
+                                    className={`text-sm leading-relaxed flex-1 ${
+                                      isSkipped
+                                        ? "line-through text-muted-foreground"
+                                        : "text-foreground"
+                                    }`}
+                                  >
+                                    {item}
+                                  </span>
                                   <div className="flex items-center gap-1">
-                                    {suggestion && !isAccepted && !isSkipped && (
-                                      <button
-                                        type="button"
-                                        onClick={() => setExpandedSuggestion(isExpanded ? null : `req-${i}`)}
-                                        className={`flex-shrink-0 p-1 rounded transition-all ${
-                                          isExpanded
-                                            ? "bg-primary text-primary-foreground"
-                                            : "text-primary/60 hover:text-primary hover:bg-primary/10"
-                                        }`}
-                                        title="AI has a suggestion"
-                                      >
-                                        <Sparkles className="w-4 h-4" />
-                                      </button>
-                                    )}
+                                    {suggestion &&
+                                      !isAccepted &&
+                                      !isSkipped && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setExpandedSuggestion(
+                                              isExpanded ? null : `req-${i}`,
+                                            )
+                                          }
+                                          className={`flex-shrink-0 p-1 rounded transition-all ${
+                                            isExpanded
+                                              ? "bg-primary text-primary-foreground"
+                                              : "text-primary/60 hover:text-primary hover:bg-primary/10"
+                                          }`}
+                                          title="AI has a suggestion"
+                                        >
+                                          <Sparkles className="w-4 h-4" />
+                                        </button>
+                                      )}
                                     <button
                                       type="button"
                                       onClick={() => toggleSkipRequirement(i)}
@@ -758,7 +850,11 @@ export default function JobCreationPage() {
                                           ? "text-primary hover:bg-primary/10"
                                           : "text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10"
                                       }`}
-                                      title={isSkipped ? "Restore requirement" : "Skip requirement"}
+                                      title={
+                                        isSkipped
+                                          ? "Restore requirement"
+                                          : "Skip requirement"
+                                      }
                                     >
                                       <X className="w-4 h-4" />
                                     </button>
@@ -766,12 +862,19 @@ export default function JobCreationPage() {
                                 </div>
                                 {isExpanded && suggestion && !isSkipped && (
                                   <div className="ml-8 mt-1 mb-2 p-3 rounded-lg bg-secondary/50 border border-border">
-                                    <p className="text-sm text-foreground mb-2">{suggestion.improved}</p>
+                                    <p className="text-sm text-foreground mb-2">
+                                      {suggestion.improved}
+                                    </p>
                                     <div className="flex gap-2">
                                       <Button
                                         size="sm"
                                         className="h-7 text-xs"
-                                        onClick={() => handleAcceptSuggestion(suggestion, "requirements")}
+                                        onClick={() =>
+                                          handleAcceptSuggestion(
+                                            suggestion,
+                                            "requirements",
+                                          )
+                                        }
                                       >
                                         <Check className="w-3 h-3 mr-1" />
                                         Apply
@@ -780,7 +883,9 @@ export default function JobCreationPage() {
                                         size="sm"
                                         variant="ghost"
                                         className="h-7 text-xs"
-                                        onClick={() => handleDismissSuggestion(suggestion)}
+                                        onClick={() =>
+                                          handleDismissSuggestion(suggestion)
+                                        }
                                       >
                                         Dismiss
                                       </Button>
@@ -811,13 +916,15 @@ export default function JobCreationPage() {
                   </div>
 
                   <p className="text-sm text-muted-foreground">
-                    Click on a question to toggle include/exclude. Custom questions appear at the top.
+                    Click on a question to toggle include/exclude. Custom
+                    questions appear at the top.
                   </p>
 
                   {/* Unified Question List */}
                   {state.questions.length === 0 ? (
                     <p className="text-muted-foreground py-8 text-center">
-                      No questions yet. Upload a job description to generate AI questions or add custom ones.
+                      No questions yet. Upload a job description to generate AI
+                      questions or add custom ones.
                     </p>
                   ) : (
                     <div className="space-y-1.5">
@@ -845,14 +952,18 @@ export default function JobCreationPage() {
                               >
                                 {isCustom ? "Custom" : "AI"}
                               </Badge>
-                              <p className={`text-sm flex-1 ${isExcluded ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                              <p
+                                className={`text-sm flex-1 ${isExcluded ? "line-through text-muted-foreground" : "text-foreground"}`}
+                              >
                                 {question.content}
                               </p>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 font-medium ${
-                                isExcluded
-                                  ? "bg-muted text-muted-foreground"
-                                  : "bg-primary/10 text-primary"
-                              }`}>
+                              <span
+                                className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 font-medium ${
+                                  isExcluded
+                                    ? "bg-muted text-muted-foreground"
+                                    : "bg-primary/10 text-primary"
+                                }`}
+                              >
                                 {isExcluded ? "Skip" : "Include"}
                               </span>
                             </div>
@@ -863,7 +974,6 @@ export default function JobCreationPage() {
                   )}
                 </div>
               </Card>
-
             </div>
 
             {/* Sidebar - Sticky on scroll with max height */}
@@ -881,7 +991,9 @@ export default function JobCreationPage() {
                   </div>
                   <div className="flex justify-between items-center py-2 border-b">
                     <span className="text-muted-foreground">Excluded</span>
-                    <Badge variant="secondary">{totalCount - includedCount}</Badge>
+                    <Badge variant="secondary">
+                      {totalCount - includedCount}
+                    </Badge>
                   </div>
                   <div className="flex justify-between items-center py-2 font-medium">
                     <span>Total</span>
@@ -892,7 +1004,9 @@ export default function JobCreationPage() {
                 {/* Preview of included questions */}
                 {includedCount > 0 && (
                   <div className="mt-4 pt-4 border-t">
-                    <p className="text-xs text-muted-foreground mb-2">Questions to be included:</p>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Questions to be included:
+                    </p>
                     <div className="space-y-1 max-h-48 overflow-y-auto">
                       {state.questions
                         .filter((q) => q.status === "included")

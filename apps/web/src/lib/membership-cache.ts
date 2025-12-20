@@ -8,8 +8,8 @@
  * Cache value: JSON string of { role: OrgMemberRole, cachedAt: number }
  */
 
-import Redis from "ioredis";
 import type { OrgMemberRole } from "@sync-hire/database";
+import Redis from "ioredis";
 import { logger } from "./logger";
 
 interface CachedMembership {
@@ -105,7 +105,7 @@ function cleanupMemoryCache(): void {
   // If still too large, remove oldest entries
   if (memoryCache.size > MAX_MEMORY_CACHE_SIZE) {
     const entries = [...memoryCache.entries()].sort(
-      (a, b) => a[1].cachedAt - b[1].cachedAt
+      (a, b) => a[1].cachedAt - b[1].cachedAt,
     );
     const toRemove = entries.slice(0, memoryCache.size - MAX_MEMORY_CACHE_SIZE);
     for (const [key] of toRemove) {
@@ -123,7 +123,7 @@ function cleanupMemoryCache(): void {
  */
 export async function getCachedMembership(
   userId: string,
-  orgId: string
+  orgId: string,
 ): Promise<OrgMemberRole | null> {
   const key = getCacheKey(userId, orgId);
   const client = getRedisClient();
@@ -171,7 +171,7 @@ export async function getCachedMembership(
 export async function setCachedMembership(
   userId: string,
   orgId: string,
-  role: OrgMemberRole
+  role: OrgMemberRole,
 ): Promise<void> {
   const key = getCacheKey(userId, orgId);
   const value: CachedMembership = {
@@ -209,7 +209,7 @@ export async function setCachedMembership(
  */
 export async function invalidateMembership(
   userId: string,
-  orgId?: string
+  orgId?: string,
 ): Promise<void> {
   const client = getRedisClient();
 
@@ -273,7 +273,7 @@ export async function invalidateMembership(
  * @param orgId - Organization ID
  */
 export async function invalidateOrganizationMemberships(
-  orgId: string
+  orgId: string,
 ): Promise<void> {
   const client = getRedisClient();
   const pattern = `${KEY_PREFIX}:membership:*:${orgId}`;

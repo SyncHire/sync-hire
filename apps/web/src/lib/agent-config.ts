@@ -20,7 +20,7 @@ export function getAgentApiUrl(): string {
   }
 
   // Fallback for local development
-  return 'http://localhost:8080';
+  return "http://localhost:8080";
 }
 
 /**
@@ -31,7 +31,7 @@ export function getAgentApiUrl(): string {
  */
 export function getAgentEndpoint(endpoint: string): string {
   const baseUrl = getAgentApiUrl();
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   return `${baseUrl}${cleanEndpoint}`;
 }
 
@@ -41,13 +41,13 @@ export function getAgentEndpoint(endpoint: string): string {
  */
 export function getAgentHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   };
 
   // Add API key if configured (required for Python agent auth)
   const apiKey = process.env.API_SECRET_KEY;
   if (apiKey) {
-    headers['X-API-Key'] = apiKey;
+    headers["X-API-Key"] = apiKey;
   }
 
   return headers;

@@ -15,7 +15,8 @@ export interface ValidationResult {
 // Map mime types to file extensions for validation
 const mimeToExtension: Record<string, string> = {
   "application/pdf": ".pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+    ".docx",
   "text/plain": ".txt",
   "text/markdown": ".md",
 };

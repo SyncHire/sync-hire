@@ -8,11 +8,11 @@
  * - Session caching for performance
  */
 
+import { prisma } from "@sync-hire/database";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { organization } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
-import { prisma } from "@sync-hire/database";
+import { organization } from "better-auth/plugins";
 import { getEmailService } from "./email/resend";
 
 // Derive base URL from BETTER_AUTH_URL or WEB_PORT
@@ -99,7 +99,7 @@ export const auth = betterAuth({
           org.name,
           inviterDisplayName,
           invitationUrl,
-          id
+          id,
         );
       },
     }),

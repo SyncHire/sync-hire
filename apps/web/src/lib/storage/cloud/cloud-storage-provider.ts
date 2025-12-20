@@ -35,7 +35,11 @@ export interface CloudStorageProvider {
    * @param expiresInMinutes - URL expiration time (default: 60)
    * @returns A time-limited signed URL for file access
    */
-  getSignedUrl(type: 'cv' | 'jd', path: string, expiresInMinutes?: number): Promise<string>;
+  getSignedUrl(
+    type: "cv" | "jd",
+    path: string,
+    expiresInMinutes?: number,
+  ): Promise<string>;
 
   /**
    * Delete a CV file from storage

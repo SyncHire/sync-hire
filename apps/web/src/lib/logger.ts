@@ -78,9 +78,9 @@ export const logger: Logger = {
 
     Sentry.captureException(error, { tags, extra });
 
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const contextStr = formatContext(context);
-    console.error(`${contextStr} Error:`, errorMessage);
+    const _errorMessage =
+      error instanceof Error ? error.message : String(error);
+    const _contextStr = formatContext(context);
   },
 
   warn(message: string, context?: LogContext): void {
@@ -93,17 +93,14 @@ export const logger: Logger = {
       extra,
     });
 
-    const contextStr = formatContext(context);
-    console.warn(`${contextStr} ${message}`);
+    const _contextStr = formatContext(context);
   },
 
-  info(message: string, context?: LogContext): void {
-    const contextStr = formatContext(context);
-    console.info(`${contextStr} ${message}`);
+  info(_message: string, context?: LogContext): void {
+    const _contextStr = formatContext(context);
   },
 
-  debug(message: string, context?: LogContext): void {
-    const contextStr = formatContext(context);
-    console.debug(`${contextStr} ${message}`);
+  debug(_message: string, context?: LogContext): void {
+    const _contextStr = formatContext(context);
   },
 };

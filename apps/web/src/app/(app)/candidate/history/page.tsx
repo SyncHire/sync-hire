@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowDown,
   ArrowLeft,
@@ -27,7 +28,6 @@ import {
 } from "@/components/ui/table";
 import { getCompanyLogoUrl } from "@/lib/logo-utils";
 import type { Interview, Job } from "@/lib/storage/storage-interface";
-import { useQuery } from "@tanstack/react-query";
 
 interface JobsResponse {
   success: boolean;
@@ -53,17 +53,18 @@ export default function InterviewHistory() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   // Fetch user's interviews
-  const { data: interviewsData, isLoading: interviewsLoading } = useQuery<InterviewsResponse>({
-    queryKey: ["/api/candidate/interviews"],
-    queryFn: async () => {
-      const res = await fetch("/api/candidate/interviews");
-      if (!res.ok) {
-        throw new Error("Failed to fetch interviews");
-      }
-      return res.json();
-    },
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: interviewsData, isLoading: interviewsLoading } =
+    useQuery<InterviewsResponse>({
+      queryKey: ["/api/candidate/interviews"],
+      queryFn: async () => {
+        const res = await fetch("/api/candidate/interviews");
+        if (!res.ok) {
+          throw new Error("Failed to fetch interviews");
+        }
+        return res.json();
+      },
+      staleTime: 5 * 60 * 1000,
+    });
 
   // Fetch all jobs to get job details
   const { data: jobsData, isLoading: jobsLoading } = useQuery<JobsResponse>({
@@ -104,9 +105,10 @@ export default function InterviewHistory() {
           return null;
         }
         // Format completion date - using createdAt for completed interviews
-        const completionDate = interview.createdAt instanceof Date
-          ? interview.createdAt
-          : new Date(interview.createdAt);
+        const completionDate =
+          interview.createdAt instanceof Date
+            ? interview.createdAt
+            : new Date(interview.createdAt);
         return {
           ...interview,
           job,
@@ -126,7 +128,8 @@ export default function InterviewHistory() {
             comparison = (a.score || 0) - (b.score || 0);
             break;
           case "date":
-            comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+            comparison =
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
             break;
           case "company":
             comparison = (a.job?.organization?.name || "").localeCompare(
@@ -237,7 +240,7 @@ export default function InterviewHistory() {
           </div>
           <div className="text-2xl font-bold text-foreground">
             {completedInterviews.length > 0
-              ? Math.max(...completedInterviews.map((i) => i.score || 0)) + "%"
+              ? `${Math.max(...completedInterviews.map((i) => i.score || 0))}%`
               : "N/A"}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
@@ -251,12 +254,12 @@ export default function InterviewHistory() {
           </div>
           <div className="text-2xl font-bold text-foreground">
             {completedInterviews.length > 0
-              ? Math.round(
+              ? `${Math.round(
                   completedInterviews.reduce(
                     (sum, i) => sum + (i.score || 0),
                     0,
                   ) / completedInterviews.length,
-                ) + "%"
+                )}%`
               : "N/A"}
           </div>
           <div className="w-full bg-secondary/50 h-1.5 rounded-full mt-3 overflow-hidden">
@@ -346,7 +349,11 @@ export default function InterviewHistory() {
                         {interview.job?.organization?.name &&
                         getCompanyLogoUrl(interview.job.organization.name) ? (
                           <img
-                            src={getCompanyLogoUrl(interview.job.organization.name)!}
+                            src={
+                              getCompanyLogoUrl(
+                                interview.job.organization.name,
+                              )!
+                            }
                             alt={`${interview.job.organization.name} logo`}
                             className="h-6 w-6 object-contain"
                           />
@@ -370,7 +377,11 @@ export default function InterviewHistory() {
                       {interview.job?.organization?.name &&
                         getCompanyLogoUrl(interview.job.organization.name) && (
                           <img
-                            src={getCompanyLogoUrl(interview.job.organization.name)!}
+                            src={
+                              getCompanyLogoUrl(
+                                interview.job.organization.name,
+                              )!
+                            }
                             alt={`${interview.job.organization.name} logo`}
                             className="h-5 w-5 object-contain rounded"
                           />
@@ -387,7 +398,8 @@ export default function InterviewHistory() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {interview.score !== undefined && interview.score !== null ? (
+                    {interview.score !== undefined &&
+                    interview.score !== null ? (
                       <div className="flex items-center gap-3">
                         <div className="relative h-10 w-10 flex items-center justify-center">
                           <svg
@@ -415,7 +427,9 @@ export default function InterviewHistory() {
                           </span>
                         </div>
                         <div className="flex flex-col">
-                          <span className={`text-sm font-medium ${getScoreColor(interview.score)}`}>
+                          <span
+                            className={`text-sm font-medium ${getScoreColor(interview.score)}`}
+                          >
                             {getScoreLabel(interview.score)}
                           </span>
                           <span className="text-xs text-muted-foreground">

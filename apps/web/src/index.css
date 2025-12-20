@@ -175,7 +175,7 @@
 }
 
 .pip-video-container .str-video__participant-view video {
-  object-fit: cover !important;
+  object-fit: cover;
   border-radius: 0;
 }
 
@@ -183,7 +183,7 @@
 .pip-video-container .str-video__participant-details,
 .pip-video-container .str-video__menu-container,
 .pip-video-container .str-video__participant-view__video-wrapper::after {
-  display: none !important;
+  display: none;
 }
 
 /* Main video area - make video fill container */
@@ -212,7 +212,7 @@
 }
 
 .ai-video-container .str-video__participant-view video {
-  object-fit: cover !important;
+  object-fit: cover;
   width: 100%;
   height: 100%;
 }
@@ -221,5 +221,5 @@
 .ai-video-container .str-video__participant-details,
 .ai-video-container .str-video__menu-container,
 .ai-video-container .str-video__participant-view__video-wrapper::after {
-  display: none !important;
+  display: none;
 }

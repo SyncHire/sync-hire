@@ -7,26 +7,26 @@
  * Access: HR only (organization members)
  */
 
-import { type NextRequest } from "next/server";
-import { logger } from "@/lib/logger";
-import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
-import { geminiClient } from "@/lib/gemini-client";
-import { ApplicationStatus, ApplicationSource } from "@sync-hire/database";
-import { withRateLimit } from "@/lib/rate-limiter";
-import { withQuota } from "@/lib/with-quota";
-import { trackUsage } from "@/lib/ai-usage-tracker";
 import type {
+  ApplicationFailure,
+  CandidateApplication,
   ExtractedCVData,
   ExtractedJobData,
-  CandidateApplication,
   InterviewQuestions,
-  ApplicationFailure,
 } from "@sync-hire/database";
-import type { Question } from "@/lib/types/interview-types";
-import { getStorage } from "@/lib/storage/storage-factory";
-import { withOrgMembership } from "@/lib/auth-middleware";
-import { errors, successResponse } from "@/lib/api-response";
+import { ApplicationSource, ApplicationStatus } from "@sync-hire/database";
+import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { trackUsage } from "@/lib/ai-usage-tracker";
+import { errors, successResponse } from "@/lib/api-response";
+import { withOrgMembership } from "@/lib/auth-middleware";
+import { generateSmartMergedQuestions } from "@/lib/backend/question-generator";
+import { geminiClient } from "@/lib/gemini-client";
+import { logger } from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limiter";
+import { getStorage } from "@/lib/storage/storage-factory";
+import type { Question } from "@/lib/types/interview-types";
+import { withQuota } from "@/lib/with-quota";
 
 const matchResultSchema = z.object({
   matchScore: z.number().min(0).max(100),
@@ -38,8 +38,12 @@ async function calculateMatchScore(
   cvData: ExtractedCVData,
   jobTitle: string,
   jobRequirements: string[],
-  jobDescription: string
-): Promise<{ matchScore: number; matchReasons: string[]; skillGaps: string[] }> {
+  jobDescription: string,
+): Promise<{
+  matchScore: number;
+  matchReasons: string[];
+  skillGaps: string[];
+}> {
   const prompt = `Analyze how well this candidate matches the job position.
 
 JOB:
@@ -102,7 +106,7 @@ async function generateAndSaveQuestions(
   },
   cvId: string,
   jobId: string,
-  applicationId: string
+  applicationId: string,
 ) {
   try {
     // Build JD data for question generator
@@ -125,14 +129,14 @@ async function generateAndSaveQuestions(
         type: "text" as const,
         duration: q.duration,
         category: (q.category ?? "Technical Skills") as Question["category"],
-      })
+      }),
     );
 
     // Generate smart merged questions
     const mergedQuestions = await generateSmartMergedQuestions(
       cvData,
       jdData,
-      questionsWithCategory
+      questionsWithCategory,
     );
 
     // Build interview questions structure
@@ -206,7 +210,7 @@ async function generateAndSaveQuestions(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string; jobId: string }> }
+  { params }: { params: Promise<{ id: string; jobId: string }> },
 ) {
   try {
     const { id: organizationId, jobId } = await params;
@@ -221,7 +225,7 @@ export async function POST(
     const rateLimitResponse = await withRateLimit(
       request,
       "expensive",
-      "orgs/jobs/match-candidates"
+      "orgs/jobs/match-candidates",
     );
     if (rateLimitResponse) {
       return rateLimitResponse;
@@ -255,7 +259,7 @@ export async function POST(
         "jobs/match-candidates",
         {
           estimatedCount: cvExtractions.length,
-        }
+        },
       );
       if (quotaResponse) {
         return quotaResponse;
@@ -290,7 +294,7 @@ export async function POST(
       // Check if application already exists
       const existingApplications = await storage.getApplicationsForJob(jobId);
       const alreadyApplied = existingApplications.some(
-        (app) => app.cvUploadId === cvId
+        (app) => app.cvUploadId === cvId,
       );
 
       if (alreadyApplied) {
@@ -308,7 +312,7 @@ export async function POST(
           cvData,
           job.title,
           job.requirements,
-          job.description
+          job.description,
         );
         matchScore = result.matchScore;
         matchReasons = result.matchReasons;
@@ -353,7 +357,7 @@ export async function POST(
           job,
           cvId,
           jobId,
-          savedApplication.id
+          savedApplication.id,
         ).catch((err) =>
           logger.error(err, {
             api: "orgs/[id]/jobs/[jobId]/match-candidates",
@@ -361,7 +365,7 @@ export async function POST(
             jobId,
             cvId,
             applicationId: savedApplication.id,
-          })
+          }),
         );
       } else {
         belowThresholdCount++;

@@ -18,7 +18,7 @@ interface RequestOptions {
  */
 export function createTestRequest(
   path: string,
-  options: RequestOptions = {}
+  options: RequestOptions = {},
 ): NextRequest {
   const { method = "GET", body, headers = {}, searchParams = {} } = options;
 
@@ -42,7 +42,10 @@ export function createTestRequest(
   }
 
   // Cast to NextRequest's RequestInit which has stricter types than standard RequestInit
-  return new NextRequest(url, requestInit as ConstructorParameters<typeof NextRequest>[1]);
+  return new NextRequest(
+    url,
+    requestInit as ConstructorParameters<typeof NextRequest>[1],
+  );
 }
 
 /**
@@ -58,7 +61,7 @@ export async function parseJsonResponse<T>(response: Response): Promise<T> {
  * Next.js 16 uses Promise<params> pattern
  */
 export function createRouteParams<T extends Record<string, string>>(
-  params: T
+  params: T,
 ): { params: Promise<T> } {
   return { params: Promise.resolve(params) };
 }

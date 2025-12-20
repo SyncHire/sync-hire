@@ -2,8 +2,8 @@
  * Server-side Stream token generation
  */
 import { StreamClient } from "@stream-io/node-sdk";
-import { streamConfig } from "./stream-config";
 import { singleton } from "@/lib/utils/singleton";
+import { streamConfig } from "./stream-config";
 
 function createStreamClient(): StreamClient {
   if (!streamConfig.apiKey || !streamConfig.apiSecret) {

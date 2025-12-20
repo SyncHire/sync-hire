@@ -11,22 +11,33 @@
 
 import type {
   EmploymentType,
-  WorkArrangement,
   ExtractedJobData,
+  WorkArrangement,
 } from "@sync-hire/database";
 
 // Valid employment types for ExtractedJobData
-const VALID_EMPLOYMENT_TYPES: EmploymentType[] = ['Full-time', 'Part-time', 'Contract', 'Internship'];
-const DEFAULT_EMPLOYMENT_TYPE: EmploymentType = 'Full-time';
+const VALID_EMPLOYMENT_TYPES: EmploymentType[] = [
+  "Full-time",
+  "Part-time",
+  "Contract",
+  "Internship",
+];
+const DEFAULT_EMPLOYMENT_TYPE: EmploymentType = "Full-time";
 
 // Valid work arrangements for ExtractedJobData
-const VALID_WORK_ARRANGEMENTS: WorkArrangement[] = ['On-site', 'Remote', 'Hybrid'];
-const DEFAULT_WORK_ARRANGEMENT: WorkArrangement = 'On-site';
+const VALID_WORK_ARRANGEMENTS: WorkArrangement[] = [
+  "On-site",
+  "Remote",
+  "Hybrid",
+];
+const DEFAULT_WORK_ARRANGEMENT: WorkArrangement = "On-site";
 
 /**
  * Converts a string to EmploymentType, returning default if invalid
  */
-export function toEmploymentType(value: string | null | undefined): EmploymentType {
+export function toEmploymentType(
+  value: string | null | undefined,
+): EmploymentType {
   if (value && VALID_EMPLOYMENT_TYPES.includes(value as EmploymentType)) {
     return value as EmploymentType;
   }
@@ -36,7 +47,9 @@ export function toEmploymentType(value: string | null | undefined): EmploymentTy
 /**
  * Converts a string to WorkArrangement, returning default if invalid
  */
-export function toWorkArrangement(value: string | null | undefined): WorkArrangement {
+export function toWorkArrangement(
+  value: string | null | undefined,
+): WorkArrangement {
   if (value && VALID_WORK_ARRANGEMENTS.includes(value as WorkArrangement)) {
     return value as WorkArrangement;
   }
@@ -67,4 +80,3 @@ export function jobToExtractedJobData(job: {
     responsibilities: job.description ? [job.description] : [],
   };
 }
-

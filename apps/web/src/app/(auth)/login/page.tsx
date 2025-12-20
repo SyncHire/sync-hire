@@ -7,13 +7,11 @@
  * Handles redirect after successful login.
  */
 
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "@/lib/auth-client";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -22,8 +20,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { signIn } from "@/lib/auth-client";
 
 export default function LoginPage() {
   return (
@@ -72,7 +72,7 @@ function LoginContent() {
     if (result.error) {
       if (result.error.status === 403) {
         setError(
-          "Please verify your email address before logging in. Check your inbox for the verification link."
+          "Please verify your email address before logging in. Check your inbox for the verification link.",
         );
       } else {
         setError(result.error.message || "Invalid email or password");

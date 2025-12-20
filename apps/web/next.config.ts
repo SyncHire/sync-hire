@@ -1,6 +1,6 @@
-import {withSentryConfig} from "@sentry/nextjs";
+import { execFileSync } from "node:child_process";
+import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
-import { execFileSync } from "child_process";
 
 // Get git commit SHA at build time (safe - no user input)
 const getCommitSha = (): string => {
@@ -13,7 +13,7 @@ const getCommitSha = (): string => {
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
-  output: 'standalone',
+  output: "standalone",
   transpilePackages: ["@sync-hire/database"],
   serverExternalPackages: [
     "@prisma/client",
@@ -34,8 +34,8 @@ const nextConfig: NextConfig = {
     unoptimized: false,
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: '**',
+        protocol: "https",
+        hostname: "**",
       },
     ],
   },

@@ -16,7 +16,7 @@ import {
  * UI screens for different interview states
  * Updated to match dark theme design system
  */
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getCompanyLogoUrl } from "@/lib/logo-utils";
@@ -70,7 +70,6 @@ export function InterviewPreviewScreen({
           videoRef.current.srcObject = mediaStream;
         }
       } catch (err) {
-        console.error("Permission error:", err);
         // Try to get more specific error info
         if (err instanceof Error) {
           if (err.name === "NotAllowedError") {
@@ -89,7 +88,7 @@ export function InterviewPreviewScreen({
         stream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, []);
+  }, [stream]);
 
   // Update video element when stream changes
   useEffect(() => {

@@ -8,14 +8,13 @@
  * Sets new org as active and redirects to HR dashboard.
  */
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
-import { organization, useSession } from "@/lib/auth-client";
+import { Building2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -24,9 +23,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { Building2 } from "lucide-react";
+import { organization, useSession } from "@/lib/auth-client";
 import { slugify } from "@/lib/utils/slugify";
 
 export default function CreateOrganizationPage() {
@@ -68,9 +68,12 @@ export default function CreateOrganizationPage() {
     });
 
     if (result.error) {
-      const errorMessage = result.error.message || "Failed to create organization";
+      const errorMessage =
+        result.error.message || "Failed to create organization";
       if (errorMessage.toLowerCase().includes("slug")) {
-        setError("An organization with this name already exists. Please choose a different name.");
+        setError(
+          "An organization with this name already exists. Please choose a different name.",
+        );
       } else {
         setError(errorMessage);
       }
@@ -79,7 +82,9 @@ export default function CreateOrganizationPage() {
     }
 
     // Invalidate organizations list cache so dropdowns update
-    await queryClient.invalidateQueries({ queryKey: ["organizations", "list"] });
+    await queryClient.invalidateQueries({
+      queryKey: ["organizations", "list"],
+    });
 
     // Set the new org as active
     if (result.data?.id) {
@@ -149,7 +154,11 @@ export default function CreateOrganizationPage() {
             )}
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading || !name.trim()}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isLoading || !name.trim()}
+          >
             {isLoading ? <Spinner className="mr-2 h-4 w-4" /> : null}
             Create Organization
           </Button>

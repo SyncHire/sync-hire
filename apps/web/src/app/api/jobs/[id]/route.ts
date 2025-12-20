@@ -4,12 +4,12 @@
  * PUT - Update job settings (aiMatchingEnabled, etc.) - requires HR access
  */
 
-import { type NextRequest } from "next/server";
-import { logger } from "@/lib/logger";
-import { MatchingStatus, JobStatus } from "@sync-hire/database";
-import { getStorage } from "@/lib/storage/storage-factory";
-import { withJobAccess } from "@/lib/auth-middleware";
+import { JobStatus, MatchingStatus } from "@sync-hire/database";
+import type { NextRequest } from "next/server";
 import { errors, successResponse } from "@/lib/api-response";
+import { withJobAccess } from "@/lib/auth-middleware";
+import { logger } from "@/lib/logger";
+import { getStorage } from "@/lib/storage/storage-factory";
 
 /**
  * GET /api/jobs/[id]
@@ -21,7 +21,7 @@ import { errors, successResponse } from "@/lib/api-response";
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: jobId } = await params;
@@ -71,7 +71,7 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: jobId } = await params;

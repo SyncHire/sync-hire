@@ -7,11 +7,11 @@
 import { notFound, redirect } from "next/navigation";
 import { InterviewRoom } from "@/components/InterviewRoom";
 import { StreamVideoProvider } from "@/components/StreamVideoProvider";
-import type { Question } from "@/lib/types/interview-types";
-import type { Job, Interview } from "@/lib/storage/storage-interface";
-import { getStorage } from "@/lib/storage/storage-factory";
-import { mergeInterviewQuestions } from "@/lib/utils/question-utils";
 import { getServerSession } from "@/lib/auth-server";
+import { getStorage } from "@/lib/storage/storage-factory";
+import type { Interview, Job } from "@/lib/storage/storage-interface";
+import type { Question } from "@/lib/types/interview-types";
+import { mergeInterviewQuestions } from "@/lib/utils/question-utils";
 
 interface InterviewPageProps {
   params: Promise<{
@@ -33,7 +33,9 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
 
   // Try to get interview from database
   let interview: Interview | null = await storage.getInterview(id);
-  let job: Job | null = interview ? await storage.getJob(interview.jobId) : null;
+  let job: Job | null = interview
+    ? await storage.getJob(interview.jobId)
+    : null;
   let generatedQuestions: Question[] = [];
   let jobId: string | null = interview?.jobId ?? null;
 
@@ -82,7 +84,6 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
   // Use generated questions if available, otherwise map job's questions to Question format
   let questions: Question[] = generatedQuestions;
   if (questions.length === 0 && job.questions) {
-    console.warn(`[interview-page] No personalized questions found for interviewId: ${id}, falling back to ${job.questions.length} job default questions`);
     // Map database JobQuestion to Question format
     questions = job.questions.map((q) => ({
       id: q.id,

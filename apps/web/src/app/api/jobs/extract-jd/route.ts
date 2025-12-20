@@ -5,16 +5,16 @@
  * Requires organizationId from frontend, validates user membership.
  */
 
-import { type NextRequest, NextResponse } from "next/server";
-import { logger } from "@/lib/logger";
 import { prisma } from "@sync-hire/database";
-import { JobDescriptionProcessor } from "@/lib/backend/jd-processor";
-import { getStorage } from "@/lib/storage/storage-factory";
-import { getCloudStorageProvider } from "@/lib/storage/cloud/storage-provider-factory";
-import { requireAuth } from "@/lib/auth-server";
-import { withRateLimit } from "@/lib/rate-limiter";
-import { withQuota } from "@/lib/with-quota";
+import { type NextRequest, NextResponse } from "next/server";
 import { trackUsage } from "@/lib/ai-usage-tracker";
+import { requireAuth } from "@/lib/auth-server";
+import { JobDescriptionProcessor } from "@/lib/backend/jd-processor";
+import { logger } from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limiter";
+import { getCloudStorageProvider } from "@/lib/storage/cloud/storage-provider-factory";
+import { getStorage } from "@/lib/storage/storage-factory";
+import { withQuota } from "@/lib/with-quota";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -25,7 +25,12 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
 
     // Rate limit check (expensive tier - PDF processing + AI extraction)
-    const rateLimitResponse = await withRateLimit(request, "expensive", "jobs/extract-jd", userId);
+    const rateLimitResponse = await withRateLimit(
+      request,
+      "expensive",
+      "jobs/extract-jd",
+      userId,
+    );
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
@@ -71,14 +76,16 @@ export async function POST(request: NextRequest) {
 
     // Validate file type - PDF and Markdown are supported
     const isPdf = file.type === "application/pdf" || file.name.endsWith(".pdf");
-    const isMarkdown = file.type === "text/markdown" || file.name.endsWith(".md");
+    const isMarkdown =
+      file.type === "text/markdown" || file.name.endsWith(".md");
     const isText = file.type === "text/plain" || file.name.endsWith(".txt");
 
     if (!isPdf && !isMarkdown && !isText) {
       return NextResponse.json(
         {
           success: false,
-          error: "Unsupported file type. PDF, Markdown, and TXT files are accepted",
+          error:
+            "Unsupported file type. PDF, Markdown, and TXT files are accepted",
         },
         { status: 400 },
       );

@@ -7,25 +7,25 @@
  * Features a bold hero section with animated elements.
  */
 
-import Link from "next/link";
-import Image from "next/image";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
+  BarChart3,
+  FileText,
   Moon,
+  Shield,
   Sparkles,
   Sun,
   Users,
-  Zap,
-  Shield,
-  FileText,
   Video,
-  BarChart3,
+  Zap,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import Link from "next/link";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
+import { Button } from "@/components/ui/button";
 
 export function LandingPage() {
   const { theme, setTheme } = useTheme();
@@ -73,7 +73,11 @@ export function LandingPage() {
               </Button>
             )}
             <Link href="/login">
-              <Button variant="ghost" size="sm" className="hidden sm:inline-flex">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="hidden sm:inline-flex"
+              >
                 Sign in
               </Button>
             </Link>
@@ -104,9 +108,7 @@ export function LandingPage() {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8"
             >
               <Sparkles className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">
-                Try Free During Beta
-              </span>
+              <span className="text-sm font-medium">Try Free During Beta</span>
             </motion.div>
 
             {/* Main headline */}
@@ -235,14 +237,20 @@ export function LandingPage() {
                 transition={{ duration: 0.6 }}
                 className={`flex flex-col ${i % 2 === 1 ? "md:flex-row-reverse" : "md:flex-row"} gap-8 md:gap-12 items-center`}
               >
-                <div className={`flex-1 ${i % 2 === 1 ? "md:text-right" : "md:text-left"} text-center`}>
-                  <div className={`inline-flex items-center gap-4 mb-4 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}>
+                <div
+                  className={`flex-1 ${i % 2 === 1 ? "md:text-right" : "md:text-left"} text-center`}
+                >
+                  <div
+                    className={`inline-flex items-center gap-4 mb-4 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}
+                  >
                     <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 border border-primary/20">
                       <span className="text-lg font-bold text-primary">
                         {item.step}
                       </span>
                     </div>
-                    <h3 className="text-2xl md:text-3xl font-semibold">{item.title}</h3>
+                    <h3 className="text-2xl md:text-3xl font-semibold">
+                      {item.title}
+                    </h3>
                   </div>
                   <p className="text-muted-foreground text-lg max-w-md mx-auto md:mx-0">
                     {item.description}

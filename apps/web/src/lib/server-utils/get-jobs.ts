@@ -4,9 +4,8 @@
  */
 
 import "server-only";
-import type { Job } from "@/lib/storage/storage-interface";
-import type { Interview } from "@/lib/storage/storage-interface";
 import { getStorage } from "@/lib/storage/storage-factory";
+import type { Interview, Job } from "@/lib/storage/storage-interface";
 
 // Extended Job type with computed applicantsCount
 export interface JobWithApplicantCount extends Job {
@@ -27,9 +26,14 @@ function sortJobsByCreatedAt(jobs: Job[]): Job[] {
 /**
  * Add applicant counts to jobs based on interviews
  */
-function addApplicantCounts(jobs: Job[], interviews: Interview[]): JobWithApplicantCount[] {
+function addApplicantCounts(
+  jobs: Job[],
+  interviews: Interview[],
+): JobWithApplicantCount[] {
   return jobs.map((job) => {
-    const jobInterviews = interviews.filter((interview) => interview.jobId === job.id);
+    const jobInterviews = interviews.filter(
+      (interview) => interview.jobId === job.id,
+    );
     return {
       ...job,
       applicantsCount: jobInterviews.length,
@@ -49,12 +53,16 @@ export async function getJobData(id: string): Promise<Job | null> {
  * Get jobs for an organization with computed applicant counts (HR view)
  * @param organizationId - Filter jobs by organization ID (required)
  */
-export async function getAllJobsData(organizationId: string): Promise<JobWithApplicantCount[]> {
+export async function getAllJobsData(
+  organizationId: string,
+): Promise<JobWithApplicantCount[]> {
   const storage = getStorage();
   const storedJobs = await storage.getAllStoredJobs();
   const allInterviews = await storage.getAllInterviews();
 
-  const orgJobs = storedJobs.filter((job) => job.organizationId === organizationId);
+  const orgJobs = storedJobs.filter(
+    (job) => job.organizationId === organizationId,
+  );
   const sortedJobs = sortJobsByCreatedAt(orgJobs);
 
   return addApplicantCounts(sortedJobs, allInterviews);

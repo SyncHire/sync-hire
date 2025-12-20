@@ -4,7 +4,7 @@
  * Content-based hashing for file deduplication and cache keys.
  */
 
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 
 /**
  * Generate SHA-256 hash from file buffer

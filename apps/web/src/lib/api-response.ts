@@ -60,7 +60,7 @@ export function errorResponse(
   code: ErrorCode,
   message: string,
   status: number,
-  details?: FieldError[]
+  details?: FieldError[],
 ): NextResponse {
   const error: ApiError = { code, message };
   if (details && details.length > 0) {
@@ -90,8 +90,7 @@ export const errors = {
     errorResponse("not_found", `${resource} not found`, 422),
 
   /** 409 Conflict */
-  conflict: (message: string) =>
-    errorResponse("conflict", message, 409),
+  conflict: (message: string) => errorResponse("conflict", message, 409),
 
   /** 422 Validation Error - for field-level validation failures */
   validation: (message: string, details: FieldError[]) =>
@@ -127,7 +126,10 @@ export function successResponse<T>(data: T, status = 200): NextResponse {
  * @example
  * return createdResponse({ id: "new-id", title: "New Job" }, "/api/jobs/new-id");
  */
-export function createdResponse<T>(data: T, locationPath?: string): NextResponse {
+export function createdResponse<T>(
+  data: T,
+  locationPath?: string,
+): NextResponse {
   const headers: HeadersInit = {};
   if (locationPath) {
     headers.Location = locationPath;

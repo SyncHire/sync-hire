@@ -4,7 +4,7 @@
  * Tests public jobs listing endpoint (no auth required).
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "./route";
 
 // Mock the server-utils to avoid database dependency in unit test
@@ -93,7 +93,7 @@ describe("GET /api/jobs", () => {
     );
 
     vi.mocked(getAllActiveJobsData).mockRejectedValueOnce(
-      new Error("Database error")
+      new Error("Database error"),
     );
 
     const response = await GET();

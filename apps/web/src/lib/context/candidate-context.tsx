@@ -5,9 +5,9 @@
  * Provides current candidate user data throughout the candidate views
  */
 
+import type { ExtractedCVData } from "@sync-hire/database";
 import { useQuery } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext } from "react";
-import type { ExtractedCVData } from "@sync-hire/database";
 import type { User } from "@/lib/storage/storage-interface";
 import type { JobApplication } from "@/lib/types/interview-types";
 

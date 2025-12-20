@@ -22,10 +22,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import type { AIEvaluation } from "@/lib/types/interview-types";
-import type { Interview, Job } from "@/lib/storage/storage-interface";
 import { useCandidateInterview } from "@/lib/hooks/use-candidate-interview";
 import { useAnalyzeInterview } from "@/lib/hooks/use-interview";
+import type { Interview, Job } from "@/lib/storage/storage-interface";
+import type { AIEvaluation } from "@/lib/types/interview-types";
 
 interface ResultsContentProps {
   interview: Interview;
@@ -72,7 +72,10 @@ const defaultEvaluation = {
     "The candidate demonstrated solid technical skills and communication abilities. They showed good problem-solving methodology and relevant experience for the role. Overall, a strong performance that indicates readiness for the position.",
 };
 
-function buildEvaluation(aiEvaluation: AIEvaluation | undefined, score?: number) {
+function buildEvaluation(
+  aiEvaluation: AIEvaluation | undefined,
+  score?: number,
+) {
   if (aiEvaluation) {
     return {
       overallScore: aiEvaluation.overallScore,
@@ -123,30 +126,29 @@ export default function ResultsContent({
 
   // Check if interview needs analysis (completed but no aiEvaluation)
   const needsAnalysis =
-    initialInterview.status === "COMPLETED" &&
-    !initialInterview.aiEvaluation;
+    initialInterview.status === "COMPLETED" && !initialInterview.aiEvaluation;
 
   // Poll while waiting for analysis
   const shouldPoll = needsAnalysis;
 
   const { data: polledData, refetch } = useCandidateInterview(
     shouldPoll ? initialInterview.id : null,
-    { refetchInterval: 3000 }
+    { refetchInterval: 3000 },
   );
 
   // Auto-trigger analysis if needed
   useEffect(() => {
-    if (needsAnalysis && !analysisTriggeredRef.current && !analyzeInterview.isPending) {
+    if (
+      needsAnalysis &&
+      !analysisTriggeredRef.current &&
+      !analyzeInterview.isPending
+    ) {
       analysisTriggeredRef.current = true;
-      console.log("🔄 Auto-triggering interview analysis...");
       analyzeInterview.mutate(initialInterview.id, {
         onSuccess: () => {
-          console.log("✅ Analysis triggered, refreshing...");
           refetch();
         },
-        onError: (error) => {
-          console.error("❌ Analysis failed:", error);
-        },
+        onError: (_error) => {},
       });
     }
   }, [needsAnalysis, initialInterview.id, analyzeInterview, refetch]);
@@ -164,15 +166,17 @@ export default function ResultsContent({
     : null;
 
   // Use polled data if available and has evaluation, otherwise use initial
-  const interview =
-    polledInterview?.aiEvaluation
-      ? polledInterview
-      : initialInterview;
+  const interview = polledInterview?.aiEvaluation
+    ? polledInterview
+    : initialInterview;
 
   // Show "Generating" while analysis is in progress
   const isGenerating = needsAnalysis && !interview.aiEvaluation;
 
-  const evaluation = buildEvaluation(interview.aiEvaluation, interview.score ?? undefined);
+  const evaluation = buildEvaluation(
+    interview.aiEvaluation,
+    interview.score ?? undefined,
+  );
   const hasTranscript = Boolean(interview.transcript);
 
   return (

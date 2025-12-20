@@ -31,7 +31,9 @@ export interface OrganizationForLogo {
  * @param organization - Organization with name and optional logo
  * @returns Logo URL or null if not available
  */
-export function getOrganizationLogoUrl(organization: OrganizationForLogo | null | undefined): string | null {
+export function getOrganizationLogoUrl(
+  organization: OrganizationForLogo | null | undefined,
+): string | null {
   if (!organization) {
     return null;
   }

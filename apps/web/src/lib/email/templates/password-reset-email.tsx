@@ -11,15 +11,15 @@ import {
   Text,
 } from "@react-email/components";
 import {
-  main,
-  container,
-  h1,
-  text,
-  buttonContainer,
   button,
-  link,
-  warningUrgent,
+  buttonContainer,
+  container,
   footer,
+  h1,
+  link,
+  main,
+  text,
+  warningUrgent,
 } from "./styles";
 
 interface PasswordResetEmailProps {

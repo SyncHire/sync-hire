@@ -6,11 +6,11 @@
  * - HR: Can view all interviews for their active organization's jobs
  */
 
-import { type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
+import { errors, successResponse } from "@/lib/api-response";
+import { getActiveOrganizationId, getServerSession } from "@/lib/auth-server";
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
-import { getServerSession, getActiveOrganizationId } from "@/lib/auth-server";
-import { errors, successResponse } from "@/lib/api-response";
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,11 +50,11 @@ export async function GET(request: NextRequest) {
     const orgJobIds = new Set(
       allJobs
         .filter((job) => job.organizationId === activeOrgId)
-        .map((job) => job.id)
+        .map((job) => job.id),
     );
 
     const orgInterviews = allInterviews.filter((interview) =>
-      orgJobIds.has(interview.jobId)
+      orgJobIds.has(interview.jobId),
     );
 
     return successResponse({

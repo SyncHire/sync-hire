@@ -32,7 +32,7 @@ export function useAnalyzeInterview() {
 
       return response.json();
     },
-    onSuccess: (data, interviewId) => {
+    onSuccess: (_data, interviewId) => {
       // Invalidate interview details query to refresh UI
       queryClient.invalidateQueries({
         queryKey: ["/api/interviews", interviewId],

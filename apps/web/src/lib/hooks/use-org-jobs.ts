@@ -42,7 +42,10 @@ export function useOrgJobs(orgId: string | null, options?: UseOrgJobsOptions) {
       // Poll while any job is scanning
       if (options?.pollWhileScanning) {
         const jobs = query.state.data;
-        if (Array.isArray(jobs) && jobs.some((job: Job) => job.aiMatchingStatus === "SCANNING")) {
+        if (
+          Array.isArray(jobs) &&
+          jobs.some((job: Job) => job.aiMatchingStatus === "SCANNING")
+        ) {
           return 2000;
         }
       }
@@ -59,7 +62,11 @@ interface UseOrgJobOptions {
 /**
  * Hook for fetching a single job with optional polling while scanning
  */
-export function useOrgJob(orgId: string | null, jobId: string | null, options?: UseOrgJobOptions) {
+export function useOrgJob(
+  orgId: string | null,
+  jobId: string | null,
+  options?: UseOrgJobOptions,
+) {
   return useQuery({
     queryKey: ["/api/orgs", orgId, "jobs", jobId],
     queryFn: async () => {
@@ -75,7 +82,10 @@ export function useOrgJob(orgId: string | null, jobId: string | null, options?: 
       if (options?.forcePolling) {
         return 2000;
       }
-      if (options?.pollWhileScanning && query.state.data?.aiMatchingStatus === "SCANNING") {
+      if (
+        options?.pollWhileScanning &&
+        query.state.data?.aiMatchingStatus === "SCANNING"
+      ) {
         return 2000;
       }
       return false;
@@ -133,14 +143,19 @@ interface OrgJobApplicantsResponse {
 /**
  * Hook for fetching applicants for a specific job
  */
-export function useOrgJobApplicants(orgId: string | null, jobId: string | null) {
+export function useOrgJobApplicants(
+  orgId: string | null,
+  jobId: string | null,
+) {
   return useQuery<OrgJobApplicantsResponse>({
     queryKey: ["/api/orgs", orgId, "jobs", jobId, "applicants"],
     queryFn: async () => {
       if (!orgId || !jobId) {
         throw new Error("Organization ID and Job ID are required");
       }
-      const response = await fetch(`/api/orgs/${orgId}/jobs/${jobId}/applicants`);
+      const response = await fetch(
+        `/api/orgs/${orgId}/jobs/${jobId}/applicants`,
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch applicants");
       }
@@ -185,11 +200,14 @@ export function useSaveOrgJobQuestions() {
 
   return useMutation<SaveQuestionsResponse, Error, SaveQuestionsParams>({
     mutationFn: async ({ orgId, jobId, questions }) => {
-      const response = await fetch(`/api/orgs/${orgId}/jobs/${jobId}/questions`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questions }),
-      });
+      const response = await fetch(
+        `/api/orgs/${orgId}/jobs/${jobId}/questions`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ questions }),
+        },
+      );
 
       if (!response.ok) {
         const error = await response.json();
@@ -239,25 +257,27 @@ interface GenerateQuestionsResponse {
  * Hook for generating AI interview questions
  */
 export function useGenerateOrgJobQuestions() {
-  return useMutation<GenerateQuestionsResponse, Error, GenerateQuestionsParams>({
-    mutationFn: async ({ jobId, title, description, requirements }) => {
-      // Uses existing endpoint which already handles quota via jobId lookup
-      const response = await fetch("/api/jobs/generate-questions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId, title, description, requirements }),
-      });
+  return useMutation<GenerateQuestionsResponse, Error, GenerateQuestionsParams>(
+    {
+      mutationFn: async ({ jobId, title, description, requirements }) => {
+        // Uses existing endpoint which already handles quota via jobId lookup
+        const response = await fetch("/api/jobs/generate-questions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jobId, title, description, requirements }),
+        });
 
-      if (!response.ok) {
-        await handleResponseError(response);
-      }
+        if (!response.ok) {
+          await handleResponseError(response);
+        }
 
-      return response.json();
+        return response.json();
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to generate questions");
+      },
     },
-    onError: (error) => {
-      toast.error(error.message || "Failed to generate questions");
-    },
-  });
+  );
 }
 
 // =============================================================================
@@ -292,9 +312,12 @@ export function useOrgMatchCandidates() {
 
   return useMutation<MatchCandidatesResponse, Error, MatchCandidatesParams>({
     mutationFn: async ({ orgId, jobId }) => {
-      const response = await fetch(`/api/orgs/${orgId}/jobs/${jobId}/match-candidates`, {
-        method: "POST",
-      });
+      const response = await fetch(
+        `/api/orgs/${orgId}/jobs/${jobId}/match-candidates`,
+        {
+          method: "POST",
+        },
+      );
 
       if (!response.ok) {
         await handleResponseError(response);
@@ -303,11 +326,21 @@ export function useOrgMatchCandidates() {
       return response.json();
     },
     onSuccess: (result, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/orgs", variables.orgId, "jobs"] });
       queryClient.invalidateQueries({
-        queryKey: ["/api/orgs", variables.orgId, "jobs", variables.jobId, "applicants"],
+        queryKey: ["/api/orgs", variables.orgId, "jobs"],
       });
-      toast.success(`Found ${result.data?.matchedCount || 0} matching candidates!`);
+      queryClient.invalidateQueries({
+        queryKey: [
+          "/api/orgs",
+          variables.orgId,
+          "jobs",
+          variables.jobId,
+          "applicants",
+        ],
+      });
+      toast.success(
+        `Found ${result.data?.matchedCount || 0} matching candidates!`,
+      );
     },
     onError: (error) => {
       toast.error(error.message || "Failed to match candidates");
@@ -377,7 +410,9 @@ export function useCreateOrgJob() {
       return response.json();
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/orgs", variables.orgId, "jobs"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/orgs", variables.orgId, "jobs"],
+      });
       toast.success("Job created successfully!");
     },
     onError: (error) => {
@@ -408,28 +443,32 @@ interface UpdateJobSettingsResponse {
 export function useUpdateOrgJobSettings() {
   const queryClient = useQueryClient();
 
-  return useMutation<UpdateJobSettingsResponse, Error, UpdateJobSettingsParams>({
-    mutationFn: async ({ orgId, jobId, ...settings }) => {
-      const response = await fetch(`/api/orgs/${orgId}/jobs/${jobId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
-      });
+  return useMutation<UpdateJobSettingsResponse, Error, UpdateJobSettingsParams>(
+    {
+      mutationFn: async ({ orgId, jobId, ...settings }) => {
+        const response = await fetch(`/api/orgs/${orgId}/jobs/${jobId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(settings),
+        });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to update job settings");
-      }
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to update job settings");
+        }
 
-      return response.json();
+        return response.json();
+      },
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries({
+          queryKey: ["/api/orgs", variables.orgId, "jobs"],
+        });
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to update settings");
+      },
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/orgs", variables.orgId, "jobs"] });
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to update settings");
-    },
-  });
+  );
 }
 
 export type {

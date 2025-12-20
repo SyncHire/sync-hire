@@ -14,9 +14,9 @@
  */
 
 import {
+  type AIEndpoint,
   checkQuota,
   getNextMonthStart,
-  type AIEndpoint,
   type UsageCheckResult,
 } from "./ai-usage-tracker";
 import { logger } from "./logger";
@@ -40,7 +40,7 @@ export interface QuotaCheckOptions {
  */
 function createQuotaExceededResponse(
   result: UsageCheckResult,
-  endpoint: AIEndpoint
+  endpoint: AIEndpoint,
 ): Response {
   const resetDate = getNextMonthStart();
 
@@ -74,7 +74,7 @@ function createQuotaExceededResponse(
         "X-Quota-Remaining": String(result.remaining ?? "unlimited"),
         "X-Quota-Reset": resetDate.toISOString(),
       },
-    }
+    },
   );
 }
 
@@ -84,7 +84,7 @@ function createQuotaExceededResponse(
  */
 export function addQuotaHeaders(
   headers: Headers,
-  result: UsageCheckResult
+  result: UsageCheckResult,
 ): void {
   const resetDate = getNextMonthStart();
 
@@ -116,7 +116,7 @@ export function addQuotaHeaders(
 export async function withQuota(
   organizationId: string,
   endpoint: AIEndpoint,
-  options?: QuotaCheckOptions
+  options?: QuotaCheckOptions,
 ): Promise<Response | null> {
   let result;
   try {
@@ -173,7 +173,7 @@ export async function withQuota(
  * Returns the quota status without returning a 402 response
  */
 export async function getQuotaStatus(
-  organizationId: string
+  organizationId: string,
 ): Promise<UsageCheckResult> {
   return checkQuota(organizationId);
 }

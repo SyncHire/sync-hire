@@ -7,7 +7,10 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { HRInterviewResponse, AIEvaluation } from "@/lib/types/api-responses";
+import type {
+  AIEvaluation,
+  HRInterviewResponse,
+} from "@/lib/types/api-responses";
 
 // =============================================================================
 // Interview List and Details
@@ -20,7 +23,10 @@ interface UseOrgInterviewsOptions {
 /**
  * Hook for fetching all interviews for an organization
  */
-export function useOrgInterviews(orgId: string | null, options?: UseOrgInterviewsOptions) {
+export function useOrgInterviews(
+  orgId: string | null,
+  options?: UseOrgInterviewsOptions,
+) {
   return useQuery<{ success: boolean; data: HRInterviewResponse[] }>({
     queryKey: ["/api/orgs", orgId, "interviews"],
     queryFn: async () => {
@@ -46,7 +52,7 @@ interface UseOrgInterviewOptions {
 export function useOrgInterview(
   orgId: string | null,
   interviewId: string | null,
-  options?: UseOrgInterviewOptions
+  options?: UseOrgInterviewOptions,
 ) {
   return useQuery<{ success: boolean; data: HRInterviewResponse }>({
     queryKey: ["/api/orgs", orgId, "interviews", interviewId],
@@ -54,7 +60,9 @@ export function useOrgInterview(
       if (!orgId || !interviewId) {
         throw new Error("Organization ID and Interview ID are required");
       }
-      const response = await fetch(`/api/orgs/${orgId}/interviews/${interviewId}`);
+      const response = await fetch(
+        `/api/orgs/${orgId}/interviews/${interviewId}`,
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch interview");
       }
@@ -90,9 +98,12 @@ export function useOrgAnalyzeInterview() {
 
   return useMutation<AnalyzeInterviewResponse, Error, AnalyzeInterviewParams>({
     mutationFn: async ({ orgId, interviewId }) => {
-      const response = await fetch(`/api/orgs/${orgId}/interviews/${interviewId}/analyze`, {
-        method: "POST",
-      });
+      const response = await fetch(
+        `/api/orgs/${orgId}/interviews/${interviewId}/analyze`,
+        {
+          method: "POST",
+        },
+      );
 
       if (!response.ok) {
         const errorData = await response
@@ -106,7 +117,12 @@ export function useOrgAnalyzeInterview() {
     onSuccess: (_, variables) => {
       // Invalidate interview queries to refresh UI
       queryClient.invalidateQueries({
-        queryKey: ["/api/orgs", variables.orgId, "interviews", variables.interviewId],
+        queryKey: [
+          "/api/orgs",
+          variables.orgId,
+          "interviews",
+          variables.interviewId,
+        ],
       });
       queryClient.invalidateQueries({
         queryKey: ["/api/orgs", variables.orgId, "interviews"],

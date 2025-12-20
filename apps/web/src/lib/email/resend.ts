@@ -12,9 +12,9 @@
 
 import { Resend } from "resend";
 import { logger } from "@/lib/logger";
-import { VerificationEmail } from "./templates/verification-email";
-import { PasswordResetEmail } from "./templates/password-reset-email";
 import { InvitationEmail } from "./templates/invitation-email";
+import { PasswordResetEmail } from "./templates/password-reset-email";
+import { VerificationEmail } from "./templates/verification-email";
 
 interface EmailUser {
   id: string;
@@ -28,7 +28,7 @@ interface EmailUser {
 export class EmailService {
   constructor(
     private readonly client: Resend,
-    private readonly fromEmail: string
+    private readonly fromEmail: string,
   ) {}
 
   /**
@@ -37,7 +37,7 @@ export class EmailService {
    */
   async sendVerificationEmail(
     user: EmailUser,
-    verificationUrl: string
+    verificationUrl: string,
   ): Promise<void> {
     const { error } = await this.client.emails.send({
       from: this.fromEmail,
@@ -65,7 +65,7 @@ export class EmailService {
    */
   async sendPasswordResetEmail(
     user: EmailUser,
-    resetUrl: string
+    resetUrl: string,
   ): Promise<void> {
     const { error } = await this.client.emails.send({
       from: this.fromEmail,
@@ -96,7 +96,7 @@ export class EmailService {
     organizationName: string,
     inviterName: string,
     invitationUrl: string,
-    invitationId: string
+    invitationId: string,
   ): Promise<void> {
     const { error } = await this.client.emails.send({
       from: this.fromEmail,
@@ -140,7 +140,7 @@ export function getEmailService(): EmailService {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     throw new Error(
-      "RESEND_API_KEY environment variable is not configured. Email sending is disabled."
+      "RESEND_API_KEY environment variable is not configured. Email sending is disabled.",
     );
   }
 

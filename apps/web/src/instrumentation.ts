@@ -7,51 +7,52 @@
  * @see https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation
  */
 
-import { isSentryEnabled } from './lib/sentry.config';
+import { isSentryEnabled } from "./lib/sentry.config";
 
 export async function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
+  if (process.env.NEXT_RUNTIME === "nodejs") {
     if (isSentryEnabled) {
-      await import('../sentry.server.config');
+      await import("../sentry.server.config");
     }
 
     // Validate database connection when database mode is enabled
-    if (process.env.USE_DATABASE === 'true') {
-      const { validateDatabaseConnection } = await import('@sync-hire/database');
+    if (process.env.USE_DATABASE === "true") {
+      const { validateDatabaseConnection } = await import(
+        "@sync-hire/database"
+      );
 
       try {
         await validateDatabaseConnection();
       } catch (error) {
         if (isSentryEnabled) {
-          const Sentry = await import('@sentry/nextjs');
+          const Sentry = await import("@sentry/nextjs");
           Sentry.captureException(error);
         }
-        console.error('FATAL: Database connection failed');
 
-        if (process.env.NODE_ENV === 'production') {
-          console.error('Exiting: Database connection is required in production');
+        if (process.env.NODE_ENV === "production") {
           process.exit(1);
         } else {
-          console.warn('Continuing without database (non-production environment)');
         }
       }
     }
 
     // Validate rate limit connection (non-blocking - just logs status)
-    const { validateRateLimitConnection } = await import('./lib/rate-limiter');
+    const { validateRateLimitConnection } = await import("./lib/rate-limiter");
     await validateRateLimitConnection();
   }
 
-  if (process.env.NEXT_RUNTIME === 'edge') {
+  if (process.env.NEXT_RUNTIME === "edge") {
     if (isSentryEnabled) {
-      await import('../sentry.edge.config');
+      await import("../sentry.edge.config");
     }
   }
 }
 
-export async function onRequestError(...args: Parameters<typeof import('@sentry/nextjs').captureRequestError>) {
+export async function onRequestError(
+  ...args: Parameters<typeof import("@sentry/nextjs").captureRequestError>
+) {
   if (isSentryEnabled) {
-    const Sentry = await import('@sentry/nextjs');
+    const Sentry = await import("@sentry/nextjs");
     return Sentry.captureRequestError(...args);
   }
 }

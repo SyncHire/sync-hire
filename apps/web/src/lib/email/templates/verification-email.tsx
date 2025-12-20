@@ -11,14 +11,14 @@ import {
   Text,
 } from "@react-email/components";
 import {
-  main,
-  container,
-  h1,
-  text,
-  buttonContainer,
   button,
-  link,
+  buttonContainer,
+  container,
   footer,
+  h1,
+  link,
+  main,
+  text,
 } from "./styles";
 
 interface VerificationEmailProps {

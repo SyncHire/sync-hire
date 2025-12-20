@@ -6,16 +6,16 @@
  * Access: HR only (organization members)
  */
 
-import { type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
+import { errors, successResponse } from "@/lib/api-response";
+import { withOrgMembership } from "@/lib/auth-middleware";
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
-import { withOrgMembership } from "@/lib/auth-middleware";
-import { errors, successResponse } from "@/lib/api-response";
 import type { HRApplicationResponse } from "@/lib/types/api-responses";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string; jobId: string }> }
+  { params }: { params: Promise<{ id: string; jobId: string }> },
 ) {
   try {
     const { id: organizationId, jobId } = await params;

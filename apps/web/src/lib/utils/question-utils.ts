@@ -2,8 +2,8 @@
  * Utility functions for handling interview questions
  */
 
-import type { Question, InterviewStage } from "@/lib/types/interview-types";
 import type { InterviewQuestions } from "@/lib/storage/storage-interface";
+import type { InterviewStage, Question } from "@/lib/types/interview-types";
 
 /**
  * Map question category to interview stage
@@ -50,14 +50,16 @@ export function mergeInterviewQuestions(
   }));
 
   // AI-suggested questions (personalized based on CV gaps)
-  const suggestedQs = (questionSet.suggestedQuestions || []).map((q, index) => ({
-    id: `suggested-q-${index}`,
-    text: q.content,
-    type: "video" as const,
-    duration: 3,
-    category: mapCategoryToStage(q.category),
-    keyPoints: q.reason ? [q.reason] : [],
-  }));
+  const suggestedQs = (questionSet.suggestedQuestions || []).map(
+    (q, index) => ({
+      id: `suggested-q-${index}`,
+      text: q.content,
+      type: "video" as const,
+      duration: 3,
+      category: mapCategoryToStage(q.category),
+      keyPoints: q.reason ? [q.reason] : [],
+    }),
+  );
 
   // Merge: custom questions first (from job), then AI-personalized questions
   return [...customQs, ...suggestedQs];

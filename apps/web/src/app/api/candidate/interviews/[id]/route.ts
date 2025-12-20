@@ -6,15 +6,15 @@
  * Access: Candidate only (must be the interview owner)
  */
 
+import { errors, successResponse } from "@/lib/api-response";
+import { getServerSession } from "@/lib/auth-server";
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
-import { getServerSession } from "@/lib/auth-server";
-import { errors, successResponse } from "@/lib/api-response";
 import type { CandidateInterviewResponse } from "@/lib/types/api-responses";
 
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await getServerSession();
@@ -26,7 +26,7 @@ export async function GET(
     const storage = getStorage();
 
     // Try to get interview directly
-    let interview = await storage.getInterview(id);
+    const interview = await storage.getInterview(id);
     let job = interview ? await storage.getJob(interview.jobId) : null;
 
     // If not found as interview, try as application ID

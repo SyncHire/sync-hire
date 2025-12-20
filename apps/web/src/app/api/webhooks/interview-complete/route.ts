@@ -3,12 +3,13 @@
  * Receives notification when an AI interview is completed
  * POST /api/webhooks/interview-complete
  */
+
+import { ApplicationStatus, InterviewStatus } from "@sync-hire/database";
 import { NextResponse } from "next/server";
-import type { AIEvaluation } from "@/lib/types/interview-types";
-import type { Interview } from "@/lib/storage/storage-interface";
-import { getStorage } from "@/lib/storage/storage-factory";
-import { InterviewStatus, ApplicationStatus } from "@sync-hire/database";
 import { logger } from "@/lib/logger";
+import { getStorage } from "@/lib/storage/storage-factory";
+import type { Interview } from "@/lib/storage/storage-interface";
+import type { AIEvaluation } from "@/lib/types/interview-types";
 
 interface TranscriptEntry {
   speaker: string;
@@ -47,7 +48,8 @@ interface InterviewCompletePayload {
 function formatTranscript(transcript: TranscriptEntry[]): string {
   return transcript
     .map((entry) => {
-      const speaker = entry.speaker === "agent" ? "AI Interviewer" : "Candidate";
+      const speaker =
+        entry.speaker === "agent" ? "AI Interviewer" : "Candidate";
       const time = new Date(entry.timestamp * 1000).toISOString().substr(14, 5);
       return `[${time}] ${speaker}: ${entry.text}`;
     })
@@ -72,11 +74,14 @@ export async function POST(request: Request) {
 
     // Log transcript summary for debugging
     if (payload.transcript && payload.transcript.length > 0) {
-      logger.debug(`Transcript received with ${payload.transcript.length} entries`, {
-        api: "webhooks/interview-complete",
-        operation: "parseTranscript",
-        interviewId: payload.interviewId,
-      });
+      logger.debug(
+        `Transcript received with ${payload.transcript.length} entries`,
+        {
+          api: "webhooks/interview-complete",
+          operation: "parseTranscript",
+          interviewId: payload.interviewId,
+        },
+      );
     }
 
     const storage = getStorage();
@@ -108,10 +113,12 @@ export async function POST(request: Request) {
       aiEvaluation = {
         overallScore: payload.aiEvaluation.overallScore,
         categories: {
-          technicalKnowledge: payload.aiEvaluation.categories?.technicalKnowledge ?? 75,
+          technicalKnowledge:
+            payload.aiEvaluation.categories?.technicalKnowledge ?? 75,
           problemSolving: payload.aiEvaluation.categories?.problemSolving ?? 75,
           communication: payload.aiEvaluation.categories?.communication ?? 75,
-          experienceRelevance: payload.aiEvaluation.categories?.experienceRelevance ?? 75,
+          experienceRelevance:
+            payload.aiEvaluation.categories?.experienceRelevance ?? 75,
         },
         strengths: payload.aiEvaluation.strengths ?? [
           "Good technical foundation",
@@ -120,7 +127,8 @@ export async function POST(request: Request) {
         improvements: payload.aiEvaluation.improvements ?? [
           "Could provide more detailed examples",
         ],
-        summary: payload.aiEvaluation.summary ?? "Interview completed successfully.",
+        summary:
+          payload.aiEvaluation.summary ?? "Interview completed successfully.",
       };
     }
 
@@ -149,7 +157,9 @@ export async function POST(request: Request) {
 
     // Update associated application status if exists
     try {
-      const application = await storage.getApplicationByInterviewId(payload.interviewId);
+      const application = await storage.getApplicationByInterviewId(
+        payload.interviewId,
+      );
       if (application) {
         application.status = ApplicationStatus.COMPLETED;
         application.updatedAt = new Date();

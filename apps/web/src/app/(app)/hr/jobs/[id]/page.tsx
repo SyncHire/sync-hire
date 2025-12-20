@@ -33,12 +33,11 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  useSaveOrgJobQuestions,
   useGenerateOrgJobQuestions,
-  useUpdateOrgJobSettings,
-  useOrgMatchCandidates,
   useOrgJob,
-  type Job,
+  useOrgMatchCandidates,
+  useSaveOrgJobQuestions,
+  useUpdateOrgJobSettings,
 } from "@/lib/hooks/use-org-jobs";
 import { useActiveOrganization } from "@/lib/hooks/use-organizations";
 
@@ -65,7 +64,10 @@ export default function HRJDDetail() {
   const [forcePolling, setForcePolling] = useState(scanningParam);
 
   // Fetch job with react-query, poll while scanning or force polling
-  const { data: job, isLoading } = useOrgJob(orgId, jobId ?? null, { pollWhileScanning: true, forcePolling });
+  const { data: job, isLoading } = useOrgJob(orgId, jobId ?? null, {
+    pollWhileScanning: true,
+    forcePolling,
+  });
 
   // Stop force polling after 10 seconds or when scanning completes
   useEffect(() => {
@@ -87,7 +89,11 @@ export default function HRJDDetail() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [newQuestion, setNewQuestion] = useState<{ text: string; type: "text" | "video" | "code"; duration: number }>({ text: "", type: "text", duration: 2 });
+  const [newQuestion, setNewQuestion] = useState<{
+    text: string;
+    type: "text" | "video" | "code";
+    duration: number;
+  }>({ text: "", type: "text", duration: 2 });
 
   // AI Matching settings state - derived from job data
   const [aiMatchingEnabled, setAiMatchingEnabled] = useState(true);
@@ -109,14 +115,17 @@ export default function HRJDDetail() {
             text: q.content,
             type: "text" as const, // DB uses SHORT_ANSWER, frontend uses text
             duration: q.duration,
-          }))
+          })),
         );
       }
       setAiMatchingEnabled(job.aiMatchingEnabled ?? true);
 
       // Show toast when scanning completes
       if (prevStatus === "SCANNING" && job.aiMatchingStatus === "COMPLETE") {
-        toast.success(`Scanning complete! Found ${job.applicantsCount || 0} matching candidates.`, { duration: 4000 });
+        toast.success(
+          `Scanning complete! Found ${job.applicantsCount || 0} matching candidates.`,
+          { duration: 4000 },
+        );
       }
       setPrevStatus(job.aiMatchingStatus);
     }
@@ -148,7 +157,7 @@ export default function HRJDDetail() {
       return;
     }
     setQuestions((prev) =>
-      prev.map((q) => (q.id === editingQuestion.id ? editingQuestion : q))
+      prev.map((q) => (q.id === editingQuestion.id ? editingQuestion : q)),
     );
     setEditingQuestion(null);
     setHasUnsavedChanges(true);
@@ -180,13 +189,15 @@ export default function HRJDDetail() {
               text: q.content,
               type: "text" as const,
               duration: 2,
-            })
+            }),
           );
           setQuestions((prev) => [...prev, ...aiQuestions]);
           setHasUnsavedChanges(true);
-          toast.success(`Generated ${aiQuestions.length} questions - remember to save!`);
+          toast.success(
+            `Generated ${aiQuestions.length} questions - remember to save!`,
+          );
         },
-      }
+      },
     );
   };
 
@@ -199,7 +210,7 @@ export default function HRJDDetail() {
         onSuccess: () => {
           setHasUnsavedChanges(false);
         },
-      }
+      },
     );
   };
 
@@ -222,7 +233,7 @@ export default function HRJDDetail() {
         onError: () => {
           setAiMatchingEnabled(!enabled); // Revert on error
         },
-      }
+      },
     );
   };
 
@@ -450,7 +461,9 @@ export default function HRJDDetail() {
                 ) : (
                   <Sparkles className="h-3.5 w-3.5" />
                 )}
-                {generateQuestionsMutation.isPending ? "Generating..." : "Generate with AI"}
+                {generateQuestionsMutation.isPending
+                  ? "Generating..."
+                  : "Generate with AI"}
               </Button>
               <Button
                 size="sm"
@@ -472,7 +485,9 @@ export default function HRJDDetail() {
                   ) : (
                     <Check className="h-3.5 w-3.5" />
                   )}
-                  {saveQuestionsMutation.isPending ? "Saving..." : "Save Changes"}
+                  {saveQuestionsMutation.isPending
+                    ? "Saving..."
+                    : "Save Changes"}
                 </Button>
               )}
             </div>
@@ -481,7 +496,9 @@ export default function HRJDDetail() {
           {questions.length === 0 ? (
             <div className="text-center py-12 border border-dashed border-border rounded-xl">
               <Sparkles className="h-8 w-8 mx-auto mb-3 text-muted-foreground/50" />
-              <p className="text-muted-foreground mb-4">No interview questions yet</p>
+              <p className="text-muted-foreground mb-4">
+                No interview questions yet
+              </p>
               <div className="flex justify-center gap-3">
                 <Button
                   size="sm"
@@ -494,7 +511,9 @@ export default function HRJDDetail() {
                   ) : (
                     <Sparkles className="h-3.5 w-3.5 mr-2" />
                   )}
-                  {generateQuestionsMutation.isPending ? "Generating..." : "Generate with AI"}
+                  {generateQuestionsMutation.isPending
+                    ? "Generating..."
+                    : "Generate with AI"}
                 </Button>
                 <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
                   <Plus className="h-3.5 w-3.5 mr-2" />
@@ -564,9 +583,9 @@ export default function HRJDDetail() {
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  Automatically find and match candidates from the CV pool. When enabled,
-                  candidates with 80%+ match score will be auto-applied and receive personalized
-                  interview questions.
+                  Automatically find and match candidates from the CV pool. When
+                  enabled, candidates with 80%+ match score will be auto-applied
+                  and receive personalized interview questions.
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -579,7 +598,10 @@ export default function HRJDDetail() {
                 <Switch
                   checked={aiMatchingEnabled}
                   onCheckedChange={handleToggleAiMatching}
-                  disabled={updateSettingsMutation.isPending || matchCandidatesMutation.isPending}
+                  disabled={
+                    updateSettingsMutation.isPending ||
+                    matchCandidatesMutation.isPending
+                  }
                   className="data-[state=checked]:bg-blue-500"
                 />
               </div>
@@ -589,16 +611,26 @@ export default function HRJDDetail() {
               <div className="mt-6 pt-6 border-t border-border">
                 <div className="grid grid-cols-3 gap-4">
                   <div className="p-4 rounded-lg bg-secondary/30 border border-border">
-                    <p className="text-xs text-muted-foreground">Match Threshold</p>
+                    <p className="text-xs text-muted-foreground">
+                      Match Threshold
+                    </p>
                     <p className="text-2xl font-bold text-foreground">80%</p>
                   </div>
                   <div className="p-4 rounded-lg bg-secondary/30 border border-border">
-                    <p className="text-xs text-muted-foreground">Matched Candidates</p>
-                    <p className="text-2xl font-bold text-foreground">{job.applicantsCount}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Matched Candidates
+                    </p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {job.applicantsCount}
+                    </p>
                   </div>
                   <div className="p-4 rounded-lg bg-secondary/30 border border-border">
-                    <p className="text-xs text-muted-foreground">Questions Ready</p>
-                    <p className="text-2xl font-bold text-foreground">{job.applicantsCount}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Questions Ready
+                    </p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {job.applicantsCount}
+                    </p>
                   </div>
                 </div>
 
@@ -613,7 +645,9 @@ export default function HRJDDetail() {
                   ) : (
                     <Sparkles className="h-4 w-4" />
                   )}
-                  {matchCandidatesMutation.isPending ? "Scanning..." : "Rescan for Candidates"}
+                  {matchCandidatesMutation.isPending
+                    ? "Scanning..."
+                    : "Rescan for Candidates"}
                 </Button>
               </div>
             )}
@@ -633,20 +667,31 @@ export default function HRJDDetail() {
               <Textarea
                 placeholder="Enter your interview question..."
                 value={newQuestion.text}
-                onChange={(e) => setNewQuestion((prev) => ({ ...prev, text: e.target.value }))}
+                onChange={(e) =>
+                  setNewQuestion((prev) => ({ ...prev, text: e.target.value }))
+                }
                 rows={6}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Expected Duration (min)</label>
+              <label className="text-sm font-medium">
+                Expected Duration (min)
+              </label>
               <Input
                 type="number"
                 min={1}
                 max={10}
                 value={newQuestion.duration}
-                onChange={(e) => setNewQuestion((prev) => ({ ...prev, duration: parseInt(e.target.value) || 2 }))}
+                onChange={(e) =>
+                  setNewQuestion((prev) => ({
+                    ...prev,
+                    duration: parseInt(e.target.value, 10) || 2,
+                  }))
+                }
               />
-              <p className="text-xs text-muted-foreground">How long the candidate should spend answering this question</p>
+              <p className="text-xs text-muted-foreground">
+                How long the candidate should spend answering this question
+              </p>
             </div>
           </div>
           <DialogFooter>
@@ -659,7 +704,10 @@ export default function HRJDDetail() {
       </Dialog>
 
       {/* Edit Question Modal */}
-      <Dialog open={!!editingQuestion} onOpenChange={(open) => !open && setEditingQuestion(null)}>
+      <Dialog
+        open={!!editingQuestion}
+        onOpenChange={(open) => !open && setEditingQuestion(null)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Question</DialogTitle>
@@ -671,20 +719,37 @@ export default function HRJDDetail() {
                 <Textarea
                   placeholder="Enter your interview question..."
                   value={editingQuestion.text}
-                  onChange={(e) => setEditingQuestion((prev) => prev ? { ...prev, text: e.target.value } : null)}
+                  onChange={(e) =>
+                    setEditingQuestion((prev) =>
+                      prev ? { ...prev, text: e.target.value } : null,
+                    )
+                  }
                   rows={6}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Expected Duration (min)</label>
+                <label className="text-sm font-medium">
+                  Expected Duration (min)
+                </label>
                 <Input
                   type="number"
                   min={1}
                   max={10}
                   value={editingQuestion.duration}
-                  onChange={(e) => setEditingQuestion((prev) => prev ? { ...prev, duration: parseInt(e.target.value) || 2 } : null)}
+                  onChange={(e) =>
+                    setEditingQuestion((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            duration: parseInt(e.target.value, 10) || 2,
+                          }
+                        : null,
+                    )
+                  }
                 />
-                <p className="text-xs text-muted-foreground">How long the candidate should spend answering this question</p>
+                <p className="text-xs text-muted-foreground">
+                  How long the candidate should spend answering this question
+                </p>
               </div>
             </div>
           )}

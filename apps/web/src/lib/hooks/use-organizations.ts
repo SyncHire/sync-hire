@@ -25,7 +25,9 @@ export function useUserOrganizations(enabled: boolean = true) {
     queryFn: async () => {
       const result = await organization.list();
       if (result.error) {
-        throw new Error(result.error.message || "Failed to fetch organizations");
+        throw new Error(
+          result.error.message || "Failed to fetch organizations",
+        );
       }
       return (result.data || []) as Organization[];
     },
@@ -48,7 +50,9 @@ export function useSetActiveOrganization() {
     mutationFn: async ({ organizationId }) => {
       const result = await organization.setActive({ organizationId });
       if (result.error) {
-        throw new Error(result.error.message || "Failed to set active organization");
+        throw new Error(
+          result.error.message || "Failed to set active organization",
+        );
       }
     },
     onSuccess: () => {

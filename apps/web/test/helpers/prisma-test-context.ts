@@ -8,7 +8,7 @@
  * @see https://www.prisma.io/docs/guides/testing/unit-testing
  */
 
-import { PrismaClient, Prisma } from "@sync-hire/database";
+import { Prisma, PrismaClient } from "@sync-hire/database";
 
 // Extend Prisma transaction client type for better typing
 export type TransactionClient = Omit<
@@ -59,7 +59,7 @@ class RollbackError extends Error {
  * ```
  */
 export async function createTestContext<T>(
-  callback: (ctx: TestContext) => Promise<T>
+  callback: (ctx: TestContext) => Promise<T>,
 ): Promise<T> {
   const prisma = new PrismaClient();
 
@@ -76,7 +76,7 @@ export async function createTestContext<T>(
         maxWait: 5000,
         timeout: 10000,
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      }
+      },
     );
   } catch (error) {
     if (error instanceof RollbackError) {
@@ -105,7 +105,7 @@ export function createTestFixture() {
   };
 
   const withTransaction = async <T>(
-    callback: (tx: TransactionClient) => Promise<T>
+    callback: (tx: TransactionClient) => Promise<T>,
   ): Promise<T> => {
     try {
       return await prisma.$transaction(async (tx) => {

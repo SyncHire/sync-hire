@@ -64,8 +64,12 @@ export default function SettingsPage() {
             <Building2 className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h2 className="font-semibold">{activeOrg?.name || "Organization"}</h2>
-            <p className="text-sm text-muted-foreground">Organization details</p>
+            <h2 className="font-semibold">
+              {activeOrg?.name || "Organization"}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Organization details
+            </p>
           </div>
         </div>
       </section>
@@ -121,7 +125,9 @@ export default function SettingsPage() {
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>{percentUsed.toFixed(0)}% used</span>
                   <span>
-                    {quota.remaining !== null ? `${quota.remaining} remaining` : ""}
+                    {quota.remaining !== null
+                      ? `${quota.remaining} remaining`
+                      : ""}
                   </span>
                 </div>
                 {isDanger && (
@@ -156,7 +162,9 @@ export default function SettingsPage() {
                         <span className="text-muted-foreground">
                           {endpointLabels[endpoint] || endpoint}
                         </span>
-                        <span className="font-medium tabular-nums">{count}</span>
+                        <span className="font-medium tabular-nums">
+                          {count}
+                        </span>
                       </div>
                     ))}
                 </div>

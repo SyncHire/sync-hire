@@ -197,7 +197,7 @@ export async function validateRateLimitConnection(): Promise<{
 export async function checkRateLimit(
   identifier: string,
   tier: RateLimitTier = "moderate",
-  endpoint?: string
+  endpoint?: string,
 ): Promise<RateLimitResult> {
   const limiters = getRateLimiters();
 
@@ -270,7 +270,7 @@ export async function checkRateLimit(
  */
 export function createRateLimitResponse(
   result: RateLimitResult,
-  tier: RateLimitTier
+  tier: RateLimitTier,
 ): Response {
   const { points: quota, duration: window } = TIER_CONFIG[tier];
 
@@ -285,9 +285,9 @@ export function createRateLimitResponse(
         "Content-Type": "application/json",
         "Retry-After": result.resetInSeconds.toString(),
         "RateLimit-Policy": `"${tier}";q=${quota};w=${window}`,
-        "RateLimit": `"${tier}";r=${result.remaining};t=${result.resetInSeconds}`,
+        RateLimit: `"${tier}";r=${result.remaining};t=${result.resetInSeconds}`,
       },
-    }
+    },
   );
 }
 
@@ -296,7 +296,7 @@ export function createRateLimitResponse(
  */
 export function getRequestIdentifier(
   request: Request,
-  userId?: string | null
+  userId?: string | null,
 ): string {
   if (userId) {
     return `user:${userId}`;
@@ -316,7 +316,7 @@ export async function withRateLimit(
   request: Request,
   tier: RateLimitTier,
   endpoint: string,
-  userId?: string | null
+  userId?: string | null,
 ): Promise<Response | null> {
   const identifier = getRequestIdentifier(request, userId);
   const result = await checkRateLimit(identifier, tier, endpoint);

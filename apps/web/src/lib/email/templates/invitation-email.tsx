@@ -10,14 +10,14 @@ import {
   Text,
 } from "@react-email/components";
 import {
-  main,
-  container,
-  h1,
-  text,
-  buttonContainer,
   button,
-  warningInfo,
+  buttonContainer,
+  container,
   footer,
+  h1,
+  main,
+  text,
+  warningInfo,
 } from "./styles";
 
 interface InvitationEmailProps {

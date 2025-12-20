@@ -6,10 +6,10 @@
  * Directory structure is handled internally.
  */
 
-import { promises as fs } from "fs";
-import { dirname, join } from "path";
-import type { CloudStorageProvider } from "./cloud-storage-provider";
+import { promises as fs } from "node:fs";
+import { dirname, join } from "node:path";
 import { storageConfig } from "../storage-config";
+import type { CloudStorageProvider } from "./cloud-storage-provider";
 
 const CV_DIR = "cv-uploads";
 const JD_DIR = "jd-uploads";
@@ -18,7 +18,8 @@ export class LocalStorageProvider implements CloudStorageProvider {
   private baseDir: string;
 
   constructor(baseDir?: string) {
-    this.baseDir = baseDir ?? join(process.cwd(), storageConfig.localStorageDir);
+    this.baseDir =
+      baseDir ?? join(process.cwd(), storageConfig.localStorageDir);
   }
 
   async uploadCV(hash: string, buffer: Buffer): Promise<string> {
@@ -33,10 +34,10 @@ export class LocalStorageProvider implements CloudStorageProvider {
     return path;
   }
 
-  async getSignedUrl(type: 'cv' | 'jd', path: string): Promise<string> {
+  async getSignedUrl(type: "cv" | "jd", path: string): Promise<string> {
     // In development, return a local file URL (no signing needed)
-    const dir = type === 'cv' ? CV_DIR : JD_DIR;
-    const filename = path.replace(`${type}/`, '');
+    const dir = type === "cv" ? CV_DIR : JD_DIR;
+    const filename = path.replace(`${type}/`, "");
     return `/local-storage/${dir}/${filename}`;
   }
 
@@ -59,19 +60,15 @@ export class LocalStorageProvider implements CloudStorageProvider {
   private async uploadFile(
     dir: string,
     filename: string,
-    buffer: Buffer
+    buffer: Buffer,
   ): Promise<void> {
     const fullPath = join(this.baseDir, dir, filename);
-
-    console.log(`[Local] Uploading: ${fullPath} (${buffer.length} bytes)`);
 
     // Ensure directory exists
     await fs.mkdir(dirname(fullPath), { recursive: true });
 
     // Write file
     await fs.writeFile(fullPath, buffer);
-
-    console.log(`[Local] Upload complete: ${fullPath}`);
   }
 
   private async deleteFile(dir: string, filename: string): Promise<void> {
@@ -81,7 +78,11 @@ export class LocalStorageProvider implements CloudStorageProvider {
       await fs.unlink(fullPath);
     } catch (error) {
       // Ignore ENOENT errors - file may already be deleted
-      if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
+      if (
+        error instanceof Error &&
+        "code" in error &&
+        (error as NodeJS.ErrnoException).code === "ENOENT"
+      ) {
         return;
       }
       throw error;

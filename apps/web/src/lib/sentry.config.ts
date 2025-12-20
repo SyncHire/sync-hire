@@ -53,8 +53,6 @@ function getSentryEnv() {
   });
 
   if (!result.success) {
-    console.error("Invalid Sentry environment variables:");
-    console.error(result.error.flatten().fieldErrors);
     throw new Error("Invalid Sentry environment variables");
   }
 

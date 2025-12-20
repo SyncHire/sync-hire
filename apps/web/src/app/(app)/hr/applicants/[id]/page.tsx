@@ -50,7 +50,11 @@ export default function HRApplicantDetail() {
   const { data: activeOrg } = useActiveOrganization();
   const orgId = activeOrg?.id ?? null;
 
-  const { data: response, isLoading, error } = useOrgJobApplicants(orgId, jobId);
+  const {
+    data: response,
+    isLoading,
+    error,
+  } = useOrgJobApplicants(orgId, jobId);
 
   if (isLoading) {
     return (
@@ -205,7 +209,9 @@ export default function HRApplicantDetail() {
           <div className="text-xs font-medium text-muted-foreground mb-1">
             Total Applicants
           </div>
-          <div className="text-2xl font-bold text-foreground">{stats.total}</div>
+          <div className="text-2xl font-bold text-foreground">
+            {stats.total}
+          </div>
           <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
             <span className="text-green-500">{stats.completed} completed</span>
             <span>•</span>
@@ -223,7 +229,8 @@ export default function HRApplicantDetail() {
               No applicants yet
             </h3>
             <p className="text-sm text-muted-foreground">
-              Candidates will appear here once they apply and complete interviews.
+              Candidates will appear here once they apply and complete
+              interviews.
             </p>
           </div>
         ) : (
@@ -365,7 +372,9 @@ export default function HRApplicantDetail() {
                       )}
                       {applicant.status === "COMPLETED" && (
                         <>
-                          <Link href={`/candidate/interview/${applicant.interviewId}/results`}>
+                          <Link
+                            href={`/candidate/interview/${applicant.interviewId}/results`}
+                          >
                             <Button
                               size="sm"
                               variant="secondary"

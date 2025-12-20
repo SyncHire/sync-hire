@@ -61,10 +61,16 @@ function LogoIcon({ size }: { size: number }) {
       />
 
       {/* Upper arrow */}
-      <path d="M26 44 L18 36 L26 28 L26 36 L34 36 L34 44 Z" fill="url(#logoGrad)" />
+      <path
+        d="M26 44 L18 36 L26 28 L26 36 L34 36 L34 44 Z"
+        fill="url(#logoGrad)"
+      />
 
       {/* Lower arrow */}
-      <path d="M54 56 L62 64 L54 72 L54 64 L46 64 L46 56 Z" fill="url(#logoGrad)" />
+      <path
+        d="M54 56 L62 64 L54 72 L54 64 L46 64 L46 56 Z"
+        fill="url(#logoGrad)"
+      />
 
       {/* Head profile */}
       <path
@@ -88,7 +94,7 @@ export function Logo({
       className={cn(
         "flex items-center gap-2 group",
         asLink && "cursor-pointer",
-        className
+        className,
       )}
     >
       <div className="group-hover:scale-105 transition-transform">

@@ -5,13 +5,13 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
-import { logger } from "@/lib/logger";
 import { z } from "zod";
-import { geminiClient } from "@/lib/gemini-client";
-import { withRateLimit } from "@/lib/rate-limiter";
-import { withQuota } from "@/lib/with-quota";
 import { trackUsage } from "@/lib/ai-usage-tracker";
+import { geminiClient } from "@/lib/gemini-client";
+import { logger } from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limiter";
 import { getStorage } from "@/lib/storage/storage-factory";
+import { withQuota } from "@/lib/with-quota";
 
 const requestSchema = z.object({
   jobId: z.string(),
@@ -25,20 +25,25 @@ const questionsSchema = z.object({
     z.object({
       content: z.string().describe("The interview question"),
       reason: z.string().describe("Why this question is relevant"),
-    })
+    }),
   ),
 });
 
 export async function POST(request: NextRequest) {
   try {
     // Rate limit check (moderate tier - single Gemini call)
-    const rateLimitResponse = await withRateLimit(request, "moderate", "jobs/generate-questions");
+    const rateLimitResponse = await withRateLimit(
+      request,
+      "moderate",
+      "jobs/generate-questions",
+    );
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
 
     const body = await request.json();
-    const { jobId, title, description, requirements } = requestSchema.parse(body);
+    const { jobId, title, description, requirements } =
+      requestSchema.parse(body);
 
     // Get organization from job for quota check
     const storage = getStorage();
@@ -46,13 +51,16 @@ export async function POST(request: NextRequest) {
     if (!job) {
       return NextResponse.json(
         { success: false, error: "Job not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
     const organizationId = job.organizationId;
 
     // Check quota before generating questions
-    const quotaResponse = await withQuota(organizationId, "jobs/generate-questions");
+    const quotaResponse = await withQuota(
+      organizationId,
+      "jobs/generate-questions",
+    );
     if (quotaResponse) {
       return quotaResponse;
     }
@@ -103,13 +111,19 @@ IMPORTANT: Do not include the candidate's name in any question. Keep questions p
       data: validated,
     });
   } catch (error) {
-    logger.error(error, { api: "jobs/generate-questions", operation: "generate" });
+    logger.error(error, {
+      api: "jobs/generate-questions",
+      operation: "generate",
+    });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to generate questions",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to generate questions",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

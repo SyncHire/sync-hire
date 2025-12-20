@@ -4,7 +4,7 @@
  * Basic smoke tests to verify critical pages load correctly.
  */
 
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test.describe("Landing Page", () => {
   test("should display the landing page with CTA", async ({ page }) => {
@@ -12,7 +12,7 @@ test.describe("Landing Page", () => {
 
     // Verify "Get Started" CTA button is visible
     await expect(
-      page.getByRole("link", { name: /get started/i }).first()
+      page.getByRole("link", { name: /get started/i }).first(),
     ).toBeVisible();
   });
 
@@ -21,7 +21,7 @@ test.describe("Landing Page", () => {
 
     // Verify Sign In link is visible
     await expect(
-      page.getByRole("link", { name: /sign in/i }).first()
+      page.getByRole("link", { name: /sign in/i }).first(),
     ).toBeVisible();
   });
 });
@@ -37,9 +37,7 @@ test.describe("Authentication Pages", () => {
     await expect(page.getByLabel(/password/i)).toBeVisible();
 
     // Verify sign in button exists
-    await expect(
-      page.getByRole("button", { name: /sign in/i })
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
   });
 
   test("should display the signup page with form", async ({ page }) => {
@@ -50,7 +48,7 @@ test.describe("Authentication Pages", () => {
 
     // Verify submit button exists
     await expect(
-      page.getByRole("button", { name: /sign up|create|get started/i })
+      page.getByRole("button", { name: /sign up|create|get started/i }),
     ).toBeVisible();
   });
 });
@@ -63,8 +61,6 @@ test.describe("Protected Routes", () => {
 
     // Should redirect to login - verify login form is shown
     await expect(page.getByLabel(/email/i)).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: /sign in/i })
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
   });
 });

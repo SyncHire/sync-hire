@@ -10,9 +10,9 @@
  * - Hybrid approach balances speed with durability
  */
 
-import Redis from "ioredis";
-import { prisma } from "@sync-hire/database";
 import type { QuotaTier } from "@sync-hire/database";
+import { prisma } from "@sync-hire/database";
+import Redis from "ioredis";
 import { logger } from "./logger";
 
 // =============================================================================
@@ -36,11 +36,20 @@ const TIER_LIMITS: Record<QuotaTier, number | null> = {
  */
 export const AI_ENDPOINTS = {
   "cv/extract": { weight: 1, description: "CV extraction" },
-  "jobs/extract-jd": { weight: 2, description: "JD extraction (2 Gemini calls)" },
+  "jobs/extract-jd": {
+    weight: 2,
+    description: "JD extraction (2 Gemini calls)",
+  },
   "jobs/generate-questions": { weight: 1, description: "Question generation" },
   "jobs/apply": { weight: 1, description: "Application question generation" },
-  "jobs/match-candidates": { weight: "dynamic", description: "Candidate matching (N calls)" },
-  "jobs/create": { weight: "dynamic", description: "Job creation with auto-match" },
+  "jobs/match-candidates": {
+    weight: "dynamic",
+    description: "Candidate matching (N calls)",
+  },
+  "jobs/create": {
+    weight: "dynamic",
+    description: "Job creation with auto-match",
+  },
   "interviews/analyze": { weight: 1, description: "Interview analysis" },
 } as const;
 
@@ -162,7 +171,8 @@ function getBreakdownKey(organizationId: string, periodKey: string): string {
 function calculateTTL(): number {
   const nextMonth = getNextMonthStart();
   const buffer = 7 * 24 * 60 * 60; // 7 days in seconds
-  const ttlSeconds = Math.floor((nextMonth.getTime() - Date.now()) / 1000) + buffer;
+  const ttlSeconds =
+    Math.floor((nextMonth.getTime() - Date.now()) / 1000) + buffer;
   return Math.max(ttlSeconds, 86400); // At least 1 day
 }
 
@@ -206,7 +216,7 @@ async function getOrCreateQuota(organizationId: string) {
 async function getCurrentUsage(
   organizationId: string,
   periodKey: string,
-  quotaId: string
+  _quotaId: string,
 ): Promise<number> {
   const redis = getRedisClient();
 
@@ -231,13 +241,16 @@ async function getCurrentUsage(
 
       return count;
     } catch (error) {
-      logger.warn("Redis error in getCurrentUsage, falling back to PostgreSQL", {
-        api: "quota",
-        operation: "get-usage-redis",
-        organizationId,
-        periodKey,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.warn(
+        "Redis error in getCurrentUsage, falling back to PostgreSQL",
+        {
+          api: "quota",
+          operation: "get-usage-redis",
+          organizationId,
+          periodKey,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
       // Fall through to PostgreSQL
     }
   }
@@ -254,11 +267,17 @@ async function getCurrentUsage(
  * Check if organization can make an AI request
  * Does NOT increment usage - call trackUsage() after successful AI call
  */
-export async function checkQuota(organizationId: string): Promise<UsageCheckResult> {
+export async function checkQuota(
+  organizationId: string,
+): Promise<UsageCheckResult> {
   const periodKey = getCurrentPeriodKey();
   const quota = await getOrCreateQuota(organizationId);
   const limit = quota.monthlyLimit;
-  const currentUsage = await getCurrentUsage(organizationId, periodKey, quota.id);
+  const currentUsage = await getCurrentUsage(
+    organizationId,
+    periodKey,
+    quota.id,
+  );
 
   // ENTERPRISE has unlimited usage
   if (limit === null) {
@@ -275,7 +294,8 @@ export async function checkQuota(organizationId: string): Promise<UsageCheckResu
 
   const remaining = Math.max(0, limit - currentUsage);
   const allowed = currentUsage < limit;
-  const warningThreshold = currentUsage >= (limit * quota.warningThreshold) / 100;
+  const warningThreshold =
+    currentUsage >= (limit * quota.warningThreshold) / 100;
 
   return {
     allowed,
@@ -297,14 +317,15 @@ export async function checkQuota(organizationId: string): Promise<UsageCheckResu
 export async function trackUsage(
   organizationId: string,
   endpoint: AIEndpoint,
-  count: number = 1
+  count: number = 1,
 ): Promise<UsageTrackResult> {
   const periodKey = getCurrentPeriodKey();
   const redis = getRedisClient();
 
   // Calculate actual count based on endpoint weight
   const endpointConfig = AI_ENDPOINTS[endpoint];
-  const weight = typeof endpointConfig.weight === "number" ? endpointConfig.weight : 1;
+  const weight =
+    typeof endpointConfig.weight === "number" ? endpointConfig.weight : 1;
   const actualCount = count * weight;
 
   let newCount = 0;
@@ -329,18 +350,22 @@ export async function trackUsage(
       usedRedis = true;
 
       // Async sync to PostgreSQL (don't block the response)
-      syncToPostgreSQL(organizationId, periodKey, newCount, endpoint, actualCount).catch(
-        (error) => {
-          logger.error(error, {
-            api: "quota",
-            operation: "sync-to-postgresql",
-            organizationId,
-            periodKey,
-            endpoint,
-            count: actualCount,
-          });
-        }
-      );
+      syncToPostgreSQL(
+        organizationId,
+        periodKey,
+        newCount,
+        endpoint,
+        actualCount,
+      ).catch((error) => {
+        logger.error(error, {
+          api: "quota",
+          operation: "sync-to-postgresql",
+          organizationId,
+          periodKey,
+          endpoint,
+          count: actualCount,
+        });
+      });
     } catch (error) {
       logger.warn("Redis error in trackUsage, falling back to PostgreSQL", {
         api: "quota",
@@ -403,7 +428,7 @@ async function syncToPostgreSQL(
   periodKey: string,
   totalCount: number,
   endpoint: AIEndpoint,
-  incrementCount: number
+  incrementCount: number,
 ): Promise<void> {
   const quota = await getOrCreateQuota(organizationId);
 
@@ -412,7 +437,8 @@ async function syncToPostgreSQL(
     where: { organizationId_periodKey: { organizationId, periodKey } },
   });
 
-  const currentBreakdown = (existingRecord?.endpointBreakdown as Record<string, number>) ?? {};
+  const currentBreakdown =
+    (existingRecord?.endpointBreakdown as Record<string, number>) ?? {};
   const newBreakdown = {
     ...currentBreakdown,
     [endpoint]: (currentBreakdown[endpoint] ?? 0) + incrementCount,
@@ -440,7 +466,11 @@ async function syncToPostgreSQL(
 export async function getUsage(organizationId: string): Promise<UsageStats> {
   const periodKey = getCurrentPeriodKey();
   const quota = await getOrCreateQuota(organizationId);
-  const currentUsage = await getCurrentUsage(organizationId, periodKey, quota.id);
+  const currentUsage = await getCurrentUsage(
+    organizationId,
+    periodKey,
+    quota.id,
+  );
   const limit = quota.monthlyLimit;
 
   // Get breakdown from Redis or PostgreSQL
@@ -453,17 +483,20 @@ export async function getUsage(organizationId: string): Promise<UsageStats> {
       const breakdownKey = getBreakdownKey(organizationId, periodKey);
       const redisBreakdown = await redis.hgetall(breakdownKey);
       breakdown = Object.fromEntries(
-        Object.entries(redisBreakdown).map(([k, v]) => [k, parseInt(v, 10)])
+        Object.entries(redisBreakdown).map(([k, v]) => [k, parseInt(v, 10)]),
       );
       gotFromRedis = true;
     } catch (error) {
-      logger.warn("Redis error in getUsage breakdown, falling back to PostgreSQL", {
-        api: "quota",
-        operation: "get-breakdown-redis",
-        organizationId,
-        periodKey,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.warn(
+        "Redis error in getUsage breakdown, falling back to PostgreSQL",
+        {
+          api: "quota",
+          operation: "get-breakdown-redis",
+          organizationId,
+          periodKey,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
     }
   }
 
@@ -480,7 +513,8 @@ export async function getUsage(organizationId: string): Promise<UsageStats> {
     tier: quota.tier,
     periodKey,
     remaining: limit !== null ? Math.max(0, limit - currentUsage) : null,
-    percentUsed: limit !== null ? Math.round((currentUsage / limit) * 100) : null,
+    percentUsed:
+      limit !== null ? Math.round((currentUsage / limit) * 100) : null,
     breakdown,
   };
 }
@@ -491,7 +525,7 @@ export async function getUsage(organizationId: string): Promise<UsageStats> {
  */
 export async function initializeQuota(
   organizationId: string,
-  tier: QuotaTier = "FREE"
+  tier: QuotaTier = "FREE",
 ): Promise<void> {
   const limit = TIER_LIMITS[tier];
 

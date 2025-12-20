@@ -12,14 +12,11 @@
  * ```
  */
 
-import { prisma, OrgMemberRole } from "@sync-hire/database";
+import { type OrgMemberRole, prisma } from "@sync-hire/database";
 import { errors } from "./api-response";
 import { getServerSession } from "./auth-server";
-import {
-  getCachedMembership,
-  setCachedMembership,
-} from "./membership-cache";
 import { logger } from "./logger";
+import { getCachedMembership, setCachedMembership } from "./membership-cache";
 
 // =============================================================================
 // Types
@@ -64,7 +61,7 @@ export interface InterviewAccessResult extends AuthResult {
  */
 export async function withOrgMembership(
   orgId: string,
-  requiredRoles?: OrgMemberRole[]
+  requiredRoles?: OrgMemberRole[],
 ): Promise<AuthResult> {
   // 1. Get authenticated session
   const session = await getServerSession();
@@ -147,7 +144,7 @@ export async function withOrgMembership(
  */
 export async function withJobAccess(
   jobId: string,
-  requiredRoles?: OrgMemberRole[]
+  requiredRoles?: OrgMemberRole[],
 ): Promise<JobAccessResult> {
   // 1. Get authenticated session
   const session = await getServerSession();
@@ -174,7 +171,7 @@ export async function withJobAccess(
   // 3. Verify org membership (with caching)
   const membershipResult = await withOrgMembership(
     job.organizationId,
-    requiredRoles
+    requiredRoles,
   );
 
   if (membershipResult.response) {
@@ -219,7 +216,7 @@ export interface InterviewAccessOptions {
  */
 export async function withInterviewAccess(
   interviewId: string,
-  options: InterviewAccessOptions = {}
+  options: InterviewAccessOptions = {},
 ): Promise<InterviewAccessResult> {
   const { allowCandidate = false, requiredRoles } = options;
 
@@ -267,7 +264,7 @@ export async function withInterviewAccess(
   // 4. Check org membership through job
   const membershipResult = await withOrgMembership(
     interview.job.organizationId,
-    requiredRoles
+    requiredRoles,
   );
 
   if (membershipResult.response) {
@@ -310,7 +307,7 @@ export interface ApplicationAccessOptions {
  */
 export async function withApplicationAccess(
   applicationId: string,
-  options: ApplicationAccessOptions = {}
+  options: ApplicationAccessOptions = {},
 ): Promise<ApplicationAccessResult> {
   const { allowCandidate = false, requiredRoles } = options;
 
@@ -357,7 +354,7 @@ export async function withApplicationAccess(
   // 4. Check org membership through job
   const membershipResult = await withOrgMembership(
     application.job.organizationId,
-    requiredRoles
+    requiredRoles,
   );
 
   if (membershipResult.response) {

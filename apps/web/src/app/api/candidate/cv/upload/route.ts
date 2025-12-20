@@ -6,14 +6,14 @@
  * Access: Authenticated candidates only
  */
 
-import { type NextRequest } from "next/server";
-import { logger } from "@/lib/logger";
-import { CVProcessor } from "@/lib/backend/cv-processor";
-import { getStorage } from "@/lib/storage/storage-factory";
-import { getCloudStorageProvider } from "@/lib/storage/cloud/storage-provider-factory";
-import { withRateLimit } from "@/lib/rate-limiter";
-import { getServerSession } from "@/lib/auth-server";
+import type { NextRequest } from "next/server";
 import { errors, successResponse } from "@/lib/api-response";
+import { getServerSession } from "@/lib/auth-server";
+import { CVProcessor } from "@/lib/backend/cv-processor";
+import { logger } from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limiter";
+import { getCloudStorageProvider } from "@/lib/storage/cloud/storage-provider-factory";
+import { getStorage } from "@/lib/storage/storage-factory";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -26,7 +26,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Rate limit check (expensive tier - PDF processing + AI extraction)
-    const rateLimitResponse = await withRateLimit(request, "expensive", "candidate/cv/upload");
+    const rateLimitResponse = await withRateLimit(
+      request,
+      "expensive",
+      "candidate/cv/upload",
+    );
     if (rateLimitResponse) {
       return rateLimitResponse;
     }

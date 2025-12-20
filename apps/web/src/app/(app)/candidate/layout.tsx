@@ -1,5 +1,5 @@
-import { CandidateProvider } from "@/lib/context/candidate-context";
 import { AppLayout } from "@/components/AppLayout";
+import { CandidateProvider } from "@/lib/context/candidate-context";
 
 export default function CandidateLayout({
   children,

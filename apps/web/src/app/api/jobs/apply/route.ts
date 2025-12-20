@@ -6,21 +6,25 @@
  * Requires a valid CV to be uploaded first.
  */
 
+import { getQuestionCounts } from "@sync-hire/database";
 import { type NextRequest, NextResponse } from "next/server";
-import { logger } from "@/lib/logger";
+import { trackUsage } from "@/lib/ai-usage-tracker";
 import { generateInterviewQuestions } from "@/lib/backend/question-generator";
+import { logger } from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limiter";
 import { getStorage } from "@/lib/storage/storage-factory";
 import type { InterviewQuestions } from "@/lib/storage/storage-interface";
-import { getQuestionCounts } from "@sync-hire/database";
 import { toEmploymentType, toWorkArrangement } from "@/lib/utils/type-adapters";
-import { withRateLimit } from "@/lib/rate-limiter";
 import { withQuota } from "@/lib/with-quota";
-import { trackUsage } from "@/lib/ai-usage-tracker";
 
 export async function POST(request: NextRequest) {
   try {
     // Rate limit check (moderate tier - personalized question generation)
-    const rateLimitResponse = await withRateLimit(request, "moderate", "jobs/apply");
+    const rateLimitResponse = await withRateLimit(
+      request,
+      "moderate",
+      "jobs/apply",
+    );
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
@@ -56,12 +60,15 @@ export async function POST(request: NextRequest) {
     const cvData = await storage.getCVExtraction(cvId);
 
     if (!cvData) {
-      logger.error(new Error("CV not found for interview question generation"), {
-        api: "jobs/apply",
-        operation: "getCVExtraction",
-        cvId,
-        jobId,
-      });
+      logger.error(
+        new Error("CV not found for interview question generation"),
+        {
+          api: "jobs/apply",
+          operation: "getCVExtraction",
+          cvId,
+          jobId,
+        },
+      );
       return NextResponse.json(
         {
           error: "CV not found",

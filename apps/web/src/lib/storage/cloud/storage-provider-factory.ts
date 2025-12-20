@@ -5,20 +5,17 @@
  * Uses GCS in production, local filesystem in development.
  */
 
-import type { CloudStorageProvider } from "./cloud-storage-provider";
-import { GCSStorageProvider } from "./gcs-storage-provider";
-import { LocalStorageProvider } from "./local-storage-provider";
 import { singleton } from "@/lib/utils/singleton";
 import { gcsClient } from "../gcs-client";
 import { storageConfig } from "../storage-config";
+import type { CloudStorageProvider } from "./cloud-storage-provider";
+import { GCSStorageProvider } from "./gcs-storage-provider";
+import { LocalStorageProvider } from "./local-storage-provider";
 
 function createCloudStorageProvider(): CloudStorageProvider {
   if (storageConfig.useCloudStorage) {
-    console.log(`[Storage] Using GCP Cloud Storage (bucket: ${storageConfig.gcsBucket})`);
     return new GCSStorageProvider(gcsClient);
   }
-
-  console.log("[Storage] Using local file storage (development mode)");
   return new LocalStorageProvider();
 }
 

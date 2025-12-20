@@ -7,7 +7,7 @@
  * - Provide type safety for API consumers
  */
 
-import type { InterviewStatus, ApplicationStatus } from "@sync-hire/database";
+import type { ApplicationStatus, InterviewStatus } from "@sync-hire/database";
 
 // =============================================================================
 // Interview Response Types

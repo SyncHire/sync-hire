@@ -7,13 +7,12 @@
  * Requires valid token from URL params.
  */
 
-import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
-import { authClient } from "@/lib/auth-client";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -22,10 +21,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Spinner } from "@/components/ui/spinner";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { authClient } from "@/lib/auth-client";
 
 function getPasswordStrength(password: string): {
   score: number;
@@ -118,7 +118,8 @@ function ResetPasswordContent() {
 
     if (result.error) {
       setError(
-        result.error.message || "Failed to reset password. The link may have expired."
+        result.error.message ||
+          "Failed to reset password. The link may have expired.",
       );
       setIsLoading(false);
       return;
@@ -200,11 +201,7 @@ function ResetPasswordContent() {
               <p className="text-xs text-destructive">Passwords do not match</p>
             )}
           </div>
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isLoading}
-          >
+          <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? <Spinner className="mr-2 h-4 w-4" /> : null}
             Reset Password
           </Button>

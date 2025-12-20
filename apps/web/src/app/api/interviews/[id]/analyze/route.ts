@@ -3,16 +3,17 @@
  * Triggers AI analysis for an interview that is stuck or missing evaluation.
  * Access: HR only (organization members)
  */
-import { logger } from "@/lib/logger";
-import { getStorage } from "@/lib/storage/storage-factory";
-import { geminiClient } from "@/lib/gemini-client";
+
 import { z } from "zod";
-import type { AIEvaluation } from "@/lib/types/interview-types";
-import { withRateLimit } from "@/lib/rate-limiter";
-import { withQuota } from "@/lib/with-quota";
 import { trackUsage } from "@/lib/ai-usage-tracker";
-import { withInterviewAccess } from "@/lib/auth-middleware";
 import { errors, successResponse } from "@/lib/api-response";
+import { withInterviewAccess } from "@/lib/auth-middleware";
+import { geminiClient } from "@/lib/gemini-client";
+import { logger } from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limiter";
+import { getStorage } from "@/lib/storage/storage-factory";
+import type { AIEvaluation } from "@/lib/types/interview-types";
+import { withQuota } from "@/lib/with-quota";
 
 const EvaluationSchema = z.object({
   overallScore: z.number().min(0).max(100),
@@ -29,7 +30,7 @@ const EvaluationSchema = z.object({
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: interviewId } = await params;
@@ -44,7 +45,7 @@ export async function POST(
     const rateLimitResponse = await withRateLimit(
       request,
       "moderate",
-      "interviews/analyze"
+      "interviews/analyze",
     );
     if (rateLimitResponse) {
       return rateLimitResponse;
@@ -182,7 +183,7 @@ Be fair but honest in your assessment. Base scores on what was actually discusse
       });
 
       return errors.internal(
-        "AI analysis failed. The service may be temporarily unavailable."
+        "AI analysis failed. The service may be temporarily unavailable.",
       );
     }
   } catch (error) {

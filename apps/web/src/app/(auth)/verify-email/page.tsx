@@ -8,13 +8,12 @@
  * - Provides resend verification email functionality
  */
 
-import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { AlertCircle, CheckCircle2, Mail } from "lucide-react";
 import Link from "next/link";
-import { authClient } from "@/lib/auth-client";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -23,9 +22,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { CheckCircle2, Mail, AlertCircle } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
 
 function VerifyEmailContent() {
   const router = useRouter();
@@ -45,7 +45,7 @@ function VerifyEmailContent() {
     if (token) {
       verifyEmail(token);
     }
-  }, [token]);
+  }, [token, verifyEmail]);
 
   async function verifyEmail(verificationToken: string) {
     setStatus("verifying");
@@ -57,7 +57,10 @@ function VerifyEmailContent() {
 
     if (result.error) {
       setStatus("error");
-      setError(result.error.message || "Verification failed. The link may have expired.");
+      setError(
+        result.error.message ||
+          "Verification failed. The link may have expired.",
+      );
       return;
     }
 
@@ -142,11 +145,7 @@ function VerifyEmailContent() {
                 disabled={isResending}
               />
             </div>
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isResending}
-            >
+            <Button type="submit" className="w-full" disabled={isResending}>
               {isResending ? <Spinner className="mr-2 h-4 w-4" /> : null}
               Resend Verification Email
             </Button>
@@ -161,7 +160,10 @@ function VerifyEmailContent() {
           )}
         </CardContent>
         <CardFooter className="flex justify-center">
-          <Link href="/login" className="text-sm text-muted-foreground hover:text-primary">
+          <Link
+            href="/login"
+            className="text-sm text-muted-foreground hover:text-primary"
+          >
             Back to Login
           </Link>
         </CardFooter>
@@ -237,7 +239,10 @@ function VerifyEmailContent() {
         </form>
       </CardContent>
       <CardFooter className="flex justify-center">
-        <Link href="/login" className="text-sm text-muted-foreground hover:text-primary">
+        <Link
+          href="/login"
+          className="text-sm text-muted-foreground hover:text-primary"
+        >
           Back to Login
         </Link>
       </CardFooter>

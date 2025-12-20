@@ -29,6 +29,7 @@ import {
   useInvalidateCVQueries,
   useQuestionSets,
 } from "@/lib/hooks/use-candidate-jobs";
+import { useHasOrganization } from "@/lib/hooks/use-organizations";
 import { toast } from "@/lib/hooks/use-toast";
 import {
   generateJobMatches,
@@ -36,7 +37,6 @@ import {
   simulateJobMatching,
 } from "@/lib/job-matching";
 import { getCompanyLogoUrl } from "@/lib/logo-utils";
-import { useHasOrganization } from "@/lib/hooks/use-organizations";
 import type { JobApplication } from "@/lib/types/interview-types";
 
 type WorkflowStage = "upload" | "processing" | "results";
@@ -149,16 +149,9 @@ export default function CandidateJobListings() {
           const result = await response.json();
           extractedCvId = result.data.id;
           setCvId(extractedCvId);
-          console.log(
-            "CV extraction completed:",
-            result.data.id,
-            result.data.cached ? "from cache" : "new extraction",
-          );
         } else {
-          console.warn("CV extraction failed:", await response.text());
         }
-      } catch (error) {
-        console.error("CV extraction error:", error);
+      } catch (_error) {
         // Don't let extraction failures affect the user experience
       }
 
@@ -213,14 +206,13 @@ export default function CandidateJobListings() {
           setWorkflowStage("results");
         }, 1500);
       } catch (err) {
-        console.error("Processing error:", err);
         setError(
           err instanceof Error ? err.message : "An unexpected error occurred",
         );
         setProcessingStage("error");
       }
     },
-    [jobApplications, invalidateUserCV],
+    [jobApplications],
   );
 
   const handleApplyToJob = useCallback(
@@ -251,8 +243,8 @@ export default function CandidateJobListings() {
                 prev.map((app) =>
                   app.job.id === jobId
                     ? { ...app, id: realApplicationId, status: "APPLIED" }
-                    : app
-                )
+                    : app,
+                ),
               );
               // Update UI state with new ID
               setUiApplicationStates((prev) => {
@@ -398,300 +390,291 @@ export default function CandidateJobListings() {
                 />
               )}
 
-              {workflowStage === "results" && (
-                <>
-                  {jobApplications.length > 0 ? (
-                    <>
-                      {/* Results Summary */}
-                      {(() => {
-                        const excellentMatches = jobApplications.filter(
-                          (app) => app.matchPercentage >= 90,
-                        );
-                        const strongMatches = jobApplications.filter(
-                          (app) =>
-                            app.matchPercentage >= 80 &&
-                            app.matchPercentage < 90,
-                        );
-                        const avgMatch = Math.round(
-                          jobApplications.reduce(
-                            (sum, app) => sum + app.matchPercentage,
-                            0,
-                          ) / jobApplications.length,
-                        );
+              {workflowStage === "results" &&
+                (jobApplications.length > 0 ? (
+                  <>
+                    {/* Results Summary */}
+                    {(() => {
+                      const excellentMatches = jobApplications.filter(
+                        (app) => app.matchPercentage >= 90,
+                      );
+                      const strongMatches = jobApplications.filter(
+                        (app) =>
+                          app.matchPercentage >= 80 && app.matchPercentage < 90,
+                      );
+                      const avgMatch = Math.round(
+                        jobApplications.reduce(
+                          (sum, app) => sum + app.matchPercentage,
+                          0,
+                        ) / jobApplications.length,
+                      );
 
-                        return (
-                          <div className="text-center mb-8">
-                            <div className="inline-flex items-center gap-4 px-6 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-full dark:bg-emerald-500/5 dark:border-emerald-500/30">
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse dark:bg-emerald-400" />
-                                <span className="text-amber-600 font-medium dark:text-amber-400">
-                                  {excellentMatches.length} Excellent Match
-                                  {excellentMatches.length !== 1 ? "es" : ""}
-                                </span>
-                                <span className="text-emerald-600 font-medium dark:text-emerald-400">
-                                  {strongMatches.length} Strong Match
-                                  {strongMatches.length !== 1 ? "es" : ""}
-                                </span>
-                              </div>
-                              <span className="text-emerald-600/50 dark:text-emerald-400/50">
-                                •
+                      return (
+                        <div className="text-center mb-8">
+                          <div className="inline-flex items-center gap-4 px-6 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-full dark:bg-emerald-500/5 dark:border-emerald-500/30">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse dark:bg-emerald-400" />
+                              <span className="text-amber-600 font-medium dark:text-amber-400">
+                                {excellentMatches.length} Excellent Match
+                                {excellentMatches.length !== 1 ? "es" : ""}
                               </span>
                               <span className="text-emerald-600 font-medium dark:text-emerald-400">
-                                Avg Match: {avgMatch}%
+                                {strongMatches.length} Strong Match
+                                {strongMatches.length !== 1 ? "es" : ""}
                               </span>
                             </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Hiring CTA Banner - only show if user doesn't have an organization */}
-                      {!hasOrganization && (
-                        <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-xl p-5 mb-6">
-                          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                            <div className="text-center sm:text-left">
-                              <h3 className="font-semibold text-base">
-                                Hiring for your company?
-                              </h3>
-                              <p className="text-muted-foreground text-sm">
-                                Post jobs and find great candidates with AI-powered
-                                interviews
-                              </p>
-                            </div>
-                            <Link href="/create-organization">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="whitespace-nowrap"
-                              >
-                                <Building2 className="h-4 w-4 mr-2" />
-                                Post a Job
-                              </Button>
-                            </Link>
+                            <span className="text-emerald-600/50 dark:text-emerald-400/50">
+                              •
+                            </span>
+                            <span className="text-emerald-600 font-medium dark:text-emerald-400">
+                              Avg Match: {avgMatch}%
+                            </span>
                           </div>
                         </div>
-                      )}
+                      );
+                    })()}
 
-                      {/* Job Application Cards */}
-                      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        {jobApplications.map((application, index) => {
-                          const statusConfig = {
-                            NOT_APPLIED: {
-                              label: "Available",
-                              icon: Play,
-                              color:
-                                "bg-blue-500/10 text-blue-400 border-blue-500/20",
-                            },
-                            APPLIED: {
-                              label: "Applied",
-                              icon: CheckCircle2,
-                              color:
-                                "bg-green-500/10 text-green-400 border-green-500/20",
-                            },
-                            INTERVIEWING: {
-                              label: "Interviewing",
-                              icon: Clock,
-                              color:
-                                "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-                            },
-                            COMPLETED: {
-                              label: "Completed",
-                              icon: CheckCircle2,
-                              color:
-                                "bg-green-500/10 text-green-400 border-green-500/20",
-                            },
-                          };
-
-                          const config = statusConfig[application.status];
-
-                          // Determine match quality colors
-                          const getMatchColor = (percentage: number) => {
-                            if (percentage >= 90)
-                              return "text-amber-600 dark:text-amber-400 border-amber-500/20";
-                            if (percentage >= 80)
-                              return "text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
-                            return "text-blue-600 dark:text-blue-400 border-blue-500/20";
-                          };
-
-                          const getMatchDescription = (percentage: number) => {
-                            if (percentage >= 90) return "Excellent Match";
-                            if (percentage >= 80) return "Strong Match";
-                            if (percentage >= 70) return "Good Match";
-                            return "Potential Match";
-                          };
-
-                          return (
-                            <div
-                              key={application.id}
-                              className="animate-in fade-in slide-in-from-bottom-4 duration-500"
-                              style={{ animationDelay: `${index * 100}ms` }}
+                    {/* Hiring CTA Banner - only show if user doesn't have an organization */}
+                    {!hasOrganization && (
+                      <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-xl p-5 mb-6">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                          <div className="text-center sm:text-left">
+                            <h3 className="font-semibold text-base">
+                              Hiring for your company?
+                            </h3>
+                            <p className="text-muted-foreground text-sm">
+                              Post jobs and find great candidates with
+                              AI-powered interviews
+                            </p>
+                          </div>
+                          <Link href="/create-organization">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="whitespace-nowrap"
                             >
-                              <div className="relative h-full bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-6 transition-all duration-300 overflow-hidden hover:bg-gradient-to-br hover:from-blue-500/10 hover:via-blue-500/5 hover:to-transparent hover:border-blue-500/50">
-                                <div className="relative z-10 flex flex-col h-full">
-                                  <div className="flex justify-between items-start mb-6">
-                                    <div className="flex items-center gap-3">
-                                      <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center border border-border transition-colors overflow-hidden">
-                                        {application.job?.organization?.name &&
-                                        getCompanyLogoUrl(
-                                          application.job.organization.name,
-                                        ) ? (
-                                          <img
-                                            src={
-                                              getCompanyLogoUrl(
-                                                application.job.organization.name,
-                                              )!
-                                            }
-                                            alt={`${application.job.organization.name} logo`}
-                                            className="h-8 w-8 object-contain"
-                                          />
-                                        ) : (
-                                          <Building2 className="h-6 w-6 text-muted-foreground transition-colors" />
-                                        )}
-                                      </div>
-                                      <span className="text-lg font-bold text-foreground">
-                                        {application.job?.organization?.name}
-                                      </span>
-                                    </div>
-                                    <Badge
-                                      variant="outline"
-                                      className={`${config.color} flex items-center gap-1.5 px-3 py-1`}
-                                    >
-                                      <config.icon className="h-3 w-3" />{" "}
-                                      {config.label}
-                                    </Badge>
-                                  </div>
+                              <Building2 className="h-4 w-4 mr-2" />
+                              Post a Job
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    )}
 
-                                  <h3 className="text-xl font-semibold text-foreground mb-2 transition-colors">
-                                    {application.job?.title ||
-                                      "Unknown Position"}
-                                  </h3>
+                    {/* Job Application Cards */}
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                      {jobApplications.map((application, index) => {
+                        const statusConfig = {
+                          NOT_APPLIED: {
+                            label: "Available",
+                            icon: Play,
+                            color:
+                              "bg-blue-500/10 text-blue-400 border-blue-500/20",
+                          },
+                          APPLIED: {
+                            label: "Applied",
+                            icon: CheckCircle2,
+                            color:
+                              "bg-green-500/10 text-green-400 border-green-500/20",
+                          },
+                          INTERVIEWING: {
+                            label: "Interviewing",
+                            icon: Clock,
+                            color:
+                              "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+                          },
+                          COMPLETED: {
+                            label: "Completed",
+                            icon: CheckCircle2,
+                            color:
+                              "bg-green-500/10 text-green-400 border-green-500/20",
+                          },
+                        };
 
-                                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-6">
-                                    <span className="flex items-center gap-1.5">
-                                      <MapPin className="h-3.5 w-3.5" />{" "}
-                                      {application.job?.location}
-                                    </span>
-                                  </div>
+                        const config = statusConfig[application.status];
 
-                                  <div className="mb-4 flex items-center gap-2">
-                                    <span
-                                      className={`text-sm font-medium ${getMatchColor(application.matchPercentage).split(" ")[0]}`}
-                                    >
-                                      {getMatchDescription(
-                                        application.matchPercentage,
-                                      )}
-                                    </span>
-                                    <Badge
-                                      variant="outline"
-                                      className={getMatchColor(
-                                        application.matchPercentage,
-                                      )}
-                                    >
-                                      <Trophy className="h-3.5 w-3.5 mr-1.5" />
-                                      {application.matchPercentage}%
-                                    </Badge>
-                                  </div>
+                        // Determine match quality colors
+                        const getMatchColor = (percentage: number) => {
+                          if (percentage >= 90)
+                            return "text-amber-600 dark:text-amber-400 border-amber-500/20";
+                          if (percentage >= 80)
+                            return "text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
+                          return "text-blue-600 dark:text-blue-400 border-blue-500/20";
+                        };
 
-                                  <div className="mt-auto pt-6 border-t border-border space-y-3">
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                      <Clock className="h-3.5 w-3.5" />
-                                      <span>15-30 min</span>
-                                    </div>
+                        const getMatchDescription = (percentage: number) => {
+                          if (percentage >= 90) return "Excellent Match";
+                          if (percentage >= 80) return "Strong Match";
+                          if (percentage >= 70) return "Good Match";
+                          return "Potential Match";
+                        };
 
-                                    {/* Buttons - Apply CV and Start Interview */}
-                                    <div className="flex flex-col gap-2 sm:flex-row">
-                                      {uiApplicationStates[application.id] !==
-                                        "applied" &&
-                                        application.status !== "COMPLETED" && (
-                                          <Button
-                                            onClick={(e) => {
-                                              e.preventDefault();
-                                              handleApplyToJob(
-                                                application.id,
-                                                application.job.id,
-                                              );
-                                            }}
-                                            disabled={
-                                              uiApplicationStates[
-                                                application.id
-                                              ] === "applying" || !activeCvId
-                                            }
-                                            variant="outline"
-                                            size="sm"
-                                            className="flex-1 gap-2 cursor-pointer"
-                                          >
-                                            {uiApplicationStates[
-                                              application.id
-                                            ] === "applying" ? (
-                                              <>
-                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                                <span className="text-xs">
-                                                  Generating...
-                                                </span>
-                                              </>
-                                            ) : uiApplicationStates[
-                                                application.id
-                                              ] === "error" ? (
-                                              <>
-                                                <span>Try Again</span>
-                                              </>
-                                            ) : (
-                                              <>
-                                                <span>Apply CV</span>
-                                              </>
-                                            )}
-                                          </Button>
-                                        )}
-
-                                      {(uiApplicationStates[application.id] ===
-                                        "applied" ||
-                                        application.status === "COMPLETED") && (
-                                        <Link
-                                          href={
-                                            application.status === "COMPLETED"
-                                              ? `/candidate/interview/${application.id}/results`
-                                              : `/interview/${application.id}`
+                        return (
+                          <div
+                            key={application.id}
+                            className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+                            style={{ animationDelay: `${index * 100}ms` }}
+                          >
+                            <div className="relative h-full bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-6 transition-all duration-300 overflow-hidden hover:bg-gradient-to-br hover:from-blue-500/10 hover:via-blue-500/5 hover:to-transparent hover:border-blue-500/50">
+                              <div className="relative z-10 flex flex-col h-full">
+                                <div className="flex justify-between items-start mb-6">
+                                  <div className="flex items-center gap-3">
+                                    <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center border border-border transition-colors overflow-hidden">
+                                      {application.job?.organization?.name &&
+                                      getCompanyLogoUrl(
+                                        application.job.organization.name,
+                                      ) ? (
+                                        <img
+                                          src={
+                                            getCompanyLogoUrl(
+                                              application.job.organization.name,
+                                            )!
                                           }
-                                          className="flex-1"
-                                        >
-                                          <Button
-                                            size="sm"
-                                            className="w-full gap-2 cursor-pointer"
-                                          >
-                                            <CheckCircle className="h-3.5 w-3.5" />
-                                            {application.status === "COMPLETED"
-                                              ? "View Results"
-                                              : "Start Interview"}
-                                            {application.status !==
-                                              "COMPLETED" && (
-                                              <ArrowRightIcon className="h-4 w-4" />
-                                            )}
-                                          </Button>
-                                        </Link>
+                                          alt={`${application.job.organization.name} logo`}
+                                          className="h-8 w-8 object-contain"
+                                        />
+                                      ) : (
+                                        <Building2 className="h-6 w-6 text-muted-foreground transition-colors" />
                                       )}
                                     </div>
+                                    <span className="text-lg font-bold text-foreground">
+                                      {application.job?.organization?.name}
+                                    </span>
+                                  </div>
+                                  <Badge
+                                    variant="outline"
+                                    className={`${config.color} flex items-center gap-1.5 px-3 py-1`}
+                                  >
+                                    <config.icon className="h-3 w-3" />{" "}
+                                    {config.label}
+                                  </Badge>
+                                </div>
+
+                                <h3 className="text-xl font-semibold text-foreground mb-2 transition-colors">
+                                  {application.job?.title || "Unknown Position"}
+                                </h3>
+
+                                <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-6">
+                                  <span className="flex items-center gap-1.5">
+                                    <MapPin className="h-3.5 w-3.5" />{" "}
+                                    {application.job?.location}
+                                  </span>
+                                </div>
+
+                                <div className="mb-4 flex items-center gap-2">
+                                  <span
+                                    className={`text-sm font-medium ${getMatchColor(application.matchPercentage).split(" ")[0]}`}
+                                  >
+                                    {getMatchDescription(
+                                      application.matchPercentage,
+                                    )}
+                                  </span>
+                                  <Badge
+                                    variant="outline"
+                                    className={getMatchColor(
+                                      application.matchPercentage,
+                                    )}
+                                  >
+                                    <Trophy className="h-3.5 w-3.5 mr-1.5" />
+                                    {application.matchPercentage}%
+                                  </Badge>
+                                </div>
+
+                                <div className="mt-auto pt-6 border-t border-border space-y-3">
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    <span>15-30 min</span>
+                                  </div>
+
+                                  {/* Buttons - Apply CV and Start Interview */}
+                                  <div className="flex flex-col gap-2 sm:flex-row">
+                                    {uiApplicationStates[application.id] !==
+                                      "applied" &&
+                                      application.status !== "COMPLETED" && (
+                                        <Button
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            handleApplyToJob(
+                                              application.id,
+                                              application.job.id,
+                                            );
+                                          }}
+                                          disabled={
+                                            uiApplicationStates[
+                                              application.id
+                                            ] === "applying" || !activeCvId
+                                          }
+                                          variant="outline"
+                                          size="sm"
+                                          className="flex-1 gap-2 cursor-pointer"
+                                        >
+                                          {uiApplicationStates[
+                                            application.id
+                                          ] === "applying" ? (
+                                            <>
+                                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                              <span className="text-xs">
+                                                Generating...
+                                              </span>
+                                            </>
+                                          ) : uiApplicationStates[
+                                              application.id
+                                            ] === "error" ? (
+                                            <span>Try Again</span>
+                                          ) : (
+                                            <span>Apply CV</span>
+                                          )}
+                                        </Button>
+                                      )}
+
+                                    {(uiApplicationStates[application.id] ===
+                                      "applied" ||
+                                      application.status === "COMPLETED") && (
+                                      <Link
+                                        href={
+                                          application.status === "COMPLETED"
+                                            ? `/candidate/interview/${application.id}/results`
+                                            : `/interview/${application.id}`
+                                        }
+                                        className="flex-1"
+                                      >
+                                        <Button
+                                          size="sm"
+                                          className="w-full gap-2 cursor-pointer"
+                                        >
+                                          <CheckCircle className="h-3.5 w-3.5" />
+                                          {application.status === "COMPLETED"
+                                            ? "View Results"
+                                            : "Start Interview"}
+                                          {application.status !==
+                                            "COMPLETED" && (
+                                            <ArrowRightIcon className="h-4 w-4" />
+                                          )}
+                                        </Button>
+                                      </Link>
+                                    )}
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center py-12">
-                      <p className="text-muted-foreground">
-                        No interviews found that match your profile.
-                      </p>
-                      <Button
-                        onClick={handleTryAgain}
-                        className="mt-4 cursor-pointer"
-                      >
-                        Try Again
-                      </Button>
+                          </div>
+                        );
+                      })}
                     </div>
-                  )}
-                </>
-              )}
+                  </>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">
+                      No interviews found that match your profile.
+                    </p>
+                    <Button
+                      onClick={handleTryAgain}
+                      className="mt-4 cursor-pointer"
+                    >
+                      Try Again
+                    </Button>
+                  </div>
+                ))}
 
               {error && workflowStage !== "processing" && (
                 <div className="flex justify-center">

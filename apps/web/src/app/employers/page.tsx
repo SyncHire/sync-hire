@@ -7,21 +7,21 @@
  * Shows value proposition and CTA to create organization.
  */
 
+import { useQuery } from "@tanstack/react-query";
+import {
+  ArrowRight,
+  BarChart3,
+  CheckCircle2,
+  Clock,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSession, organization } from "@/lib/auth-client";
-import { useQuery } from "@tanstack/react-query";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  Sparkles,
-  Users,
-  Clock,
-  BarChart3,
-  CheckCircle2,
-  ArrowRight,
-} from "lucide-react";
+import { organization, useSession } from "@/lib/auth-client";
 
 const features = [
   {
@@ -242,9 +242,7 @@ export default function EmployersPage() {
         <div className="container mx-auto max-w-4xl">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl font-bold mb-6">
-                Why Choose SyncHire?
-              </h2>
+              <h2 className="text-3xl font-bold mb-6">Why Choose SyncHire?</h2>
               <ul className="space-y-4">
                 {benefits.map((benefit) => (
                   <li key={benefit} className="flex items-center gap-3">
@@ -255,7 +253,9 @@ export default function EmployersPage() {
               </ul>
             </div>
             <div className="bg-card p-8 rounded-xl border shadow-sm text-center">
-              <h3 className="text-2xl font-bold mb-2">Ready to Transform Your Hiring?</h3>
+              <h3 className="text-2xl font-bold mb-2">
+                Ready to Transform Your Hiring?
+              </h3>
               <p className="text-muted-foreground mb-6">
                 Join companies using AI to find the best talent faster.
               </p>
@@ -277,7 +277,9 @@ export default function EmployersPage() {
       {/* Footer */}
       <footer className="py-8 px-4 border-t">
         <div className="container mx-auto text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} SyncHire. All rights reserved.</p>
+          <p>
+            &copy; {new Date().getFullYear()} SyncHire. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>

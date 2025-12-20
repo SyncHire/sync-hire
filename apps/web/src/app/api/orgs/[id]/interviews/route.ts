@@ -6,16 +6,16 @@
  * Access: HR only (organization members)
  */
 
-import { type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
+import { errors, successResponse } from "@/lib/api-response";
+import { withOrgMembership } from "@/lib/auth-middleware";
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage/storage-factory";
-import { withOrgMembership } from "@/lib/auth-middleware";
-import { errors, successResponse } from "@/lib/api-response";
 import type { HRInterviewResponse } from "@/lib/types/api-responses";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: organizationId } = await params;
@@ -30,14 +30,16 @@ export async function GET(
 
     // Get all jobs for this org
     const allJobs = await storage.getAllStoredJobs();
-    const orgJobs = allJobs.filter((job) => job.organizationId === organizationId);
+    const orgJobs = allJobs.filter(
+      (job) => job.organizationId === organizationId,
+    );
     const orgJobIds = new Set(orgJobs.map((job) => job.id));
     const jobMap = new Map(orgJobs.map((job) => [job.id, job]));
 
     // Get all interviews and filter by org's jobs
     const allInterviews = await storage.getAllInterviews();
     const orgInterviews = allInterviews.filter((interview) =>
-      orgJobIds.has(interview.jobId)
+      orgJobIds.has(interview.jobId),
     );
 
     // Build HR response format with enriched data
@@ -62,7 +64,7 @@ export async function GET(
           createdAt: interview.createdAt,
           completedAt: interview.completedAt,
         };
-      })
+      }),
     );
 
     return successResponse({

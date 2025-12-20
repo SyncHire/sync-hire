@@ -7,7 +7,7 @@
  * Renders the main header and optional container styling for children.
  */
 
-import { MainHeader, type AppView } from "./MainHeader";
+import { type AppView, MainHeader } from "./MainHeader";
 
 interface AppLayoutProps {
   view: AppView;
@@ -16,7 +16,11 @@ interface AppLayoutProps {
   fullWidth?: boolean;
 }
 
-export function AppLayout({ view, children, fullWidth = false }: AppLayoutProps) {
+export function AppLayout({
+  view,
+  children,
+  fullWidth = false,
+}: AppLayoutProps) {
   return (
     <div className="min-h-screen bg-background font-sans text-foreground transition-colors duration-300">
       <MainHeader view={view} />

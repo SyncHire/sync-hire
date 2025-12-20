@@ -8,10 +8,9 @@
  * - Users with orgs see a dropdown to switch between personal/org views
  */
 
-import { useRouter, usePathname } from "next/navigation";
-import Link from "next/link";
 import { Building2, ChevronDown, Plus, Settings, User } from "lucide-react";
-import { getOrganizationLogoUrl } from "@/lib/logo-utils";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,10 +22,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  useUserOrganizations,
-  useSetActiveOrganization,
   useActiveOrganization,
+  useSetActiveOrganization,
+  useUserOrganizations,
 } from "@/lib/hooks/use-organizations";
+import { getOrganizationLogoUrl } from "@/lib/logo-utils";
 
 export function ContextSwitcher() {
   const router = useRouter();
@@ -35,7 +35,8 @@ export function ContextSwitcher() {
   const { data: activeOrg } = useActiveOrganization();
   const setActiveOrg = useSetActiveOrganization();
 
-  const isCandidate = pathname.startsWith("/candidate") || pathname.startsWith("/interview");
+  const isCandidate =
+    pathname.startsWith("/candidate") || pathname.startsWith("/interview");
   const hasOrganizations = orgs && orgs.length > 0;
 
   // Still loading organizations

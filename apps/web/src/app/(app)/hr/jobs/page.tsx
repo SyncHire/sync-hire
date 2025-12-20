@@ -115,7 +115,10 @@ export default function HRJDListings() {
                       ON
                     </Badge>
                     <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> {job.postedAt instanceof Date ? job.postedAt.toLocaleDateString() : job.postedAt}
+                      <Clock className="h-3 w-3" />{" "}
+                      {job.postedAt instanceof Date
+                        ? job.postedAt.toLocaleDateString()
+                        : job.postedAt}
                     </span>
                   </div>
                   <h3 className="font-semibold text-xl text-foreground group-hover:text-primary transition-colors">

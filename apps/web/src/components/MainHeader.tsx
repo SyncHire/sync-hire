@@ -24,9 +24,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { signOut } from "@/lib/auth-client";
 import { useCurrentUser } from "@/lib/hooks/use-current-user";
 import { useNotifications } from "@/lib/hooks/use-notifications";
-import { signOut } from "@/lib/auth-client";
 import { AboutDialog } from "./AboutDialog";
 import { ContextSwitcher } from "./ContextSwitcher";
 import { Logo } from "./Logo";
@@ -208,35 +208,37 @@ export function MainHeader({ view }: MainHeaderProps) {
               <div className="h-4 w-px bg-border/50" />
 
               <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="h-7 w-7 rounded-full overflow-hidden border border-border/50 bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors cursor-pointer">
-                      <span className="text-xs font-medium">{userInitials}</span>
+                <PopoverTrigger asChild>
+                  <button className="h-7 w-7 rounded-full overflow-hidden border border-border/50 bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors cursor-pointer">
+                    <span className="text-xs font-medium">{userInitials}</span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-56 p-0">
+                  <div className="px-4 py-3 border-b border-border">
+                    <p className="text-sm font-medium">{user.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {user.email}
+                    </p>
+                  </div>
+                  <div className="p-2">
+                    <Link
+                      href="/home"
+                      className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted rounded transition-colors"
+                    >
+                      <Home className="h-4 w-4" />
+                      Homepage
+                    </Link>
+                    <button
+                      onClick={handleSignOut}
+                      disabled={isSigningOut}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 rounded transition-colors disabled:opacity-50"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      {isSigningOut ? "Signing out..." : "Sign out"}
                     </button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-56 p-0">
-                    <div className="px-4 py-3 border-b border-border">
-                      <p className="text-sm font-medium">{user.name}</p>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
-                    </div>
-                    <div className="p-2">
-                      <Link
-                        href="/home"
-                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted rounded transition-colors"
-                      >
-                        <Home className="h-4 w-4" />
-                        Homepage
-                      </Link>
-                      <button
-                        onClick={handleSignOut}
-                        disabled={isSigningOut}
-                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 rounded transition-colors disabled:opacity-50"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        {isSigningOut ? "Signing out..." : "Sign out"}
-                      </button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </>
           ) : (
             <Link
