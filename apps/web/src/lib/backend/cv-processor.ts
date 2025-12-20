@@ -13,6 +13,54 @@ import type { CloudStorageProvider } from "@/lib/storage/cloud/cloud-storage-pro
 import type { StorageInterface } from "@/lib/storage/storage-interface";
 import { generateFileHash } from "@/lib/utils/hash-utils";
 
+// Type for raw data from Gemini API - uses Record<string, unknown> for safety
+type RawExtraction = Record<string, unknown>;
+
+// Type for experience item after processing
+interface ProcessedExperience {
+  title: string;
+  company: string;
+  location: string | undefined;
+  startDate: string;
+  endDate: string | undefined;
+  current: boolean;
+  description: string[];
+}
+
+// Type for education item after processing
+interface ProcessedEducation {
+  degree: string;
+  field: string;
+  institution: string;
+  location: string | undefined;
+  startDate: string;
+  endDate: string;
+  current: boolean;
+  gpa: string | undefined;
+}
+
+// Type for certification item after processing
+interface ProcessedCertification {
+  name: string;
+  issuer: string;
+  issueDate: string | undefined;
+  expiryDate: string | undefined;
+}
+
+// Type for language item after processing
+interface ProcessedLanguage {
+  language: string;
+  proficiency: "Basic" | "Intermediate" | "Advanced" | "Fluent" | "Native";
+}
+
+// Type for project item after processing
+interface ProcessedProject {
+  name: string;
+  description: string;
+  technologies: string[];
+  url: string | undefined;
+}
+
 // Define Zod schema for extracted CV data
 const extractedCVDataSchema = z.object({
   personalInfo: z
@@ -426,9 +474,9 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
       const content = response.text || "";
 
       // Parse the raw response
-      let parsed;
+      let parsed: RawExtraction;
       try {
-        parsed = JSON.parse(content);
+        parsed = JSON.parse(content) as RawExtraction;
       } catch (_parseError) {
         // Try to extract JSON from potentially malformed response
         const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -472,8 +520,8 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
   /**
    * Enhanced post-processing to fix common CV extraction issues
    */
-  private postProcessExtraction(rawData: any): any {
-    const processed = {
+  private postProcessExtraction(rawData: RawExtraction): RawExtraction {
+    const processed: RawExtraction = {
       personalInfo: {
         fullName: this.extractFullName(rawData.personalInfo),
         email: this.extractContactInfo(rawData.personalInfo, "email"),
@@ -490,12 +538,16 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
           "portfolioUrl",
         ),
       },
-      experience: this.fixExperienceArray(rawData.experience || []),
-      education: this.fixEducationArray(rawData.education || []),
-      skills: this.fixSkillsArray(rawData.skills || []),
-      certifications: this.fixCertificationsArray(rawData.certifications || []),
-      languages: this.fixLanguagesArray(rawData.languages || []),
-      projects: this.fixProjectsArray(rawData.projects || []),
+      experience: this.fixExperienceArray(
+        Array.isArray(rawData.experience) ? rawData.experience : [],
+      ),
+      education: this.fixEducationArray(
+        Array.isArray(rawData.education) ? rawData.education : [],
+      ),
+      skills: this.fixSkillsArray(rawData.skills ?? []),
+      certifications: this.fixCertificationsArray(rawData.certifications ?? []),
+      languages: this.fixLanguagesArray(rawData.languages ?? []),
+      projects: this.fixProjectsArray(rawData.projects ?? []),
     };
 
     return processed;
@@ -504,18 +556,23 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
   /**
    * Extract full name from personal info or attempt to find it elsewhere
    */
-  private extractFullName(personalInfo: any): string {
+  private extractFullName(personalInfo: unknown): string {
+    if (typeof personalInfo !== "object" || personalInfo === null) {
+      return "";
+    }
+    const info = personalInfo as Record<string, unknown>;
+
     if (
-      personalInfo?.fullName &&
-      typeof personalInfo.fullName === "string" &&
-      personalInfo.fullName.trim()
+      info.fullName &&
+      typeof info.fullName === "string" &&
+      info.fullName.trim()
     ) {
-      return personalInfo.fullName.trim();
+      return info.fullName.trim();
     }
 
     // Try to extract from email as fallback
-    if (personalInfo?.email && typeof personalInfo.email === "string") {
-      const emailParts = personalInfo.email.split("@");
+    if (info.email && typeof info.email === "string") {
+      const emailParts = info.email.split("@");
       if (emailParts[0] && emailParts[0].length > 2) {
         return emailParts[0]
           .replace(/[^a-zA-Z\s]/g, " ")
@@ -531,15 +588,17 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
    * Extract contact info safely
    */
   private extractContactInfo(
-    personalInfo: any,
+    personalInfo: unknown,
     field: string,
   ): string | undefined {
-    if (
-      personalInfo?.[field] &&
-      typeof personalInfo[field] === "string" &&
-      personalInfo[field].trim()
-    ) {
-      return personalInfo[field].trim();
+    if (typeof personalInfo !== "object" || personalInfo === null) {
+      return undefined;
+    }
+    const info = personalInfo as Record<string, unknown>;
+    const value = info[field];
+
+    if (value && typeof value === "string" && value.trim()) {
+      return value.trim();
     }
     return undefined;
   }
@@ -547,8 +606,8 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
   /**
    * Fix experience array - handle JSON strings and mixed data
    */
-  private fixExperienceArray(experience: any[]): any[] {
-    const fixed: any[] = [];
+  private fixExperienceArray(experience: unknown[]): ProcessedExperience[] {
+    const fixed: ProcessedExperience[] = [];
 
     for (const item of experience) {
       if (!item) continue;
@@ -556,7 +615,7 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
       // Handle JSON string arrays
       if (typeof item === "string") {
         try {
-          const parsed = JSON.parse(item);
+          const parsed = JSON.parse(item) as unknown;
           if (Array.isArray(parsed)) {
             fixed.push(...this.fixExperienceArray(parsed));
           }
@@ -576,9 +635,10 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
       }
 
       // Handle object experience items
-      if (typeof item === "object") {
-        const title = this.cleanStringField(item.title);
-        const company = this.cleanStringField(item.company);
+      if (typeof item === "object" && item !== null) {
+        const obj = item as Record<string, unknown>;
+        const title = this.cleanStringField(obj.title);
+        const company = this.cleanStringField(obj.company);
 
         // Skip if both title and company are empty
         if (!title && !company) continue;
@@ -604,13 +664,13 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
         fixed.push({
           title: finalTitle || "",
           company: finalCompany || "",
-          location: item.location
-            ? this.cleanStringField(item.location)
+          location: obj.location
+            ? this.cleanStringField(obj.location)
             : undefined,
-          startDate: this.normalizeDate(item.startDate),
-          endDate: this.normalizeDate(item.endDate),
-          current: Boolean(item.current),
-          description: this.parseDescriptionArray(item.description),
+          startDate: this.normalizeDate(obj.startDate),
+          endDate: this.normalizeDate(obj.endDate) || undefined,
+          current: Boolean(obj.current),
+          description: this.parseDescriptionArray(obj.description),
         });
       }
     }
@@ -621,8 +681,8 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
   /**
    * Fix education array
    */
-  private fixEducationArray(education: any[]): any[] {
-    const fixed: any[] = [];
+  private fixEducationArray(education: unknown[]): ProcessedEducation[] {
+    const fixed: ProcessedEducation[] = [];
 
     for (const item of education) {
       if (!item) continue;
@@ -630,7 +690,7 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
       // Handle JSON string arrays
       if (typeof item === "string") {
         try {
-          const parsed = JSON.parse(item);
+          const parsed = JSON.parse(item) as unknown;
           if (Array.isArray(parsed)) {
             fixed.push(...this.fixEducationArray(parsed));
           }
@@ -650,9 +710,10 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
         continue;
       }
 
-      if (typeof item === "object") {
-        const degree = this.cleanStringField(item.degree);
-        const institution = this.cleanStringField(item.institution);
+      if (typeof item === "object" && item !== null) {
+        const obj = item as Record<string, unknown>;
+        const degree = this.cleanStringField(obj.degree);
+        const institution = this.cleanStringField(obj.institution);
 
         // Skip if both are empty
         if (!degree && !institution) continue;
@@ -676,15 +737,15 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
 
         fixed.push({
           degree: finalDegree || "",
-          field: this.cleanStringField(item.field),
+          field: this.cleanStringField(obj.field),
           institution: finalInstitution || "",
-          location: item.location
-            ? this.cleanStringField(item.location)
+          location: obj.location
+            ? this.cleanStringField(obj.location)
             : undefined,
-          startDate: this.normalizeDate(item.startDate),
-          endDate: this.normalizeDate(item.endDate),
-          current: Boolean(item.current),
-          gpa: item.gpa ? this.cleanStringField(item.gpa) : undefined,
+          startDate: this.normalizeDate(obj.startDate),
+          endDate: this.normalizeDate(obj.endDate),
+          current: Boolean(obj.current),
+          gpa: obj.gpa ? this.cleanStringField(obj.gpa) : undefined,
         });
       }
     }
@@ -695,10 +756,10 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
   /**
    * Fix skills array
    */
-  private fixSkillsArray(skills: any): string[] {
+  private fixSkillsArray(skills: unknown): string[] {
     if (typeof skills === "string") {
       try {
-        const parsed = JSON.parse(skills);
+        const parsed = JSON.parse(skills) as unknown;
         if (Array.isArray(parsed)) {
           return this.fixSkillsArray(parsed);
         }
@@ -723,12 +784,14 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
   /**
    * Fix certifications array
    */
-  private fixCertificationsArray(certifications: any): any[] {
-    const fixed: any[] = [];
+  private fixCertificationsArray(
+    certifications: unknown,
+  ): ProcessedCertification[] {
+    const fixed: ProcessedCertification[] = [];
 
     if (typeof certifications === "string") {
       try {
-        const parsed = JSON.parse(certifications);
+        const parsed = JSON.parse(certifications) as unknown;
         if (Array.isArray(parsed)) {
           return this.fixCertificationsArray(parsed);
         }
@@ -756,12 +819,13 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
             issueDate: undefined,
             expiryDate: undefined,
           });
-        } else if (typeof cert === "object") {
+        } else if (typeof cert === "object" && cert !== null) {
+          const obj = cert as Record<string, unknown>;
           fixed.push({
-            name: this.cleanStringField(cert.name),
-            issuer: cert.issuer ? this.cleanStringField(cert.issuer) : "",
-            issueDate: this.normalizeDate(cert.issueDate) || undefined,
-            expiryDate: this.normalizeDate(cert.expiryDate) || undefined,
+            name: this.cleanStringField(obj.name),
+            issuer: obj.issuer ? this.cleanStringField(obj.issuer) : "",
+            issueDate: this.normalizeDate(obj.issueDate) || undefined,
+            expiryDate: this.normalizeDate(obj.expiryDate) || undefined,
           });
         }
       }
@@ -773,12 +837,12 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
   /**
    * Fix languages array
    */
-  private fixLanguagesArray(languages: any): any[] {
-    const fixed: any[] = [];
+  private fixLanguagesArray(languages: unknown): ProcessedLanguage[] {
+    const fixed: ProcessedLanguage[] = [];
 
     if (typeof languages === "string") {
       try {
-        const parsed = JSON.parse(languages);
+        const parsed = JSON.parse(languages) as unknown;
         if (Array.isArray(parsed)) {
           return this.fixLanguagesArray(parsed);
         }
@@ -794,15 +858,16 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
         if (typeof lang === "string") {
           fixed.push({
             language: this.cleanStringField(lang),
-            proficiency: "Basic" as const,
+            proficiency: "Basic",
           });
-        } else if (typeof lang === "object") {
-          const language = this.cleanStringField(lang.language);
-          let proficiency = lang.proficiency;
+        } else if (typeof lang === "object" && lang !== null) {
+          const obj = lang as Record<string, unknown>;
+          const language = this.cleanStringField(obj.language);
+          let proficiency: ProcessedLanguage["proficiency"] = "Basic";
 
           // Normalize proficiency
-          if (typeof proficiency === "string") {
-            const prof = proficiency.toLowerCase();
+          if (typeof obj.proficiency === "string") {
+            const prof = obj.proficiency.toLowerCase();
             if (prof.includes("native") || prof.includes("c2")) {
               proficiency = "Native";
             } else if (prof.includes("fluent")) {
@@ -818,18 +883,11 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
             } else {
               proficiency = "Basic";
             }
-          } else {
-            proficiency = "Basic";
           }
 
           fixed.push({
             language: language,
-            proficiency: proficiency as
-              | "Basic"
-              | "Intermediate"
-              | "Advanced"
-              | "Fluent"
-              | "Native",
+            proficiency: proficiency,
           });
         }
       }
@@ -841,12 +899,12 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
   /**
    * Fix projects array
    */
-  private fixProjectsArray(projects: any): any[] {
-    const fixed: any[] = [];
+  private fixProjectsArray(projects: unknown): ProcessedProject[] {
+    const fixed: ProcessedProject[] = [];
 
     if (typeof projects === "string") {
       try {
-        const parsed = JSON.parse(projects);
+        const parsed = JSON.parse(projects) as unknown;
         if (Array.isArray(parsed)) {
           return this.fixProjectsArray(parsed);
         }
@@ -866,9 +924,10 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
             technologies: [],
             url: undefined,
           });
-        } else if (typeof project === "object") {
-          const name = this.cleanStringField(project.name);
-          const description = this.cleanStringField(project.description);
+        } else if (typeof project === "object" && project !== null) {
+          const obj = project as Record<string, unknown>;
+          const name = this.cleanStringField(obj.name);
+          const description = this.cleanStringField(obj.description);
 
           // Skip if both name and description are empty
           if (!name && !description) continue;
@@ -876,8 +935,8 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
           fixed.push({
             name: name || "",
             description: description || "",
-            technologies: this.parseTechnologiesArray(project.technologies),
-            url: project.url ? this.cleanStringField(project.url) : undefined,
+            technologies: this.parseTechnologiesArray(obj.technologies),
+            url: obj.url ? this.cleanStringField(obj.url) : undefined,
           });
         }
       }
@@ -889,7 +948,7 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
   /**
    * Helper to clean string fields
    */
-  private cleanStringField(value: any): string {
+  private cleanStringField(value: unknown): string {
     if (typeof value === "string") {
       return value.trim();
     }
@@ -899,13 +958,13 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
   /**
    * Parse description array
    */
-  private parseDescriptionArray(description: any): string[] {
+  private parseDescriptionArray(description: unknown): string[] {
     if (Array.isArray(description)) {
       return description.map((d) => this.cleanStringField(d)).filter(Boolean);
     }
     if (typeof description === "string") {
       try {
-        const parsed = JSON.parse(description);
+        const parsed = JSON.parse(description) as unknown;
         if (Array.isArray(parsed)) {
           return this.parseDescriptionArray(parsed);
         }
@@ -923,13 +982,13 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
   /**
    * Parse technologies array
    */
-  private parseTechnologiesArray(technologies: any): string[] {
+  private parseTechnologiesArray(technologies: unknown): string[] {
     if (Array.isArray(technologies)) {
       return technologies.map((t) => this.cleanStringField(t)).filter(Boolean);
     }
     if (typeof technologies === "string") {
       try {
-        const parsed = JSON.parse(technologies);
+        const parsed = JSON.parse(technologies) as unknown;
         if (Array.isArray(parsed)) {
           return this.parseTechnologiesArray(parsed);
         }
@@ -946,7 +1005,7 @@ Focus on accuracy and proper data structure. Parse ALL available information cor
   /**
    * Normalize date formats
    */
-  private normalizeDate(date: any): string {
+  private normalizeDate(date: unknown): string {
     if (!date) return "";
 
     if (typeof date === "string") {
