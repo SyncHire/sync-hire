@@ -136,3 +136,14 @@ env:
     secret: REDIS_URL
     availability:
       - RUNTIME
+
+  # Novu Notifications
+  - variable: NOVU_API_KEY
+    secret: NOVU_API_KEY
+    availability:
+      - RUNTIME
+  - variable: NEXT_PUBLIC_NOVU_APPLICATION_IDENTIFIER
+    secret: NOVU_APPLICATION_IDENTIFIER
+    availability:
+      - BUILD
+      - RUNTIME

@@ -92,9 +92,11 @@
 
 > Goal: Better communication and engagement
 
-### Email Notifications
-- [ ] Interview scheduled notification
-- [ ] Interview completed notification
+### Notification Infrastructure (Novu)
+- [x] Novu integration for in-app + email notifications
+- [x] Interview started notification (in-app)
+- [x] Interview completed notification (in-app + email)
+- [x] HR notification for new interview results (in-app)
 - [ ] Application status updates (accepted/rejected)
 - [ ] Quota warning notifications
 - [ ] Weekly digest for HR (new applicants, pending interviews)
@@ -175,6 +177,7 @@
 | Upstash Redis | Rate limiting + caching | Active |
 | Resend | Email delivery | Active |
 | Google Gemini | AI/ML | Active |
+| Novu | In-app + email notifications | Active |
 
 ---
 

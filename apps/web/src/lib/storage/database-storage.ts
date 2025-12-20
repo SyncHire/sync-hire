@@ -11,7 +11,6 @@ import {
   type ExtractedJobData,
   type Interview,
   type InterviewQuestions,
-  type Notification,
   type Organization,
   Prisma,
   type prisma,
@@ -395,38 +394,6 @@ export class DatabaseStorage implements StorageInterface {
     await this.db.cVUpload.updateMany({
       where: { fileHash: cvId },
       data: { userId },
-    });
-  }
-
-  // =============================================================================
-  // Notification Methods
-  // =============================================================================
-
-  async getNotifications(userId: string): Promise<Notification[]> {
-    return this.db.notification.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-    });
-  }
-
-  async saveNotification(notification: Notification): Promise<void> {
-    await this.db.notification.create({
-      data: {
-        id: notification.id,
-        userId: notification.userId,
-        type: notification.type,
-        title: notification.title,
-        message: notification.message,
-        read: notification.read,
-        actionUrl: notification.actionUrl,
-      },
-    });
-  }
-
-  async markNotificationRead(notificationId: string): Promise<void> {
-    await this.db.notification.update({
-      where: { id: notificationId },
-      data: { read: true },
     });
   }
 

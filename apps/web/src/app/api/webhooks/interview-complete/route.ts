@@ -4,9 +4,14 @@
  * POST /api/webhooks/interview-complete
  */
 
-import { ApplicationStatus, InterviewStatus } from "@sync-hire/database";
+import {
+  ApplicationStatus,
+  InterviewStatus,
+  prisma,
+} from "@sync-hire/database";
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { getNovuService } from "@/lib/novu";
 import { getStorage } from "@/lib/storage/storage-factory";
 import type { Interview } from "@/lib/storage/storage-interface";
 import type { AIEvaluation } from "@/lib/types/interview-types";
@@ -177,6 +182,63 @@ export async function POST(request: Request) {
         operation: "updateApplicationStatus",
         interviewId: payload.interviewId,
         error: appError instanceof Error ? appError.message : String(appError),
+      });
+    }
+
+    // Send notifications
+    try {
+      const novuService = getNovuService();
+      const job = await storage.getJob(jobId);
+      const candidate = await prisma.user.findUnique({
+        where: { id: candidateId },
+        select: { id: true, email: true, name: true },
+      });
+
+      if (candidate) {
+        // Notify candidate that interview is complete
+        await novuService.notifyInterviewCompleted({
+          subscriberId: candidate.id,
+          subscriberEmail: candidate.email,
+          candidateName: candidate.name ?? payload.candidateName,
+          jobTitle: payload.jobTitle,
+          score: aiEvaluation?.overallScore,
+          feedbackUrl: `/candidate/history`,
+        });
+
+        // Notify HR team members about new interview result
+        if (job?.organizationId) {
+          const hrMembers = await prisma.member.findMany({
+            where: { organizationId: job.organizationId },
+            select: { userId: true },
+          });
+
+          for (const member of hrMembers) {
+            await novuService.notifyNewInterviewResult({
+              subscriberId: member.userId,
+              candidateName: candidate.name ?? payload.candidateName,
+              jobTitle: payload.jobTitle,
+              score: aiEvaluation?.overallScore,
+              applicantUrl: `/hr/jobs/${jobId}/applicants`,
+            });
+          }
+
+          logger.info("Sent interview result notifications", {
+            api: "webhooks/interview-complete",
+            operation: "sendNotifications",
+            interviewId: payload.interviewId,
+            hrMemberCount: hrMembers.length,
+          });
+        }
+      }
+    } catch (notificationError) {
+      logger.warn("Failed to send interview completion notifications", {
+        api: "webhooks/interview-complete",
+        operation: "sendNotifications",
+        interviewId: payload.interviewId,
+        error:
+          notificationError instanceof Error
+            ? notificationError.message
+            : String(notificationError),
       });
     }
 
