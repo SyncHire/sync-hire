@@ -6,6 +6,7 @@
  * Supports smart merging with existing job questions.
  */
 
+import type { Schema } from "@google/genai";
 import type { ExtractedCVData, ExtractedJobData } from "@sync-hire/database";
 import { z } from "zod";
 import { geminiClient } from "@/lib/gemini-client";
@@ -137,7 +138,7 @@ export async function generateInterviewQuestions(
       ],
       config: {
         responseMimeType: "application/json",
-        responseJsonSchema: jsonSchema as any,
+        responseJsonSchema: jsonSchema as unknown as Schema,
       },
     });
 

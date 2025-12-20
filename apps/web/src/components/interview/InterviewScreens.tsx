@@ -86,7 +86,9 @@ export function InterviewPreviewScreen({
     // Cleanup: stop all tracks when component unmounts
     return () => {
       if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+        stream.getTracks().forEach((track) => {
+          track.stop();
+        });
       }
     };
   }, [stream]);
@@ -106,7 +108,9 @@ export function InterviewPreviewScreen({
   const handleJoin = () => {
     // Stop preview stream before joining (the call will create its own)
     if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
+      stream.getTracks().forEach((track) => {
+        track.stop();
+      });
     }
     onJoin();
   };
@@ -438,7 +442,9 @@ export function InterviewEndedScreen({ onRejoin }: InterviewEndedScreenProps) {
               Start New Interview
             </Button>
             <Button
-              onClick={() => (window.location.href = "/candidate/jobs")}
+              onClick={() => {
+                window.location.href = "/candidate/jobs";
+              }}
               variant="outline"
               className="w-full h-11 border-border bg-secondary/50 hover:bg-secondary"
             >

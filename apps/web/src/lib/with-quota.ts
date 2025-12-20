@@ -118,7 +118,7 @@ export async function withQuota(
   endpoint: AIEndpoint,
   options?: QuotaCheckOptions,
 ): Promise<Response | null> {
-  let result;
+  let result: UsageCheckResult;
   try {
     result = await checkQuota(organizationId);
   } catch (error) {

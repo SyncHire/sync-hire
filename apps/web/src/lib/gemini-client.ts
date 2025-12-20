@@ -11,11 +11,11 @@
 import { GoogleGenAI } from "@google/genai";
 
 declare global {
-  var geminiClient: GoogleGenAI | undefined;
+  var __geminiClient: GoogleGenAI | undefined;
 }
 
 const globalForGemini = globalThis as typeof globalThis & {
-  geminiClient: GoogleGenAI | undefined;
+  __geminiClient: GoogleGenAI | undefined;
 };
 
 /**
@@ -24,12 +24,12 @@ const globalForGemini = globalThis as typeof globalThis & {
  * Persisted across hot reloads in development
  */
 export const geminiClient =
-  globalForGemini.geminiClient ??
+  globalForGemini.__geminiClient ??
   new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY ?? "",
   });
 
 // Preserve instance in development for hot reload support
 if (process.env.NODE_ENV !== "production") {
-  globalForGemini.geminiClient = geminiClient;
+  globalForGemini.__geminiClient = geminiClient;
 }

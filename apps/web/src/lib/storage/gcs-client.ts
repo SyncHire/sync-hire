@@ -11,11 +11,11 @@
 import { Storage } from "@google-cloud/storage";
 
 declare global {
-  var gcsClient: Storage | undefined;
+  var __gcsClient: Storage | undefined;
 }
 
 const globalForGCS = globalThis as typeof globalThis & {
-  gcsClient: Storage | undefined;
+  __gcsClient: Storage | undefined;
 };
 
 /**
@@ -29,12 +29,12 @@ const globalForGCS = globalThis as typeof globalThis & {
  * - Application Default Credentials
  */
 export const gcsClient =
-  globalForGCS.gcsClient ??
+  globalForGCS.__gcsClient ??
   new Storage({
     projectId: process.env.GCP_PROJECT_ID,
   });
 
 // Preserve instance in development for hot reload support
 if (process.env.NODE_ENV !== "production") {
-  globalForGCS.gcsClient = gcsClient;
+  globalForGCS.__gcsClient = gcsClient;
 }

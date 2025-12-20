@@ -4,6 +4,7 @@
  * Generate AI interview questions for a job based on title, description, and requirements.
  */
 
+import type { Schema } from "@google/genai";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { trackUsage } from "@/lib/ai-usage-tracker";
@@ -95,7 +96,7 @@ IMPORTANT: Do not include the candidate's name in any question. Keep questions p
       contents: [{ text: prompt }],
       config: {
         responseMimeType: "application/json",
-        responseJsonSchema: jsonSchema as any,
+        responseJsonSchema: jsonSchema as unknown as Schema,
       },
     });
 
