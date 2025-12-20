@@ -163,7 +163,7 @@ export async function validateRateLimitConnection(): Promise<{
     await client.ping();
     const warmLatencyMs = Date.now() - start2;
 
-    const redisUrl = new URL(process.env.REDIS_URL!);
+    const redisUrl = new URL(process.env.REDIS_URL ?? "");
     logger.info("Rate limiting enabled", {
       api: "rate-limiter",
       protocol: "TCP",

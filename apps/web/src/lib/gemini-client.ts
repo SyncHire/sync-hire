@@ -26,7 +26,7 @@ const globalForGemini = globalThis as typeof globalThis & {
 export const geminiClient =
   globalForGemini.geminiClient ??
   new GoogleGenAI({
-    apiKey: process.env.GEMINI_API_KEY!,
+    apiKey: process.env.GEMINI_API_KEY ?? "",
   });
 
 // Preserve instance in development for hot reload support

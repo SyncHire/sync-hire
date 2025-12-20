@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getCompanyLogoUrl } from "@/lib/logo-utils";
+import { getOrganizationLogoUrl } from "@/lib/logo-utils";
 import type { Interview, Job } from "@/lib/storage/storage-interface";
 
 interface JobsResponse {
@@ -335,62 +335,56 @@ export default function InterviewHistory() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {completedInterviews.map((interview) => (
-                <TableRow
-                  key={interview.id}
-                  className="group hover:bg-secondary/30 border-border transition-colors cursor-pointer"
-                  onClick={() =>
-                    router.push(`/candidate/interview/${interview.id}/results`)
-                  }
-                >
-                  <TableCell className="pl-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center border border-border group-hover:border-blue-500/30 transition-colors overflow-hidden">
-                        {interview.job?.organization?.name &&
-                        getCompanyLogoUrl(interview.job.organization.name) ? (
-                          <img
-                            src={
-                              getCompanyLogoUrl(
-                                interview.job.organization.name,
-                              )!
-                            }
-                            alt={`${interview.job.organization.name} logo`}
-                            className="h-6 w-6 object-contain"
-                          />
-                        ) : (
-                          <Building2 className="h-5 w-5 text-muted-foreground group-hover:text-blue-400 transition-colors" />
-                        )}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-sm text-foreground group-hover:text-blue-400 transition-colors">
-                          {interview.job?.title || "Interview"}
+              {completedInterviews.map((interview) => {
+                const orgLogo = getOrganizationLogoUrl(
+                  interview.job?.organization,
+                );
+                return (
+                  <TableRow
+                    key={interview.id}
+                    className="group hover:bg-secondary/30 border-border transition-colors cursor-pointer"
+                    onClick={() =>
+                      router.push(`/candidate/interview/${interview.id}/results`)
+                    }
+                  >
+                    <TableCell className="pl-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center border border-border group-hover:border-blue-500/30 transition-colors overflow-hidden">
+                          {orgLogo ? (
+                            <img
+                              src={orgLogo}
+                              alt={`${interview.job?.organization?.name} logo`}
+                              className="h-6 w-6 object-contain"
+                            />
+                          ) : (
+                            <Building2 className="h-5 w-5 text-muted-foreground group-hover:text-blue-400 transition-colors" />
+                          )}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {interview.durationMinutes} min •{" "}
-                          {interview.job?.location}
+                        <div>
+                          <div className="font-semibold text-sm text-foreground group-hover:text-blue-400 transition-colors">
+                            {interview.job?.title || "Interview"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {interview.durationMinutes} min •{" "}
+                            {interview.job?.location}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {interview.job?.organization?.name &&
-                        getCompanyLogoUrl(interview.job.organization.name) && (
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {orgLogo && (
                           <img
-                            src={
-                              getCompanyLogoUrl(
-                                interview.job.organization.name,
-                              )!
-                            }
-                            alt={`${interview.job.organization.name} logo`}
+                            src={orgLogo}
+                            alt={`${interview.job?.organization?.name} logo`}
                             className="h-5 w-5 object-contain rounded"
                           />
                         )}
-                      <span className="text-sm font-medium text-foreground">
-                        {interview.job?.organization?.name}
-                      </span>
-                    </div>
-                  </TableCell>
+                        <span className="text-sm font-medium text-foreground">
+                          {interview.job?.organization?.name}
+                        </span>
+                      </div>
+                    </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
@@ -461,8 +455,9 @@ export default function InterviewHistory() {
                       <ArrowRightIcon className="h-4 w-4" />
                     </div>
                   </TableCell>
-                </TableRow>
-              ))}
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

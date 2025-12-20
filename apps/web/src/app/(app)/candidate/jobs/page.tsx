@@ -36,7 +36,7 @@ import {
   simulateCVParsing,
   simulateJobMatching,
 } from "@/lib/job-matching";
-import { getCompanyLogoUrl } from "@/lib/logo-utils";
+import { getOrganizationLogoUrl } from "@/lib/logo-utils";
 import type { JobApplication } from "@/lib/types/interview-types";
 
 type WorkflowStage = "upload" | "processing" | "results";
@@ -492,6 +492,9 @@ export default function CandidateJobListings() {
                         };
 
                         const config = statusConfig[application.status];
+                        const orgLogo = getOrganizationLogoUrl(
+                          application.job?.organization,
+                        );
 
                         // Determine match quality colors
                         const getMatchColor = (percentage: number) => {
@@ -520,17 +523,10 @@ export default function CandidateJobListings() {
                                 <div className="flex justify-between items-start mb-6">
                                   <div className="flex items-center gap-3">
                                     <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center border border-border transition-colors overflow-hidden">
-                                      {application.job?.organization?.name &&
-                                      getCompanyLogoUrl(
-                                        application.job.organization.name,
-                                      ) ? (
+                                      {orgLogo ? (
                                         <img
-                                          src={
-                                            getCompanyLogoUrl(
-                                              application.job.organization.name,
-                                            )!
-                                          }
-                                          alt={`${application.job.organization.name} logo`}
+                                          src={orgLogo}
+                                          alt={`${application.job?.organization?.name} logo`}
                                           className="h-8 w-8 object-contain"
                                         />
                                       ) : (
