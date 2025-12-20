@@ -9,6 +9,7 @@
  */
 
 import { Building2, ChevronRight, Plus, User } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -184,10 +185,13 @@ export default function SelectOrganizationPage() {
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                   {org.logo ? (
-                    <img
+                    <Image
                       src={org.logo}
                       alt={org.name}
+                      width={40}
+                      height={40}
                       className="h-10 w-10 rounded-full"
+                      unoptimized
                     />
                   ) : (
                     <Building2 className="h-5 w-5 text-primary" />

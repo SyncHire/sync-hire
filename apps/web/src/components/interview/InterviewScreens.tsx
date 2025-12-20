@@ -16,6 +16,7 @@ import {
  * UI screens for different interview states
  * Updated to match dark theme design system
  */
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -121,10 +122,13 @@ export function InterviewPreviewScreen({
           {/* Company Header */}
           <div className="mb-6 flex items-center justify-center gap-3">
             {companyLogo ? (
-              <img
+              <Image
                 src={companyLogo}
                 alt={`${company} logo`}
+                width={40}
+                height={40}
                 className="h-10 w-10 rounded-lg object-contain bg-white p-1"
+                unoptimized
               />
             ) : (
               <div className="h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center">

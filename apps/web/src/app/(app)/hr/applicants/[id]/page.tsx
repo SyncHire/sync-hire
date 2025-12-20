@@ -12,6 +12,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -263,10 +264,13 @@ export default function HRApplicantDetail() {
                   <TableCell className="pl-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full overflow-hidden border border-border group-hover:border-blue-500/30 transition-colors">
-                        <img
+                        <Image
                           src={getAvatarUrl(applicant.name, i)}
                           alt={applicant.name}
+                          width={40}
+                          height={40}
                           className="h-full w-full object-cover"
+                          unoptimized
                         />
                       </div>
                       <div>

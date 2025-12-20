@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Zap,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { useCandidateInterview } from "@/lib/hooks/use-candidate-interview";
@@ -186,10 +187,13 @@ export default function ResultsContent({
         <div className="flex items-center gap-4 mb-4">
           <div className="h-14 w-14 rounded-xl bg-background flex items-center justify-center border border-border overflow-hidden">
             {companyLogo ? (
-              <img
+              <Image
                 src={companyLogo}
                 alt={`${job.organization.name} logo`}
+                width={40}
+                height={40}
                 className="h-10 w-10 object-contain"
+                unoptimized
               />
             ) : (
               <Building2 className="h-7 w-7 text-muted-foreground" />

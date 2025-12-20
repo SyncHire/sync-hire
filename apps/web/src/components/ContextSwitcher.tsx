@@ -9,6 +9,7 @@
  */
 
 import { Building2, ChevronDown, Plus, Settings, User } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -87,10 +88,13 @@ export function ContextSwitcher() {
           {isCandidate ? (
             <User className="h-3 w-3" />
           ) : activeOrgLogo ? (
-            <img
+            <Image
               src={activeOrgLogo}
               alt={activeOrg?.name || ""}
+              width={16}
+              height={16}
               className="h-4 w-4 rounded object-cover"
+              unoptimized
             />
           ) : (
             <Building2 className="h-3 w-3" />
@@ -130,10 +134,13 @@ export function ContextSwitcher() {
               disabled={setActiveOrg.isPending}
             >
               {logoUrl ? (
-                <img
+                <Image
                   src={logoUrl}
                   alt={org.name}
+                  width={16}
+                  height={16}
                   className="h-4 w-4 mr-2 rounded object-cover"
+                  unoptimized
                 />
               ) : (
                 <Building2 className="h-4 w-4 mr-2" />

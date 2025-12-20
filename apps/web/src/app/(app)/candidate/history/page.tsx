@@ -13,6 +13,7 @@ import {
   Loader2,
   Trophy,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -351,10 +352,13 @@ export default function InterviewHistory() {
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center border border-border group-hover:border-blue-500/30 transition-colors overflow-hidden">
                           {orgLogo ? (
-                            <img
+                            <Image
                               src={orgLogo}
                               alt={`${interview.job?.organization?.name} logo`}
+                              width={24}
+                              height={24}
                               className="h-6 w-6 object-contain"
+                              unoptimized
                             />
                           ) : (
                             <Building2 className="h-5 w-5 text-muted-foreground group-hover:text-blue-400 transition-colors" />
@@ -374,10 +378,13 @@ export default function InterviewHistory() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {orgLogo && (
-                          <img
+                          <Image
                             src={orgLogo}
                             alt={`${interview.job?.organization?.name} logo`}
+                            width={20}
+                            height={20}
                             className="h-5 w-5 object-contain rounded"
+                            unoptimized
                           />
                         )}
                         <span className="text-sm font-medium text-foreground">

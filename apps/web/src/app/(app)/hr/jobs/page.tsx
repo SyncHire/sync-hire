@@ -12,6 +12,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,10 +25,13 @@ function CompanyLogo({ name }: { name: string }) {
 
   if (logoUrl) {
     return (
-      <img
+      <Image
         src={logoUrl}
         alt={`${name} logo`}
+        width={32}
+        height={32}
         className="h-8 w-8 object-contain"
+        unoptimized
       />
     );
   }

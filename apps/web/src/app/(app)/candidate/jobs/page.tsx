@@ -14,6 +14,7 @@ import {
   Sparkles,
   Trophy,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { CVUploadSection } from "@/components/CVUpload";
@@ -524,10 +525,13 @@ export default function CandidateJobListings() {
                                   <div className="flex items-center gap-3">
                                     <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center border border-border transition-colors overflow-hidden">
                                       {orgLogo ? (
-                                        <img
+                                        <Image
                                           src={orgLogo}
                                           alt={`${application.job?.organization?.name} logo`}
+                                          width={32}
+                                          height={32}
                                           className="h-8 w-8 object-contain"
+                                          unoptimized
                                         />
                                       ) : (
                                         <Building2 className="h-6 w-6 text-muted-foreground transition-colors" />
