@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import healthRouter from "./routes/health.js";
+import documentsRouter from "./routes/documents.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
 export const createApp = () => {
@@ -16,6 +17,7 @@ export const createApp = () => {
 
   // Routes
   app.use("/", healthRouter);
+  app.use("/api/documents", documentsRouter);
 
   // Error Handler
   app.use(errorHandler);

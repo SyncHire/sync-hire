@@ -13,6 +13,8 @@ const envSchema = z.object({
   CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.75),
   WEBHOOK_TIMEOUT_MS: z.coerce.number().default(30000),
   WEBHOOK_RETRY_ATTEMPTS: z.coerce.number().default(3),
+  // Database connection
+  DATABASE_URL: z.string().min(1, "DATABASE_URL is required for job persistence"),
   // Optional LangSmith configuration
   LANGCHAIN_TRACING_V2: z.enum(["true", "false"]).optional(),
   LANGCHAIN_API_KEY: z.string().optional(),

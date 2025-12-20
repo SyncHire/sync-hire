@@ -16,10 +16,10 @@ These files can be archived or removed once the implementation is complete.
 ## Quick Links
 | Phase | Document | Status |
 |-------|----------|--------|
-| 1 | [Shared Package](./01-SHARED-PACKAGE.md) | Completed |
-| 2 | [Processor Skeleton](./02-PROCESSOR-SKELETON.md) | Completed |
-| 3 | [LangGraph JD Pipeline](./03-LANGGRAPH-JD-PIPELINE.md) | Not Started |
-| 4 | [API Endpoints](./04-API-ENDPOINTS.md) | Not Started |
+| 1 | [Shared Package](./01-SHARED-PACKAGE.md) | ✅ Completed |
+| 2 | [Processor Skeleton](./02-PROCESSOR-SKELETON.md) | ✅ Completed |
+| 3 | [LangGraph JD Pipeline](./03-LANGGRAPH-JD-PIPELINE.md) | ✅ Completed |
+| 4 | [API Endpoints](./04-API-ENDPOINTS.md) | ✅ Completed |
 | 5 | [Next.js Integration](./05-NEXTJS-INTEGRATION.md) | Not Started |
 | 6 | [Testing & Verification](./06-TESTING-VERIFICATION.md) | Not Started |
 | 7 | [Docker & Deploy](./07-DOCKER-DEPLOY.md) | Not Started |
@@ -79,28 +79,28 @@ These files can be archived or removed once the implementation is complete.
 ### Core Pipeline Implementation
 | Task | Status | Notes |
 |------|--------|-------|
-| Update JDExtractionState (remove sections, add parallelResults) | [ ] | Simplified state for parallel execution |
-| Simplify pipeline config (remove section detector option) | [ ] | DocumentParser, MetadataExtractor, SkillExtractor, RequirementsClassifier, Aggregator |
-| Implement DocumentParserNode | [ ] | Parse PDF/TXT, no section slicing |
-| Implement MetadataExtractorNode (with self-reflect loop) | [ ] | Full rawText input, inline validation + retry |
-| Implement SkillExtractorNode (with self-reflect loop) | [ ] | Full rawText input, inline validation + retry |
-| Implement RequirementsClassifierNode (with self-reflect loop) | [ ] | Full rawText input, inline validation + retry |
-| Implement AggregatorNode with cross-field validation | [ ] | Merge results, consistency checks, overall confidence |
-| Create self-reflect.ts utility | [ ] | NEW: Retry logic for low-confidence extractions |
-| Update graph-builder.ts for parallel execution | [ ] | Fan-out after Parser, fan-in before Aggregator |
-| Test parallel execution | [ ] | Verify metadata/skills/requirements run concurrently |
-| Test end-to-end latency | [ ] | Target ~5 seconds (3x improvement) |
+| Update JDExtractionState (remove sections, add parallelResults) | [x] | Simplified state for parallel execution |
+| Simplify pipeline config (remove section detector option) | [x] | DocumentParser, MetadataExtractor, SkillExtractor, RequirementsClassifier, Aggregator |
+| Implement DocumentParserNode | [x] | Parse PDF/TXT, no section slicing |
+| Implement MetadataExtractorNode (with self-reflect loop) | [x] | Full rawText input, inline validation + retry |
+| Implement SkillExtractorNode (with self-reflect loop) | [x] | Full rawText input, inline validation + retry |
+| Implement RequirementsClassifierNode (with self-reflect loop) | [x] | Full rawText input, inline validation + retry |
+| Implement AggregatorNode with cross-field validation | [x] | Merge results, consistency checks, overall confidence |
+| Create self-reflect.ts utility | [x] | NEW: Retry logic for low-confidence extractions |
+| Update graph-builder.ts for parallel execution | [x] | Fan-out after Parser, fan-in before Aggregator |
+| Test parallel execution | [x] | Verify metadata/skills/requirements run concurrently |
+| Test end-to-end latency | [x] | Target ~5 seconds (3x improvement) |
 
 ### Relevance Scoring Enhancements
 | Task | Status | Notes |
 |------|--------|-------|
-| Create node-evaluator.ts utility | [ ] | Standardized evaluation formatting |
-| Add evaluationConfig to state | [ ] | Min relevance score threshold |
-| Update all extractor nodes | [ ] | Add relevanceScore to LLM schema |
-| Add groundingEvidence prompting | [ ] | Quote extraction from source |
-| Add inferredFields detection | [ ] | Track guessed vs extracted fields |
-| Implement confidence scoring | [ ] | Weighted aggregate calculation |
-| Add node evaluation tests | [ ] | Test relevance score output |
+| Create node-evaluator.ts utility | [x] | Implemented as `self-reflect.ts` with `withRetry` |
+| Add evaluationConfig to state | [ ] | Deferred: using hardcoded 0.7 threshold |
+| Update all extractor nodes | [x] | All return `NodeEvaluationOutput` with 4 scores |
+| Add groundingEvidence prompting | [x] | Prompts ask LLM to quote source text |
+| Add inferredFields detection | [~] | Partial: LLM prompted but not stored separately |
+| Implement confidence scoring | [x] | Aggregator calculates `overallConfidence` |
+| Add node evaluation tests | [ ] | Deferred: no dedicated unit tests |
 
 ---
 
@@ -110,24 +110,26 @@ These files can be archived or removed once the implementation is complete.
 ### Base Endpoints
 | Task | Status | Notes |
 |------|--------|-------|
-| POST /api/documents/process | [ ] | |
-| GET /api/documents/:id/status | [ ] | |
-| Implement ProcessingJob Prisma model | [ ] | PostgreSQL storage via Prisma |
-| Implement webhook.service.ts | [ ] | |
-| Add retry logic for webhooks | [ ] | |
-| Add request validation | [ ] | |
-| Test with sample files | [ ] | |
+| POST /api/documents/process | [x] | |
+| GET /api/documents/:id/status | [x] | |
+| Implement ProcessingJob Prisma model | [x] | PostgreSQL storage via Prisma |
+| Implement webhook.service.ts | [x] | |
+| Add retry logic for webhooks | [x] | |
+| Add request validation | [x] | |
+| Test with sample files | [x] | |
 
 ### Evaluation & Feedback Endpoints
+> **Deferred to Phase 5:** These endpoints require the Review Dashboard (Phase 5) as consumer. Building API before UI risks premature design. Node evaluations are computed but not yet exposed via API.
+
 | Task | Status | Notes |
 |------|--------|-------|
-| GET /api/documents/:id/nodes | [ ] | Return all node evaluations |
-| POST /api/documents/:id/nodes/:nodeId/evaluate | [ ] | Accept user feedback |
-| GET /api/documents/:id/review-queue | [ ] | List nodes needing review |
-| Create CalibrationService | [ ] | Handle feedback + calibration |
-| Implement PrismaCalibrationStorage | [ ] | PostgreSQL via `@sync-hire/database` |
-| Add calibration factory | [ ] | Allow future DB migration |
-| Test evaluation endpoints | [ ] | Verify feedback storage |
+| GET /api/documents/:id/nodes | [ ] | Deferred: needs dashboard consumer |
+| POST /api/documents/:id/nodes/:nodeId/evaluate | [ ] | Deferred: needs feedback UI |
+| GET /api/documents/:id/review-queue | [ ] | Deferred: needs dashboard |
+| Create CalibrationService | [ ] | Deferred: needs feedback storage |
+| Implement PrismaCalibrationStorage | [ ] | Deferred: schema not designed |
+| Add calibration factory | [ ] | Deferred |
+| Test evaluation endpoints | [ ] | Deferred |
 
 ---
 
@@ -216,9 +218,12 @@ See [Docker & Deploy Plan](./07-DOCKER-DEPLOY.md) for details.
 PORT=3001
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-2.5-flash
+DATABASE_URL=postgresql://user:pass@localhost:5432/synchire
 LANGCHAIN_TRACING_V2=true
 LANGCHAIN_API_KEY=
 CONFIDENCE_THRESHOLD=0.75
+WEBHOOK_TIMEOUT_MS=30000
+WEBHOOK_RETRY_ATTEMPTS=3
 ```
 
 **apps/web/.env.local:**

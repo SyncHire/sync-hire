@@ -458,3 +458,35 @@ model InterviewCall {
   @@index([callId])
   @@map("interview_call")
 }
+
+// =============================================================================
+// DOCUMENT PROCESSING JOBS
+// =============================================================================
+
+model ProcessingJob {
+  id             String   @id @default(cuid())
+  type           String   // "jd" or "cv"
+  status         String   @default("queued") // queued, processing, completed, failed, needs_review
+  webhookUrl     String
+  correlationId  String?
+  
+  createdAt      DateTime @default(now())
+  startedAt      DateTime?
+  completedAt    DateTime?
+  
+  /// [ProcessingJobProgress]
+  progress       Json?    // { currentNode, completedNodes[], totalNodes }
+  
+  /// [ProcessingJobResult]
+  result         Json?    // ExtractedJobData or ExtractedCVData
+  
+  /// [ProcessingJobError]
+  error          Json?    // { code, message, retryable }
+  
+  /// [ProcessingStep[]]
+  processingSteps Json?   // Array of step statuses
+  
+  @@index([status])
+  @@index([createdAt])
+  @@map("processing_job")
+}
