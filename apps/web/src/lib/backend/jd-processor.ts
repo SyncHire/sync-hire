@@ -6,8 +6,8 @@
  * Implements structured output with Zod schemas.
  */
 
-import type { ExtractedJobData } from "@sync-hire/database";
 import type { Schema } from "@google/genai";
+import type { ExtractedJobData } from "@sync-hire/database";
 import { z } from "zod";
 import { geminiClient } from "@/lib/gemini-client";
 import type { CloudStorageProvider } from "@/lib/storage/cloud/cloud-storage-provider";

@@ -25,10 +25,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCandidateContext } from "@/lib/context/candidate-context";
-import {
-  useApplyToJob,
-  useQuestionSets,
-} from "@/lib/hooks/use-candidate-jobs";
+import { useApplyToJob, useQuestionSets } from "@/lib/hooks/use-candidate-jobs";
 import { useHasOrganization } from "@/lib/hooks/use-organizations";
 import { toast } from "@/lib/hooks/use-toast";
 import {

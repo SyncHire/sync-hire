@@ -345,7 +345,9 @@ export default function InterviewHistory() {
                     key={interview.id}
                     className="group hover:bg-secondary/30 border-border transition-colors cursor-pointer"
                     onClick={() =>
-                      router.push(`/candidate/interview/${interview.id}/results`)
+                      router.push(
+                        `/candidate/interview/${interview.id}/results`,
+                      )
                     }
                   >
                     <TableCell className="pl-6 py-4">
@@ -392,77 +394,77 @@ export default function InterviewHistory() {
                         </span>
                       </div>
                     </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>{interview.formattedDate}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {interview.score !== undefined &&
-                    interview.score !== null ? (
-                      <div className="flex items-center gap-3">
-                        <div className="relative h-10 w-10 flex items-center justify-center">
-                          <svg
-                            className="h-full w-full rotate-[-90deg]"
-                            viewBox="0 0 36 36"
-                            aria-hidden="true"
-                          >
-                            <path
-                              className="text-secondary"
-                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="3"
-                            />
-                            <path
-                              className={getScoreColor(interview.score)}
-                              strokeDasharray={`${interview.score}, 100`}
-                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="3"
-                            />
-                          </svg>
-                          <span className="absolute text-[10px] font-bold">
-                            {interview.score}
-                          </span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span
-                            className={`text-sm font-medium ${getScoreColor(interview.score)}`}
-                          >
-                            {getScoreLabel(interview.score)}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {interview.score}/100
-                          </span>
-                        </div>
+                    <TableCell>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span>{interview.formattedDate}</span>
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <div className="relative h-10 w-10 flex items-center justify-center">
-                          <div className="h-10 w-10 rounded-full border-2 border-secondary flex items-center justify-center">
-                            <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                    </TableCell>
+                    <TableCell>
+                      {interview.score !== undefined &&
+                      interview.score !== null ? (
+                        <div className="flex items-center gap-3">
+                          <div className="relative h-10 w-10 flex items-center justify-center">
+                            <svg
+                              className="h-full w-full rotate-[-90deg]"
+                              viewBox="0 0 36 36"
+                              aria-hidden="true"
+                            >
+                              <path
+                                className="text-secondary"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                              />
+                              <path
+                                className={getScoreColor(interview.score)}
+                                strokeDasharray={`${interview.score}, 100`}
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                              />
+                            </svg>
+                            <span className="absolute text-[10px] font-bold">
+                              {interview.score}
+                            </span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span
+                              className={`text-sm font-medium ${getScoreColor(interview.score)}`}
+                            >
+                              {getScoreLabel(interview.score)}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {interview.score}/100
+                            </span>
                           </div>
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-muted-foreground">
-                            Processing
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            Generating results...
-                          </span>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <div className="relative h-10 w-10 flex items-center justify-center">
+                            <div className="h-10 w-10 rounded-full border-2 border-secondary flex items-center justify-center">
+                              <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                            </div>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-muted-foreground">
+                              Processing
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              Generating results...
+                            </span>
+                          </div>
                         </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right pr-6">
+                      <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                        <span className="hidden sm:inline">View Results</span>
+                        <ArrowRightIcon className="h-4 w-4" />
                       </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right pr-6">
-                    <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                      <span className="hidden sm:inline">View Results</span>
-                      <ArrowRightIcon className="h-4 w-4" />
-                    </div>
-                  </TableCell>
+                    </TableCell>
                   </TableRow>
                 );
               })}
