@@ -131,6 +131,7 @@ const Carousel = React.forwardRef<
           canScrollNext,
         }}
       >
+        {/* biome-ignore lint/a11y/useSemanticElements: Carousel uses ARIA role="region" for accessibility without semantic constraints */}
         <div
           ref={ref}
           onKeyDownCapture={handleKeyDown}
@@ -176,6 +177,7 @@ const CarouselItem = React.forwardRef<
   const { orientation } = useCarousel();
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: Carousel slide uses ARIA role for accessibility
     <div
       ref={ref}
       role="group"

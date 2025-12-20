@@ -384,6 +384,8 @@ export default function JobCreationPage() {
       {/* Add Question Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: Modal backdrop, Escape key handled by dialog pattern */}
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: Modal backdrop click to close */}
           <div
             className="absolute inset-0 bg-black/50"
             onClick={() => setIsModalOpen(false)}
@@ -401,10 +403,14 @@ export default function JobCreationPage() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-foreground">
+                <label
+                  htmlFor="new-screening-question"
+                  className="text-sm font-medium text-foreground"
+                >
                   Question
                 </label>
                 <Textarea
+                  id="new-screening-question"
                   placeholder="Enter your screening question..."
                   value={newQuestionContent}
                   onChange={(e) => setNewQuestionContent(e.target.value)}
@@ -492,10 +498,14 @@ export default function JobCreationPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-foreground">
+                      <label
+                        htmlFor="job-title"
+                        className="text-sm font-medium text-foreground"
+                      >
                         Job Title
                       </label>
                       <Input
+                        id="job-title"
                         value={state.extractedData.title}
                         onChange={(e) =>
                           handleExtractedDataChange("title", e.target.value)
@@ -505,10 +515,14 @@ export default function JobCreationPage() {
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium text-foreground">
+                      <label
+                        htmlFor="job-company"
+                        className="text-sm font-medium text-foreground"
+                      >
                         Company
                       </label>
                       <Input
+                        id="job-company"
                         value={state.extractedData.company}
                         onChange={(e) =>
                           handleExtractedDataChange("company", e.target.value)
@@ -518,10 +532,14 @@ export default function JobCreationPage() {
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium text-foreground">
+                      <label
+                        htmlFor="job-location"
+                        className="text-sm font-medium text-foreground"
+                      >
                         Location
                       </label>
                       <Input
+                        id="job-location"
                         value={state.extractedData.location}
                         onChange={(e) =>
                           handleExtractedDataChange("location", e.target.value)
@@ -531,10 +549,14 @@ export default function JobCreationPage() {
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium text-foreground">
+                      <label
+                        htmlFor="job-seniority"
+                        className="text-sm font-medium text-foreground"
+                      >
                         Seniority Level
                       </label>
                       <Input
+                        id="job-seniority"
                         value={state.extractedData.seniority}
                         onChange={(e) =>
                           handleExtractedDataChange("seniority", e.target.value)
@@ -544,7 +566,10 @@ export default function JobCreationPage() {
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium text-foreground">
+                      <label
+                        htmlFor="job-employment-type"
+                        className="text-sm font-medium text-foreground"
+                      >
                         Employment Type
                       </label>
                       <Select
@@ -553,7 +578,10 @@ export default function JobCreationPage() {
                           handleExtractedDataChange("employmentType", value)
                         }
                       >
-                        <SelectTrigger className="mt-1">
+                        <SelectTrigger
+                          id="job-employment-type"
+                          className="mt-1"
+                        >
                           <SelectValue placeholder="Select employment type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -567,7 +595,10 @@ export default function JobCreationPage() {
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium text-foreground">
+                      <label
+                        htmlFor="job-work-arrangement"
+                        className="text-sm font-medium text-foreground"
+                      >
                         Work Arrangement
                       </label>
                       <Select
@@ -576,7 +607,10 @@ export default function JobCreationPage() {
                           handleExtractedDataChange("workArrangement", value)
                         }
                       >
-                        <SelectTrigger className="mt-1">
+                        <SelectTrigger
+                          id="job-work-arrangement"
+                          className="mt-1"
+                        >
                           <SelectValue placeholder="Select work arrangement" />
                         </SelectTrigger>
                         <SelectContent>
@@ -593,10 +627,10 @@ export default function JobCreationPage() {
                   {/* Responsibilities - View/Edit Mode */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-medium text-foreground">
+                      <span className="text-sm font-medium text-foreground">
                         Responsibilities (
                         {state.extractedData.responsibilities.length})
-                      </label>
+                      </span>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -729,7 +763,7 @@ export default function JobCreationPage() {
                   {/* Requirements - View/Edit Mode */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-medium text-foreground">
+                      <span className="text-sm font-medium text-foreground">
                         Requirements (
                         {state.extractedData.requirements.length -
                           skippedRequirements.size}
@@ -737,7 +771,7 @@ export default function JobCreationPage() {
                           ? ` / ${state.extractedData.requirements.length}`
                           : ""}
                         )
-                      </label>
+                      </span>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -932,10 +966,11 @@ export default function JobCreationPage() {
                         const isExcluded = question.status === "excluded";
                         const isCustom = question.type === "custom";
                         return (
-                          <div
+                          <button
+                            type="button"
                             key={question.id}
                             onClick={() => handleToggleQuestion(question.id)}
-                            className={`border rounded-md p-2 cursor-pointer transition-all ${
+                            className={`w-full text-left border rounded-md p-2 cursor-pointer transition-all ${
                               isExcluded
                                 ? "opacity-50 border-dashed bg-muted/30"
                                 : "hover:bg-muted/50"
@@ -967,7 +1002,7 @@ export default function JobCreationPage() {
                                 {isExcluded ? "Skip" : "Include"}
                               </span>
                             </div>
-                          </div>
+                          </button>
                         );
                       })}
                     </div>

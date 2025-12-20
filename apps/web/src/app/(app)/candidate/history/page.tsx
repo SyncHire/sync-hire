@@ -296,6 +296,7 @@ export default function InterviewHistory() {
               <TableRow className="hover:bg-transparent border-border">
                 <TableHead className="w-[350px] h-12 pl-6">
                   <button
+                    type="button"
                     onClick={() => handleSort("position")}
                     className="flex items-center text-xs font-medium uppercase cursor-pointer tracking-wider text-muted-foreground hover:text-foreground transition-colors"
                   >
@@ -305,6 +306,7 @@ export default function InterviewHistory() {
                 </TableHead>
                 <TableHead className="h-12">
                   <button
+                    type="button"
                     onClick={() => handleSort("company")}
                     className="flex items-center text-xs font-medium uppercase cursor-pointer tracking-wider text-muted-foreground hover:text-foreground transition-colors"
                   >
@@ -314,6 +316,7 @@ export default function InterviewHistory() {
                 </TableHead>
                 <TableHead className="h-12">
                   <button
+                    type="button"
                     onClick={() => handleSort("date")}
                     className="flex items-center text-xs font-medium uppercase cursor-pointer tracking-wider text-muted-foreground hover:text-foreground transition-colors"
                   >
@@ -323,6 +326,7 @@ export default function InterviewHistory() {
                 </TableHead>
                 <TableHead className="h-12">
                   <button
+                    type="button"
                     onClick={() => handleSort("score")}
                     className="flex items-center text-xs font-medium uppercase cursor-pointer tracking-wider text-muted-foreground hover:text-foreground transition-colors"
                   >

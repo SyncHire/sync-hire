@@ -128,6 +128,7 @@ export function CVUploadSection({
             </div>
           </div>
         ) : (
+          // biome-ignore lint/a11y/noStaticElementInteractions: Drop zone for file drag-and-drop, keyboard users use the input button
           <div
             className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
               dragActive

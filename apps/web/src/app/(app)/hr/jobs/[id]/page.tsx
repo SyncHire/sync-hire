@@ -663,8 +663,14 @@ export default function HRJDDetail() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Question</label>
+              <label
+                htmlFor="new-question-text"
+                className="text-sm font-medium"
+              >
+                Question
+              </label>
               <Textarea
+                id="new-question-text"
                 placeholder="Enter your interview question..."
                 value={newQuestion.text}
                 onChange={(e) =>
@@ -674,10 +680,14 @@ export default function HRJDDetail() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">
+              <label
+                htmlFor="new-question-duration"
+                className="text-sm font-medium"
+              >
                 Expected Duration (min)
               </label>
               <Input
+                id="new-question-duration"
                 type="number"
                 min={1}
                 max={10}
@@ -715,8 +725,14 @@ export default function HRJDDetail() {
           {editingQuestion && (
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Question</label>
+                <label
+                  htmlFor="edit-question-text"
+                  className="text-sm font-medium"
+                >
+                  Question
+                </label>
                 <Textarea
+                  id="edit-question-text"
                   placeholder="Enter your interview question..."
                   value={editingQuestion.text}
                   onChange={(e) =>
@@ -728,10 +744,14 @@ export default function HRJDDetail() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">
+                <label
+                  htmlFor="edit-question-duration"
+                  className="text-sm font-medium"
+                >
                   Expected Duration (min)
                 </label>
                 <Input
+                  id="edit-question-duration"
                   type="number"
                   min={1}
                   max={10}
