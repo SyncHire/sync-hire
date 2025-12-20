@@ -7,11 +7,18 @@
  */
 
 import type { ExtractedJobData } from "@sync-hire/database";
+import type { Schema } from "@google/genai";
 import { z } from "zod";
 import { geminiClient } from "@/lib/gemini-client";
 import type { CloudStorageProvider } from "@/lib/storage/cloud/cloud-storage-provider";
 import type { StorageInterface } from "@/lib/storage/storage-interface";
 import { generateFileHash } from "@/lib/utils/hash-utils";
+
+// Type for parsed AI content response
+interface ParsedAIContent {
+  suggestions?: Array<{ original?: string; improved?: string }>;
+  questions?: Array<{ content?: string; reason?: string }>;
+}
 
 // Valid employment types for the database
 const EMPLOYMENT_TYPES = [
@@ -188,13 +195,13 @@ All fields must be present. Default to "Full-time" for employmentType and "On-si
         ],
         config: {
           responseMimeType: "application/json",
-          responseJsonSchema: jsonSchema as any,
+          responseJsonSchema: jsonSchema as unknown as Schema,
         },
       });
 
       const structuredContent = structuredResponse.text || "";
 
-      const structuredParsed = JSON.parse(structuredContent);
+      const structuredParsed: unknown = JSON.parse(structuredContent);
 
       const extractedData = extractedJobDataSchema.parse(structuredParsed);
 
@@ -243,13 +250,13 @@ ${textContent}`,
         ],
         config: {
           responseMimeType: "application/json",
-          responseJsonSchema: jsonSchema as any,
+          responseJsonSchema: jsonSchema as unknown as Schema,
         },
       });
 
       const structuredContent = structuredResponse.text || "";
 
-      const structuredParsed = JSON.parse(structuredContent);
+      const structuredParsed: unknown = JSON.parse(structuredContent);
 
       const extractedData = extractedJobDataSchema.parse(structuredParsed);
 
@@ -334,21 +341,21 @@ Return ONLY valid JSON in the exact format shown above. All arrays must contain 
         contents: [{ text: prompt }],
         config: {
           responseMimeType: "application/json",
-          responseJsonSchema: jsonSchema as any,
+          responseJsonSchema: jsonSchema as unknown as Schema,
         },
       });
 
       const content = response.text || "";
 
       // Try to parse JSON with multiple fallback strategies
-      let parsed;
+      let parsed: ParsedAIContent;
       try {
-        parsed = JSON.parse(content);
+        parsed = JSON.parse(content) as ParsedAIContent;
       } catch (_parseError) {
         // Try to extract JSON from response if it contains extra text
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          parsed = JSON.parse(jsonMatch[0]);
+          parsed = JSON.parse(jsonMatch[0]) as ParsedAIContent;
         } else {
           throw new Error(
             "Could not parse JSON from response - no valid JSON found",
