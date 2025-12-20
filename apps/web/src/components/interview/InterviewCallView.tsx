@@ -506,13 +506,13 @@ function InterviewCallContent({
       </div>
 
       {/* Main Workspace */}
-      <div className="flex-1 flex p-6 gap-6 overflow-hidden relative">
+      <div className="flex-1 flex p-6 gap-6 overflow-hidden relative min-h-0">
         {/* Background Grid */}
         <div className="absolute inset-0 bg-grid-pattern opacity-20 pointer-events-none" />
 
         {/* Left: Main Video Feed */}
-        <div className="flex-1 flex flex-col gap-4 relative z-10">
-          <div className="flex-1 rounded-2xl overflow-hidden bg-black relative border border-border shadow-2xl group">
+        <div className="flex-1 h-full flex flex-col gap-4 relative z-10 min-h-0">
+          <div className="flex-1 rounded-2xl overflow-hidden bg-black relative border border-border shadow-2xl group min-h-0">
             {/* AI Video Feed - HeyGen or fallback avatar */}
             <div className="absolute inset-0">
               {/* Pulsing glow effect when speaking */}
@@ -735,7 +735,7 @@ function InterviewCallContent({
         </div>
 
         {/* Right: Transcript Panel */}
-        <div className="w-[400px] bg-card/60 backdrop-blur-xl border border-border rounded-2xl flex flex-col shadow-2xl overflow-hidden relative z-10">
+        <div className="w-[400px] h-full bg-card/60 backdrop-blur-xl border border-border rounded-2xl flex flex-col shadow-2xl overflow-hidden relative z-10">
           {/* Transcript Header */}
           <div className="p-4 border-b border-border bg-secondary/30">
             <div className="flex items-center justify-between">
