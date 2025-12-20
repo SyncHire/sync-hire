@@ -6,8 +6,8 @@
  */
 
 import type { PrismaClient } from "@sync-hire/database";
-import { mockDeep, mockReset } from "vitest-mock-extended";
 import { beforeEach } from "vitest";
+import { mockDeep, mockReset } from "vitest-mock-extended";
 
 // Create singleton mock
 export const prismaMock = mockDeep<PrismaClient>();
