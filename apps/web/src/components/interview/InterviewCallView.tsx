@@ -38,6 +38,9 @@ import { formatTime } from "@/lib/date-utils";
 import { toast } from "@/lib/hooks/use-toast";
 import type { InterviewStage, Question } from "@/lib/types/interview-types";
 
+// Stable IDs for waveform bars to avoid array index keys
+const WAVEFORM_BARS = Array.from({ length: 32 }, (_, i) => `waveform-${i}`);
+
 interface InterviewCallViewProps {
   call: Call;
   interviewId: string;
@@ -605,9 +608,9 @@ function InterviewCallContent({
 
               {/* Dynamic Waveform */}
               <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/90 to-transparent flex items-end justify-center pb-8 gap-1">
-                {[...Array(32)].map((_, i) => (
+                {WAVEFORM_BARS.map((barId) => (
                   <motion.div
-                    key={i}
+                    key={barId}
                     animate={{
                       height: isAISpeaking
                         ? [10, Math.random() * 60 + 20, 10]

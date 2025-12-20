@@ -285,9 +285,9 @@ export default function HRApplicantDetail() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1 max-w-[280px]">
-                      {applicant.skills.slice(0, 6).map((skill, idx) => (
+                      {applicant.skills.slice(0, 6).map((skill) => (
                         <Badge
-                          key={idx}
+                          key={skill}
                           variant="secondary"
                           className="text-[10px] px-1.5 py-0"
                         >

@@ -391,9 +391,9 @@ export default function HRJDDetail() {
                   Requirements
                 </h3>
                 <ul className="space-y-3">
-                  {job.requirements.map((req, i) => (
+                  {job.requirements.map((req) => (
                     <li
-                      key={i}
+                      key={req}
                       className="flex items-start gap-3 text-sm text-muted-foreground"
                     >
                       <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">

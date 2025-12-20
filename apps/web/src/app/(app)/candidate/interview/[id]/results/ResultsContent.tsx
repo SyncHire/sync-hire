@@ -354,9 +354,9 @@ export default function ResultsContent({
             </p>
           ) : (
             <ul className="space-y-3">
-              {evaluation.strengths.map((strength, i) => (
+              {evaluation.strengths.map((strength) => (
                 <li
-                  key={i}
+                  key={strength}
                   className="flex items-start gap-2 text-sm text-foreground"
                 >
                   <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
@@ -380,9 +380,9 @@ export default function ResultsContent({
             </p>
           ) : (
             <ul className="space-y-3">
-              {evaluation.improvements.map((improvement, i) => (
+              {evaluation.improvements.map((improvement) => (
                 <li
-                  key={i}
+                  key={improvement}
                   className="flex items-start gap-2 text-sm text-foreground"
                 >
                   <div className="h-4 w-4 rounded-full border-2 border-blue-500 mt-0.5 shrink-0" />

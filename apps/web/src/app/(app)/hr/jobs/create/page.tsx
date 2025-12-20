@@ -652,7 +652,7 @@ export default function JobCreationPage() {
                                 );
 
                               return (
-                                <div key={i}>
+                                <div key={item}>
                                   <div
                                     className={`flex items-start gap-3 p-2.5 rounded-md transition-colors ${
                                       isExpanded
@@ -793,7 +793,7 @@ export default function JobCreationPage() {
                             const isSkipped = skippedRequirements.has(i);
 
                             return (
-                              <div key={i}>
+                              <div key={item}>
                                 <div
                                   className={`flex items-start gap-3 p-2.5 rounded-md transition-colors ${
                                     isSkipped
