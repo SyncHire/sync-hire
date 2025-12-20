@@ -67,7 +67,7 @@ function extractExtra(context?: LogContext): Record<string, unknown> {
   if (!context) {
     return {};
   }
-  const { api, operation, ...extra } = context;
+  const { api: _api, operation: _operation, ...extra } = context;
   return extra;
 }
 

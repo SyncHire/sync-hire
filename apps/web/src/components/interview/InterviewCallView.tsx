@@ -73,7 +73,7 @@ interface TranscriptMessage {
  */
 function InterviewCallContent({
   call,
-  interviewId,
+  interviewId: _interviewId,
   jobTitle = "AI Interview",
   durationMinutes = 30,
   questions = [],

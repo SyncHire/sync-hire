@@ -12,7 +12,7 @@ import { Building2, ChevronRight, Plus, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +42,25 @@ export default function SelectOrganizationPage() {
   const [selectingId, setSelectingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hasNoOrgs, setHasNoOrgs] = useState(false);
+
+  const selectOrganization = useCallback(
+    async (orgId: string) => {
+      setSelectingId(orgId);
+      setError(null);
+
+      const result = await organization.setActive({ organizationId: orgId });
+
+      if (result.error) {
+        setError("Failed to select organization");
+        setSelectingId(null);
+        return;
+      }
+
+      // Redirect to HR jobs page
+      router.push("/hr/jobs");
+    },
+    [router],
+  );
 
   useEffect(() => {
     async function loadOrganizations() {
@@ -77,22 +96,6 @@ export default function SelectOrganizationPage() {
       loadOrganizations();
     }
   }, [session, sessionPending, selectOrganization]);
-
-  async function selectOrganization(orgId: string) {
-    setSelectingId(orgId);
-    setError(null);
-
-    const result = await organization.setActive({ organizationId: orgId });
-
-    if (result.error) {
-      setError("Failed to select organization");
-      setSelectingId(null);
-      return;
-    }
-
-    // Redirect to HR jobs page
-    router.push("/hr/jobs");
-  }
 
   if (sessionPending || isLoading) {
     return (

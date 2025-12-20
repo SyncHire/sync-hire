@@ -11,7 +11,7 @@
 import { AlertCircle, CheckCircle2, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,35 +41,38 @@ function VerifyEmailContent() {
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
 
+  const verifyEmail = useCallback(
+    async (verificationToken: string) => {
+      setStatus("verifying");
+      setError(null);
+
+      const result = await authClient.verifyEmail({
+        query: { token: verificationToken },
+      });
+
+      if (result.error) {
+        setStatus("error");
+        setError(
+          result.error.message ||
+            "Verification failed. The link may have expired.",
+        );
+        return;
+      }
+
+      setStatus("success");
+      // Redirect to login after a short delay
+      setTimeout(() => {
+        router.push("/login");
+      }, 3000);
+    },
+    [router],
+  );
+
   useEffect(() => {
     if (token) {
       verifyEmail(token);
     }
   }, [token, verifyEmail]);
-
-  async function verifyEmail(verificationToken: string) {
-    setStatus("verifying");
-    setError(null);
-
-    const result = await authClient.verifyEmail({
-      query: { token: verificationToken },
-    });
-
-    if (result.error) {
-      setStatus("error");
-      setError(
-        result.error.message ||
-          "Verification failed. The link may have expired.",
-      );
-      return;
-    }
-
-    setStatus("success");
-    // Redirect to login after a short delay
-    setTimeout(() => {
-      router.push("/login");
-    }, 3000);
-  }
 
   async function handleResendVerification(e: React.FormEvent) {
     e.preventDefault();

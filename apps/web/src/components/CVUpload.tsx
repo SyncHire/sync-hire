@@ -19,7 +19,7 @@ export function CVUploadSection({
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const validateFile = (file: File): string | null => {
+  const validateFile = useCallback((file: File): string | null => {
     if (file.type !== "application/pdf") {
       return "Only PDF files are supported";
     }
@@ -27,7 +27,7 @@ export function CVUploadSection({
       return "File size must be less than 10MB";
     }
     return null;
-  };
+  }, []);
 
   const handleFile = useCallback(
     (file: File) => {

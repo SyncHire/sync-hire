@@ -27,7 +27,6 @@ import { Button } from "@/components/ui/button";
 import { useCandidateContext } from "@/lib/context/candidate-context";
 import {
   useApplyToJob,
-  useInvalidateCVQueries,
   useQuestionSets,
 } from "@/lib/hooks/use-candidate-jobs";
 import { useHasOrganization } from "@/lib/hooks/use-organizations";
@@ -86,7 +85,6 @@ export default function CandidateJobListings() {
     workflowStage === "results",
   );
   const applyToJobMutation = useApplyToJob();
-  const { invalidateUserCV } = useInvalidateCVQueries();
 
   // Update UI states when question sets data changes
   useEffect(() => {

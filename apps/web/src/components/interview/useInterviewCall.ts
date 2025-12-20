@@ -25,7 +25,7 @@ interface DeviceErrors {
 
 export function useInterviewCall({
   interviewId,
-  candidateId,
+  candidateId: _candidateId,
   candidateName,
   enabled,
 }: UseInterviewCallParams) {
