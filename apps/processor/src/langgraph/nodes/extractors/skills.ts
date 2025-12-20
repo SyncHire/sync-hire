@@ -5,6 +5,7 @@ import { getCreativeLLM, cleanJSON } from "../../utils/gemini.js";
 import { logger } from "../../../utils/logger.js";
 import { NodeEvaluationOutputSchema } from "@sync-hire/shared";
 import { withRetry } from "../../utils/self-reflect.js";
+import { formatError } from "../../utils/error-utils.js";
 import { z } from "zod";
 
 const EXTRACTION_PROMPT = `You are a skilled job description analyzer specializing in skill extraction. Extract ALL skills mentioned in the document, including:
@@ -95,7 +96,7 @@ export async function skillsExtractorNode(
 
     return { skillsResult: result };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = formatError(error);
     logger.error("SkillsExtractor: Extraction failed", { error: errorMessage });
 
     const errorResult: ExtractionResult<Skill[]> = {

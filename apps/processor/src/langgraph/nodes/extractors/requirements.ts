@@ -5,6 +5,7 @@ import { getStrictLLM, cleanJSON } from "../../utils/gemini.js";
 import { logger } from "../../../utils/logger.js";
 import { NodeEvaluationOutputSchema } from "@sync-hire/shared";
 import { withRetry } from "../../utils/self-reflect.js";
+import { formatError } from "../../utils/error-utils.js";
 import { z } from "zod";
 
 const EXTRACTION_PROMPT = `You are a precise job description analyzer. Extract requirements and classify them into "required" (must-haves) and "preferred" (nice-to-haves).
@@ -101,7 +102,7 @@ export async function requirementsExtractorNode(
 
     return { requirementsResult: result };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = formatError(error);
     logger.error("RequirementsExtractor: Extraction failed", { error: errorMessage });
 
     const errorResult: ExtractionResult<Requirements> = {

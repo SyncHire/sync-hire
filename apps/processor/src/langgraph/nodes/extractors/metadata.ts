@@ -5,6 +5,7 @@ import { getStrictLLM, cleanJSON } from "../../utils/gemini.js";
 import { logger } from "../../../utils/logger.js";
 import { ExtractedJobDataSchema, NodeEvaluationOutputSchema } from "@sync-hire/shared";
 import { withRetry } from "../../utils/self-reflect.js";
+import { formatError } from "../../utils/error-utils.js";
 import { z } from "zod";
 
 const EXTRACTION_PROMPT = `You are a precise job description analyzer. Extract ONLY the following metadata from the document. Do not guess or infer missing information.
@@ -64,7 +65,6 @@ async function extractMetadata(
   }
 
   // Create multimodal message
-  // Fix 2: LangChain Multimodal Message Format
   const message = new HumanMessage({
     content: [
       { type: "text", text: prompt },
@@ -100,7 +100,6 @@ export async function metadataExtractorNode(
   logger.info("MetadataExtractor: Starting extraction", { filePath });
 
   try {
-    // Fix 4: Missing Self-Reflect Retry Loop
     const resultWithRetry = await withRetry(
       () => extractMetadata(filePath, fileType, hints?.metadata),
       "MetadataExtractor"
@@ -117,8 +116,8 @@ export async function metadataExtractorNode(
 
     return { metadataResult: result };
   } catch (error) {
-    // Fix 5: Inconsistent Error Type Access
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    // Fix: Friendly Error Formatting
+    const errorMessage = formatError(error);
     logger.error("MetadataExtractor: Extraction failed", { error: errorMessage });
 
     // Return error result instead of throwing (partial failure support)
