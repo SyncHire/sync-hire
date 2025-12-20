@@ -8,10 +8,11 @@
 // Export Prisma client instance and utilities
 export { prisma, disconnectPrisma, validateDatabaseConnection } from './client';
 
-// Re-export Prisma types (models and namespaces)
+// Re-export Prisma namespace and class (as values for runtime use)
+export { Prisma, PrismaClient } from '@prisma/client';
+
+// Re-export Prisma types (models)
 export type {
-  Prisma,
-  PrismaClient,
   User,
   Account,
   Session,

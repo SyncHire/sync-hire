@@ -8,7 +8,7 @@
  * export type MyType = Prisma.ModelGetPayload<{ include: { relations: true } }>
  */
 
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 // =============================================================================
 // Organization Types

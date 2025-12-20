@@ -5,19 +5,19 @@
  * File uploads are handled separately by CloudStorageProvider.
  */
 
-import { Prisma } from '@prisma/client';
-import type {
-  CandidateApplication,
-  ExtractedCVData,
-  ExtractedJobData,
-  Interview,
-  InterviewQuestions,
-  JobWithQuestions,
-  Notification,
-  Organization,
-  User,
+import {
+  Prisma,
+  prisma,
+  type CandidateApplication,
+  type ExtractedCVData,
+  type ExtractedJobData,
+  type Interview,
+  type InterviewQuestions,
+  type JobWithQuestions,
+  type Notification,
+  type Organization,
+  type User,
 } from '@sync-hire/database';
-import { prisma } from '@sync-hire/database';
 import type { StorageInterface, Job } from './storage-interface';
 import { getServerSession } from '@/lib/auth-server';
 
