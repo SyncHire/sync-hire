@@ -297,6 +297,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
 ## Git
 
 - **Default branch**: `main` (use this as the base for PRs)
+- **Before committing**: Always run `pnpm typecheck` and `pnpm lint` to catch errors before commit
+- If either fails, fix the issues before committing
 
 ## Additional Guidelines
 
