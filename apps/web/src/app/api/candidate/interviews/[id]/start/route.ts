@@ -13,6 +13,7 @@ import { getAgentEndpoint, getAgentHeaders } from "@/lib/agent-config";
 import { errors, successResponse } from "@/lib/api-response";
 import { getServerSession } from "@/lib/auth-server";
 import { logger } from "@/lib/logger";
+import { getNovuService } from "@/lib/novu";
 import { getStorage } from "@/lib/storage/storage-factory";
 import type { Interview, Job } from "@/lib/storage/storage-interface";
 import { getStreamClient } from "@/lib/stream-token";
@@ -277,6 +278,25 @@ export async function POST(
       logger.debug("Agent already invited, skipping duplicate", {
         api: "candidate/interviews/[id]/start",
         callId,
+      });
+    }
+
+    // Send notification that interview has started
+    try {
+      const novuService = getNovuService();
+      await novuService.notifyInterviewStarted({
+        subscriberId: candidateId,
+        jobTitle: job.title,
+        interviewUrl: `/candidate/interviews/${interviewId}`,
+      });
+    } catch (notificationError) {
+      logger.warn("Failed to send interview started notification", {
+        api: "candidate/interviews/[id]/start",
+        interviewId,
+        error:
+          notificationError instanceof Error
+            ? notificationError.message
+            : String(notificationError),
       });
     }
 

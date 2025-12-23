@@ -12,7 +12,6 @@ import type {
   Interview,
   InterviewQuestions,
   JobWithQuestionsAndOrg,
-  Notification,
   Organization,
   User,
 } from "@sync-hire/database";
@@ -24,7 +23,6 @@ export type {
   ExtractedJobData,
   Interview,
   InterviewQuestions,
-  Notification,
   Organization,
   User,
 };
@@ -172,25 +170,6 @@ export interface StorageInterface {
    * Save/link a CV ID to a user
    */
   saveUserCVId(userId: string, cvId: string): Promise<void>;
-
-  // =============================================================================
-  // Notification Methods
-  // =============================================================================
-
-  /**
-   * Get all notifications for a user
-   */
-  getNotifications(userId: string): Promise<Notification[]>;
-
-  /**
-   * Save a notification
-   */
-  saveNotification(notification: Notification): Promise<void>;
-
-  /**
-   * Mark a notification as read
-   */
-  markNotificationRead(notificationId: string): Promise<void>;
 
   // =============================================================================
   // Candidate Application Methods
