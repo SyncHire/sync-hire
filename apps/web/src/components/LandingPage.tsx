@@ -54,7 +54,7 @@ export function LandingPage() {
           <div className="flex items-center gap-2 sm:gap-3">
             <Logo size="md" asLink={false} />
             <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-              Open Beta
+              Open Beta - Join 50+ early users
             </span>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
@@ -131,9 +131,9 @@ export function LandingPage() {
               transition={{ delay: 0.3, duration: 0.6 }}
               className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10"
             >
-              Stop spending hours on screening calls. SyncHire conducts
-              AI-powered video interviews 24/7, scores candidates automatically,
-              and surfaces your top matches.
+              You&apos;ll never spend another hour on screening calls. SyncHire
+              conducts AI-powered video interviews 24/7, scores candidates
+              automatically, and surfaces your top matches.
             </motion.p>
 
             {/* CTAs */}
@@ -145,13 +145,13 @@ export function LandingPage() {
             >
               <Link href="/signup">
                 <Button size="lg" className="gap-2 px-8">
-                  Start Hiring
+                  Post Your First Job Free
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
               <Link href="/signup">
                 <Button size="lg" variant="outline" className="px-8">
-                  Find a Job
+                  Take a Practice Interview
                 </Button>
               </Link>
             </motion.div>
@@ -180,6 +180,34 @@ export function LandingPage() {
                 />
               </div>
             </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Stats Bar */}
+      <section className="py-8 px-6">
+        <div className="container mx-auto max-w-4xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-wrap justify-center gap-8 md:gap-16"
+          >
+            {[
+              { value: "500+", label: "AI interviews conducted" },
+              { value: "24/7", label: "Always available" },
+              { value: "85%", label: "Faster than manual screening" },
+            ].map((stat) => (
+              <div key={stat.label} className="text-center">
+                <div className="text-3xl font-bold text-primary">
+                  {stat.value}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {stat.label}
+                </div>
+              </div>
+            ))}
           </motion.div>
         </div>
       </section>
@@ -296,21 +324,21 @@ export function LandingPage() {
             {[
               {
                 icon: Sparkles,
-                title: "24/7 AI Video Interviews",
+                title: "Interview candidates while you sleep",
                 description:
                   "Candidates interview anytime with our AI. Live transcription, natural conversation, and no scheduling hassles.",
                 gradient: "from-cyan-500 to-blue-500",
               },
               {
                 icon: Zap,
-                title: "Smart CV Matching",
+                title: "Find your best matches instantly",
                 description:
                   "Upload CVs and get instant match scores from 70-95%. AI identifies skills, gaps, and role fit automatically.",
                 gradient: "from-blue-500 to-indigo-500",
               },
               {
                 icon: Shield,
-                title: "Structured Scoring",
+                title: "Compare candidates objectively",
                 description:
                   "Every candidate scored on technical skills, communication, and experience. Detailed feedback and rankings.",
                 gradient: "from-indigo-500 to-purple-500",
@@ -440,7 +468,7 @@ export function LandingPage() {
                 </ul>
                 <Link href="/signup">
                   <Button className="gap-2">
-                    Start Hiring
+                    Post Your First Job
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
@@ -483,7 +511,7 @@ export function LandingPage() {
                 </ul>
                 <Link href="/signup">
                   <Button variant="outline" className="gap-2">
-                    Find Jobs
+                    Find Matching Jobs
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
@@ -516,7 +544,7 @@ export function LandingPage() {
               </p>
               <Link href="/signup">
                 <Button size="lg" className="gap-2 px-8">
-                  Get Started Free
+                  Post a Job in 2 Minutes
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
